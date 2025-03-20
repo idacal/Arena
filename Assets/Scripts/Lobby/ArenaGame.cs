@@ -2,10 +2,10 @@
 
 namespace Photon.Pun.Demo.Asteroids
 {
-    public class AsteroidsGame
+    public class ArenaGame
     {
-        public const float ASTEROIDS_MIN_SPAWN_TIME = 5.0f;
-        public const float ASTEROIDS_MAX_SPAWN_TIME = 10.0f;
+        public const float MIN_SPAWN_TIME = 5.0f;
+        public const float MAX_SPAWN_TIME = 10.0f;
 
         public const float PLAYER_RESPAWN_TIME = 4.0f;
 

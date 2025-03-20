@@ -44,7 +44,7 @@ namespace Photon.Pun.Demo.Asteroids
             }
             else
             {
-                Hashtable initialProps = new Hashtable() {{AsteroidsGame.PLAYER_READY, isPlayerReady}, {AsteroidsGame.PLAYER_LIVES, AsteroidsGame.PLAYER_MAX_LIVES}};
+                Hashtable initialProps = new Hashtable() {{ArenaGame.PLAYER_READY, isPlayerReady}, {ArenaGame.PLAYER_LIVES, ArenaGame.PLAYER_MAX_LIVES}};
                 PhotonNetwork.LocalPlayer.SetCustomProperties(initialProps);
                 PhotonNetwork.LocalPlayer.SetScore(0);
 
@@ -53,7 +53,7 @@ namespace Photon.Pun.Demo.Asteroids
                     isPlayerReady = !isPlayerReady;
                     SetPlayerReady(isPlayerReady);
 
-                    Hashtable props = new Hashtable() {{AsteroidsGame.PLAYER_READY, isPlayerReady}};
+                    Hashtable props = new Hashtable() {{ArenaGame.PLAYER_READY, isPlayerReady}};
                     PhotonNetwork.LocalPlayer.SetCustomProperties(props);
 
                     if (PhotonNetwork.IsMasterClient)
@@ -80,14 +80,29 @@ namespace Photon.Pun.Demo.Asteroids
             ownerId = playerId;
             PlayerNameText.text = playerName;
         }
+                public static Color GetColor(int colorChoice)
+        {
+            switch (colorChoice)
+            {
+                case 0: return Color.red;
+                case 1: return Color.green;
+                case 2: return Color.blue;
+                case 3: return Color.yellow;
+                case 4: return Color.cyan;
+                case 5: return Color.grey;
+                case 6: return Color.magenta;
+                case 7: return Color.white;
+            }
 
+            return Color.black;
+        }
         private void OnPlayerNumberingChanged()
         {
             foreach (Player p in PhotonNetwork.PlayerList)
             {
                 if (p.ActorNumber == ownerId)
                 {
-                    PlayerColorImage.color = AsteroidsGame.GetColor(p.GetPlayerNumber());
+                    PlayerColorImage.color = GetColor(p.GetPlayerNumber());
                 }
             }
         }
