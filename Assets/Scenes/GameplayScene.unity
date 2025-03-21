@@ -465,7 +465,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   redTeamSpawn: {fileID: 469765950}
   blueTeamSpawn: {fileID: 1729628771}
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 0
   showDebugMessages: 1
+  logPlayerPositions: 0
 --- !u!4 &634162991
 Transform:
   m_ObjectHideFlags: 0

@@ -18,6 +18,9 @@ namespace Photon.Pun.Demo.Asteroids
         public TMP_Text heroNameText;
         public TMP_Text levelText;
         
+        [Header("Ability UI")]
+        public GameObject abilityPanel;
+        
         [Header("Damage/Heal Text")]
         public GameObject floatingTextPrefab;
         public Color damageColor = Color.red;
@@ -28,11 +31,43 @@ namespace Photon.Pun.Demo.Asteroids
         public Vector3 floatingTextOffset = new Vector3(0, 2, 0);
         public Transform floatingTextParent;
         
+        [Header("Canvas Settings")]
+        public Canvas mainCanvas;
+        public bool forceScreenSpaceOverlay = true;
+        
         private Transform cameraTransform;
+        private HeroBase heroOwner;
+        
+        void Awake()
+        {
+            // Buscar referencias si no están asignadas
+            if (mainCanvas == null)
+            {
+                mainCanvas = GetComponent<Canvas>();
+                if (mainCanvas == null)
+                {
+                    mainCanvas = GetComponentInChildren<Canvas>();
+                }
+            }
+            
+            // Obtener referencia al héroe propietario
+            heroOwner = GetComponentInParent<HeroBase>();
+            if (heroOwner == null)
+            {
+                heroOwner = transform.root.GetComponent<HeroBase>();
+            }
+            
+            if (heroOwner == null)
+            {
+                Debug.LogError("[HeroUIController] No se pudo encontrar el HeroBase asociado a este UI");
+            }
+        }
         
         void Start()
         {
-            // Obtener la cámara
+            Debug.Log("[HeroUIController] Inicializando UI para: " + (heroOwner != null ? heroOwner.heroName : "Desconocido"));
+            
+            // Obtener la cámara principal
             cameraTransform = Camera.main.transform;
             
             // Configurar el padre de los textos flotantes
@@ -40,18 +75,81 @@ namespace Photon.Pun.Demo.Asteroids
             {
                 floatingTextParent = transform;
             }
+            
+            // Configurar el canvas
+            ConfigureCanvas();
+            
+            // Verificar referencias importantes
+            CheckReferences();
+        }
+        
+        /// <summary>
+        /// Configura el canvas según si pertenece al jugador local o a un jugador remoto
+        /// </summary>
+        private void ConfigureCanvas()
+        {
+            if (mainCanvas == null)
+            {
+                Debug.LogError("[HeroUIController] No hay Canvas configurado");
+                return;
+            }
+            
+            // Si no es el jugador local, desactivar la interfaz
+            if (heroOwner != null && !heroOwner.photonView.IsMine)
+            {
+                Debug.Log("[HeroUIController] Desactivando UI para jugador remoto");
+                mainCanvas.enabled = false;
+                return;
+            }
+            
+            // Es el jugador local, configurar correctamente
+            Debug.Log("[HeroUIController] Configurando UI para jugador local");
+            
+            // Forzar a pantalla completa si está configurado así
+            if (forceScreenSpaceOverlay)
+            {
+                mainCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                mainCanvas.sortingOrder = 100; // Asegurar que está en primer plano
+                
+                // Reposicionar el canvas para que esté en la raíz de la jerarquía
+                // Esto evita problemas de escala y posición
+                if (transform.parent != null)
+                {
+                    Transform originalParent = transform.parent;
+                    transform.SetParent(null);
+                    // Si necesitamos mantener alguna referencia al padre original, hacerlo aquí
+                }
+            }
+            
+            mainCanvas.enabled = true;
+        }
+        
+        /// <summary>
+        /// Verifica que todas las referencias importantes estén configuradas
+        /// </summary>
+        private void CheckReferences()
+        {
+            string missingRefs = "";
+            
+            if (healthBar == null) missingRefs += "healthBar, ";
+            if (manaBar == null) missingRefs += "manaBar, ";
+            if (healthText == null) missingRefs += "healthText, ";
+            if (manaText == null) missingRefs += "manaText, ";
+            if (playerNameText == null) missingRefs += "playerNameText, ";
+            
+            if (missingRefs != "")
+            {
+                Debug.LogWarning("[HeroUIController] Faltan referencias: " + missingRefs);
+            }
         }
         
         void LateUpdate()
         {
-            // Asegurar que la UI siempre mira a la cámara si hay uno
-            if (cameraTransform != null)
+            // Si es un canvas en modo World Space, asegurar que sigue a la cámara
+            if (mainCanvas != null && mainCanvas.renderMode == RenderMode.WorldSpace && cameraTransform != null)
             {
-                // Solo rotar la UI, no los elementos del personaje
-                if (GetComponent<Canvas>() != null)
-                {
-                    transform.LookAt(transform.position + cameraTransform.rotation * Vector3.forward, cameraTransform.rotation * Vector3.up);
-                }
+                transform.LookAt(transform.position + cameraTransform.rotation * Vector3.forward, 
+                                 cameraTransform.rotation * Vector3.up);
             }
         }
         
