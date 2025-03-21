@@ -19,7 +19,10 @@ namespace Photon.Pun.Demo.Asteroids
         
         // Referencias privadas
         private HeroBase heroBase;
-        private NavMeshAgent navAgent;
+        
+        // Cambiado de privado a público para permitir acceso desde BuffAbility
+        public NavMeshAgent navAgent;
+        
         private Camera mainCamera;
         private Vector3 targetPosition;
         private bool isMoving = false;

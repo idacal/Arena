@@ -22,9 +22,9 @@ MonoBehaviour:
   Mana: 200
   HeroType: Assassin
   AttackDamage: 60
-  AttackSpeed: 1
+  AttackSpeed: 2
   MovementSpeed: 350
-  Armor: 20
+  Armor: 15
   MagicResistance: 20
   Abilities:
   - {fileID: 11400000, guid: 9af132660b5db33419265c5567003468, type: 2}

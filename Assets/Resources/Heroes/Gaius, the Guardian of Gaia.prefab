@@ -1488,6 +1488,7 @@ MonoBehaviour:
   targetDistance: 0.1
   animator: {fileID: 0}
   moveSpeedParameter: MoveSpeed
+  navAgent: {fileID: 0}
 --- !u!114 &7424854189262889703
 MonoBehaviour:
   m_ObjectHideFlags: 0

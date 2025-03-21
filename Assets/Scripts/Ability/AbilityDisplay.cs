@@ -52,7 +52,7 @@ namespace Photon.Pun.Demo.Asteroids
                 
                 if (DamageText != null && ability.DamageAmount > 0)
                 {
-                    DamageText.text = $"Daño: {ability.DamageAmount}";
+                    DamageText.text = $"Damage: {ability.DamageAmount}";
                     DamageText.gameObject.SetActive(true);
                     hasAdditionalStats = true;
                 }
@@ -63,7 +63,7 @@ namespace Photon.Pun.Demo.Asteroids
                 
                 if (DurationText != null && ability.Duration > 0)
                 {
-                    DurationText.text = $"Duración: {ability.Duration}s";
+                    DurationText.text = $"Duration: {ability.Duration}s";
                     DurationText.gameObject.SetActive(true);
                     hasAdditionalStats = true;
                 }
@@ -74,7 +74,7 @@ namespace Photon.Pun.Demo.Asteroids
                 
                 if (RangeText != null && ability.Range > 0)
                 {
-                    RangeText.text = $"Alcance: {ability.Range}";
+                    RangeText.text = $"Range: {ability.Range}";
                     RangeText.gameObject.SetActive(true);
                     hasAdditionalStats = true;
                 }

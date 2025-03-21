@@ -16,11 +16,11 @@ MonoBehaviour:
   Description: Spectral Glide desc
   IconSprite: {fileID: 21300000, guid: 71a7e37907df1f14ea8943cb2d795ccd, type: 3}
   Hotkey: W
-  Cooldown: 10
+  Cooldown: 20
   ManaCost: 50
-  AbilityType: Activa
-  DamageAmount: 0
-  Duration: 0
-  Range: 0
+  AbilityType: Active
+  DamageAmount: 20
+  Duration: 1
+  Range: 5
   AbilityPrefab: {fileID: 0}
   AbilitySound: {fileID: 0}

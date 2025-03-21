@@ -18,9 +18,9 @@ MonoBehaviour:
   Hotkey: R
   Cooldown: 60
   ManaCost: 100
-  AbilityType: Activa
-  DamageAmount: 0
-  Duration: 0
-  Range: 0
+  AbilityType: Active
+  DamageAmount: 100
+  Duration: 3
+  Range: 5
   AbilityPrefab: {fileID: 0}
   AbilitySound: {fileID: 0}

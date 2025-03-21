@@ -287,28 +287,4 @@ namespace Photon.Pun.Demo.Asteroids
         
         #endregion
     }
-    
-    /// <summary>
-    /// Clase base para comportamientos de habilidades
-    /// </summary>
-    public class AbilityBehaviour : MonoBehaviour
-    {
-        protected HeroBase caster;
-        protected HeroAbility abilityData;
-        protected int casterId;
-        
-        public virtual void Initialize(HeroBase caster, HeroAbility abilityData, int casterId)
-        {
-            this.caster = caster;
-            this.abilityData = abilityData;
-            this.casterId = casterId;
-        }
-        
-        protected virtual void OnDestroy()
-        {
-            // Limpiar referencias
-            caster = null;
-            abilityData = null;
-        }
-    }
 }

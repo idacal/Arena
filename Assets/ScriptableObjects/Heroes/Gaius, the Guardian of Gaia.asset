@@ -19,11 +19,11 @@ MonoBehaviour:
   AvatarSprite: {fileID: 21300000, guid: e9ace4c952f1e454e8a67be408e2a6ab, type: 3}
   PrefabName: Gaius, the Guardian of Gaia
   Health: 1000
-  Mana: 500
+  Mana: 200
   HeroType: Tank
-  AttackDamage: 60
-  AttackSpeed: 1
-  MovementSpeed: 350
+  AttackDamage: 30
+  AttackSpeed: 0.5
+  MovementSpeed: 280
   Armor: 40
   MagicResistance: 40
   Abilities:
