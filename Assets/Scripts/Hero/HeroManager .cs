@@ -13,6 +13,9 @@ namespace Photon.Pun.Demo.Asteroids
         [Header("Configuración de Héroes")]
         public List<HeroDataSO> AvailableHeroesSO;
         
+        [Header("Depuración")]
+        public bool debugMode = true;
+        
         // Constants for custom properties
         private const string PLAYER_SELECTED_HERO = "SelectedHero";
         private const string PLAYER_TEAM = "PlayerTeam";
@@ -35,6 +38,7 @@ namespace Photon.Pun.Demo.Asteroids
                     {
                         GameObject obj = new GameObject("HeroManager");
                         _instance = obj.AddComponent<HeroManager>();
+                        DontDestroyOnLoad(obj);
                     }
                 }
                 
@@ -60,6 +64,16 @@ namespace Photon.Pun.Demo.Asteroids
             _instance = this;
             DontDestroyOnLoad(this.gameObject);
             
+            // Verificar que AvailableHeroesSO no sea nulo
+            if (AvailableHeroesSO == null || AvailableHeroesSO.Count == 0)
+            {
+                LogDebug("¡ADVERTENCIA! No hay ScriptableObjects de héroes configurados. Verifica la lista AvailableHeroesSO en el inspector.");
+            }
+            else
+            {
+                LogDebug($"HeroManager inicializado con {AvailableHeroesSO.Count} ScriptableObjects de héroes.");
+            }
+            
             // Convertir ScriptableObjects a HeroData
             ConvertScriptableObjectsToHeroData();
             
@@ -74,15 +88,23 @@ namespace Photon.Pun.Demo.Asteroids
         {
             availableHeroes.Clear();
             
+            if (AvailableHeroesSO == null)
+                return;
+                
             foreach (var heroSO in AvailableHeroesSO)
             {
                 if (heroSO != null)
                 {
+                    LogDebug($"Convirtiendo ScriptableObject a HeroData: {heroSO.Name}");
                     availableHeroes.Add(heroSO.ToHeroData());
+                }
+                else
+                {
+                    LogDebug("¡ADVERTENCIA! Se encontró un ScriptableObject nulo en la lista.");
                 }
             }
             
-            Debug.Log($"HeroManager: Cargados {availableHeroes.Count} héroes");
+            LogDebug($"Conversión completada. Total de HeroData: {availableHeroes.Count}");
         }
 
         /// <summary>
@@ -96,18 +118,34 @@ namespace Photon.Pun.Demo.Asteroids
             {
                 if (!string.IsNullOrEmpty(hero.PrefabName))
                 {
+                    // Intentar cargar el prefab usando la estructura de carpetas "Heroes/[PrefabName]"
                     GameObject prefab = Resources.Load<GameObject>("Heroes/" + hero.PrefabName);
+                    
                     if (prefab != null)
                     {
+                        LogDebug($"Prefab cargado con éxito: Heroes/{hero.PrefabName} para héroe ID: {hero.Id}");
                         heroPrefabs.Add(hero.Id, prefab);
-                        Debug.Log($"HeroManager: Cargado prefab para {hero.Name}");
                     }
                     else
                     {
-                        Debug.LogWarning($"HeroManager: No se encontró el prefab '{hero.PrefabName}' para el héroe {hero.Name}");
+                        // Intentar cargar directamente de la carpeta Resources
+                        prefab = Resources.Load<GameObject>(hero.PrefabName);
+                        
+                        if (prefab != null)
+                        {
+                            LogDebug($"Prefab cargado con éxito (directamente): {hero.PrefabName} para héroe ID: {hero.Id}");
+                            heroPrefabs.Add(hero.Id, prefab);
+                        }
+                        else
+                        {
+                            Debug.LogError($"¡No se pudo cargar el prefab '{hero.PrefabName}' para el héroe {hero.Name} (ID: {hero.Id})!");
+                            Debug.LogError("Asegúrate de que el prefab está en la carpeta Resources/Heroes/ o directamente en Resources/");
+                        }
                     }
                 }
             }
+            
+            LogDebug($"Carga de prefabs completada. Total de prefabs cargados: {heroPrefabs.Count}");
         }
 
         /// <summary>
@@ -131,6 +169,7 @@ namespace Photon.Pun.Demo.Asteroids
                 }
             }
             
+            LogDebug($"¡No se encontró HeroData para ID: {heroId}!");
             return null;
         }
 
@@ -145,6 +184,7 @@ namespace Photon.Pun.Demo.Asteroids
                 return (int)heroIdObj;
             }
             
+            LogDebug($"El jugador {player.NickName} no tiene un héroe seleccionado.");
             return -1;
         }
 
@@ -159,6 +199,7 @@ namespace Photon.Pun.Demo.Asteroids
                 return (int)teamObj;
             }
             
+            LogDebug($"El jugador {player.NickName} no tiene un equipo asignado.");
             return -1;
         }
 
@@ -167,6 +208,13 @@ namespace Photon.Pun.Demo.Asteroids
         /// </summary>
         public GameObject InstantiatePlayerHero(Player player, Vector3 position, Quaternion rotation)
         {
+            // IMPORTANTE: Solo instanciar si es el jugador local
+            if (!player.IsLocal)
+            {
+                LogDebug($"No se instancia héroe para {player.NickName} porque no es el jugador local");
+                return null;
+            }
+            
             int heroId = GetPlayerSelectedHeroId(player);
             
             if (heroId == -1)
@@ -180,18 +228,10 @@ namespace Photon.Pun.Demo.Asteroids
             
             if (heroPrefabs.TryGetValue(heroId, out heroPrefab) && heroPrefab != null)
             {
-                // Instanciar el héroe
-                if (player.IsLocal)
-                {
-                    // Para el jugador local, usar PhotonNetwork.Instantiate para asegurar propiedad
-                    return PhotonNetwork.Instantiate(heroPrefab.name, position, rotation);
-                }
-                else
-                {
-                    // Para jugadores remotos, simplemente instanciar localmente
-                    // Esto asume que el objeto del jugador actual es creado por el propietario via PhotonNetwork.Instantiate
-                    return Instantiate(heroPrefab, position, rotation);
-                }
+                LogDebug($"Instanciando héroe '{heroPrefab.name}' para jugador {player.NickName} usando la ruta 'Heroes/{heroPrefab.name}'");
+                
+                // IMPORTANTE: Usar path relativo a Resources incluyendo la subcarpeta
+                return PhotonNetwork.Instantiate("Heroes/" + heroPrefab.name, position, rotation);
             }
             
             Debug.LogError("Hero prefab not found for hero ID: " + heroId);
@@ -221,6 +261,17 @@ namespace Photon.Pun.Demo.Asteroids
             }
             
             return heroIds;
+        }
+        
+        /// <summary>
+        /// Registra mensajes de depuración si el modo debug está activado
+        /// </summary>
+        private void LogDebug(string message)
+        {
+            if (debugMode)
+            {
+                Debug.Log($"[HeroManager] {message}");
+            }
         }
     }
 }

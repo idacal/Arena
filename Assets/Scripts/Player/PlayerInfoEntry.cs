@@ -121,7 +121,7 @@ namespace Photon.Pun.Demo.Asteroids
                         HeroData heroData = heroSelectionManager.GetHeroById(heroId);
                         if (heroData != null)
                         {
-                            SelectedHeroText.text = "Héroe: " + heroData.Name;
+                            SelectedHeroText.text = heroData.Name;
                         }
                         else
                         {
@@ -130,7 +130,7 @@ namespace Photon.Pun.Demo.Asteroids
                     }
                     else
                     {
-                        SelectedHeroText.text = "Seleccionando";
+                        SelectedHeroText.text = "Picking";
                     }
                 }
                 else

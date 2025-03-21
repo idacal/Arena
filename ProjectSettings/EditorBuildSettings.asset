@@ -11,4 +11,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/HeroSelection.unity
     guid: 7a44bf4dc804794499e07b2cb8b15d14
+  - enabled: 1
+    path: Assets/Scenes/GameplayScene.unity
+    guid: 4a1233daa66c203499cadc513596aa3a
   m_configObjects: {}

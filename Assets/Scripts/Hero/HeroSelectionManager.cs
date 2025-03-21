@@ -63,14 +63,13 @@ namespace Photon.Pun.Demo.Asteroids
             Hashtable initialProps = new Hashtable 
             { 
                 { PLAYER_SELECTED_HERO, -1 },
-                { PLAYER_TEAM, -1 },
                 { PLAYER_HERO_READY, false },
                 { ArenaGame.PLAYER_LOADED_LEVEL, true }
             };
             PhotonNetwork.LocalPlayer.SetCustomProperties(initialProps);
 
-            // Asignar equipo - intentaremos equilibrar equipos
-            AssignTeam();
+            // Asignar equipo - con un algoritmo determinista
+            AssignTeamDeterministic();
 
             // Crear la cuadrícula de héroes
             PopulateHeroGrid();
@@ -124,12 +123,29 @@ namespace Photon.Pun.Demo.Asteroids
             }
         }
 
-        public override void OnPlayerLeftRoom(Player otherPlayer)
+        public override void OnPlayerEnteredRoom(Player newPlayer)
         {
-            // Actualizar el balance de equipos si un jugador se va
+            Debug.Log($"Jugador {newPlayer.NickName} entró a la sala. Rebalanceando equipos...");
             if (PhotonNetwork.IsMasterClient)
             {
-                RebalanceTeams();
+                // Si el Master Client está en la sala, forzar un rebalanceo para todos
+                Debug.Log("Master Client enviando comando de rebalanceo de equipos...");
+                photonView.RPC("RebalanceTeamsRPC", RpcTarget.All);
+            }
+            else
+            {
+                // Si no es el Master, simplemente actualizar la UI
+                UpdateUI();
+            }
+        }
+
+        public override void OnPlayerLeftRoom(Player otherPlayer)
+        {
+            Debug.Log($"Jugador {otherPlayer.NickName} salió de la sala. Rebalanceando equipos...");
+            if (PhotonNetwork.IsMasterClient)
+            {
+                Debug.Log("Master Client enviando comando de rebalanceo de equipos...");
+                photonView.RPC("RebalanceTeamsRPC", RpcTarget.All);
             }
             
             // Actualizar la UI
@@ -210,6 +226,67 @@ namespace Photon.Pun.Demo.Asteroids
 
         #endregion
 
+        #region TEAM ASSIGNMENT METHODS
+
+        /// <summary>
+        /// Usa el ID del jugador para determinar el equipo de manera consistente
+        /// </summary>
+        private void AssignTeamDeterministic()
+        {
+            // Ordenar los jugadores por su ID para asignación determinista
+            List<Player> sortedPlayers = new List<Player>(PhotonNetwork.PlayerList);
+            sortedPlayers.Sort((a, b) => a.ActorNumber.CompareTo(b.ActorNumber));
+            
+            // Asignar jugadores de manera alternativa a los equipos
+            for (int i = 0; i < sortedPlayers.Count; i++)
+            {
+                Player p = sortedPlayers[i];
+                
+                // Asignar al equipo rojo o azul según su posición en la lista ordenada
+                int team = (i % 2 == 0) ? TEAM_RED : TEAM_BLUE;
+                
+                // Si es el jugador local, guardar el equipo asignado
+                if (p.ActorNumber == PhotonNetwork.LocalPlayer.ActorNumber)
+                {
+                    assignedTeam = team;
+                    Debug.Log($"Jugador local {p.NickName} (ID: {p.ActorNumber}) asignado al equipo: {(team == TEAM_RED ? "Rojo" : "Azul")}");
+                }
+                
+                // Actualizar propiedades del jugador si es el jugador local
+                if (p.IsLocal)
+                {
+                    Hashtable props = new Hashtable { { PLAYER_TEAM, team } };
+                    p.SetCustomProperties(props);
+                }
+            }
+            
+            // Loguear todos los jugadores y sus equipos para debug
+            Debug.Log("Estado de equipos después de asignación:");
+            foreach (Player p in PhotonNetwork.PlayerList)
+            {
+                object teamObj;
+                string teamName = "No asignado";
+                if (p.CustomProperties.TryGetValue(PLAYER_TEAM, out teamObj) && teamObj != null)
+                {
+                    teamName = ((int)teamObj == TEAM_RED) ? "Rojo" : "Azul";
+                }
+                Debug.Log($"  - Jugador {p.NickName} (ID: {p.ActorNumber}): Equipo {teamName}");
+            }
+        }
+
+        /// <summary>
+        /// RPC para rebalancear equipos cuando cambia la composición de la sala
+        /// </summary>
+        [PunRPC]
+        public void RebalanceTeamsRPC()
+        {
+            Debug.Log("Ejecutando rebalanceo de equipos...");
+            AssignTeamDeterministic();
+            UpdateUI();
+        }
+
+        #endregion
+
         #region PRIVATE METHODS
 
         private void CreateDefaultHeroes()
@@ -223,6 +300,7 @@ namespace Photon.Pun.Demo.Asteroids
                 Name = "Guerrero", 
                 Description = "Tanque con alta vida y resistencia",
                 AvatarSprite = null,
+                IconSprite = null,
                 Health = 1000,
                 Mana = 400,
                 HeroType = "Tanque",
@@ -233,53 +311,7 @@ namespace Photon.Pun.Demo.Asteroids
                 MagicResistance = 25
             };
             
-            warrior.Abilities.Add(new HeroAbility 
-            { 
-                Name = "Golpe Devastador", 
-                Description = "Golpea con fuerza al enemigo causando daño físico y ralentización",
-                Hotkey = "Q",
-                Cooldown = 8,
-                ManaCost = 60,
-                AbilityType = "Activa",
-                DamageAmount = 120,
-                Duration = 2.5f,
-                Range = 2
-            });
-            
-            warrior.Abilities.Add(new HeroAbility 
-            { 
-                Name = "Grito de Guerra", 
-                Description = "Aumenta la armadura y resistencia mágica durante un periodo de tiempo",
-                Hotkey = "W",
-                Cooldown = 15,
-                ManaCost = 80,
-                AbilityType = "Activa",
-                Duration = 5,
-            });
-            
-            warrior.Abilities.Add(new HeroAbility 
-            { 
-                Name = "Carga Heroica", 
-                Description = "Carga hacia un objetivo enemigo y lo aturde",
-                Hotkey = "E",
-                Cooldown = 12,
-                ManaCost = 70,
-                AbilityType = "Activa",
-                DamageAmount = 80,
-                Duration = 1.5f,
-                Range = 600
-            });
-            
-            warrior.Abilities.Add(new HeroAbility 
-            { 
-                Name = "Furia Indomable", 
-                Description = "Aumenta temporalmente la vida máxima y el daño de ataque",
-                Hotkey = "R",
-                Cooldown = 90,
-                ManaCost = 100,
-                AbilityType = "Ultimate",
-                Duration = 10,
-            });
+            // Añadir habilidades...
             
             // Mago
             HeroData mage = new HeroData 
@@ -288,6 +320,7 @@ namespace Photon.Pun.Demo.Asteroids
                 Name = "Mago", 
                 Description = "Especialista en daño mágico a distancia",
                 AvatarSprite = null,
+                IconSprite = null,
                 Health = 650,
                 Mana = 800,
                 HeroType = "Daño Mágico",
@@ -298,52 +331,7 @@ namespace Photon.Pun.Demo.Asteroids
                 MagicResistance = 30
             };
             
-            mage.Abilities.Add(new HeroAbility 
-            { 
-                Name = "Orbe Arcano", 
-                Description = "Lanza un orbe de energía que explota al impactar",
-                Hotkey = "Q",
-                Cooldown = 5,
-                ManaCost = 70,
-                AbilityType = "Activa",
-                DamageAmount = 150,
-                Range = 800
-            });
-            
-            mage.Abilities.Add(new HeroAbility 
-            { 
-                Name = "Barrera Mágica", 
-                Description = "Crea un escudo que absorbe daño",
-                Hotkey = "W",
-                Cooldown = 18,
-                ManaCost = 90,
-                AbilityType = "Activa",
-                Duration = 4,
-            });
-            
-            mage.Abilities.Add(new HeroAbility 
-            { 
-                Name = "Teletransporte", 
-                Description = "Se teletransporta una corta distancia",
-                Hotkey = "E",
-                Cooldown = 15,
-                ManaCost = 80,
-                AbilityType = "Activa",
-                Range = 400
-            });
-            
-            mage.Abilities.Add(new HeroAbility 
-            { 
-                Name = "Explosión Arcana",
-
-                Description = "Causa una explosión en un área que daña a todos los enemigos",
-                Hotkey = "R",
-                Cooldown = 120,
-                ManaCost = 150,
-                AbilityType = "Ultimate",
-                DamageAmount = 300,
-                Range = 600
-            });
+            // Añadir habilidades...
             
             // Arquero
             HeroData archer = new HeroData 
@@ -352,6 +340,7 @@ namespace Photon.Pun.Demo.Asteroids
                 Name = "Arquero", 
                 Description = "Daño físico a distancia con alta velocidad de ataque",
                 AvatarSprite = null,
+                IconSprite = null,
                 Health = 700,
                 Mana = 500,
                 HeroType = "Daño Físico",
@@ -362,53 +351,7 @@ namespace Photon.Pun.Demo.Asteroids
                 MagicResistance = 20
             };
             
-            archer.Abilities.Add(new HeroAbility 
-            { 
-                Name = "Flecha Penetrante", 
-                Description = "Dispara una flecha que atraviesa a los enemigos",
-                Hotkey = "Q",
-                Cooldown = 7,
-                ManaCost = 60,
-                AbilityType = "Activa",
-                DamageAmount = 130,
-                Range = 1000
-            });
-            
-            archer.Abilities.Add(new HeroAbility 
-            { 
-                Name = "Visión del Halcón", 
-                Description = "Aumenta el rango de visión y el daño crítico",
-                Hotkey = "W",
-                Cooldown = 20,
-                ManaCost = 70,
-                AbilityType = "Activa",
-                Duration = 6,
-            });
-            
-            archer.Abilities.Add(new HeroAbility 
-            { 
-                Name = "Salto Acrobático", 
-                Description = "Salta hacia atrás y aumenta la velocidad de movimiento",
-                Hotkey = "E",
-                Cooldown = 14,
-                ManaCost = 65,
-                AbilityType = "Activa",
-                Duration = 3,
-                Range = 350
-            });
-            
-            archer.Abilities.Add(new HeroAbility 
-            { 
-                Name = "Lluvia de Flechas", 
-                Description = "Dispara múltiples flechas al cielo que caen en un área",
-                Hotkey = "R",
-                Cooldown = 100,
-                ManaCost = 120,
-                AbilityType = "Ultimate",
-                DamageAmount = 250,
-                Duration = 4,
-                Range = 800
-            });
+            // Añadir habilidades...
             
             // Añadir los héroes a la lista
             AvailableHeroes.Add(warrior);
@@ -434,41 +377,6 @@ namespace Photon.Pun.Demo.Asteroids
             }
         }
 
-        private void AssignTeam()
-        {
-            // Contar jugadores en cada equipo
-            int redCount = 0;
-            int blueCount = 0;
-            
-            foreach (Player p in PhotonNetwork.PlayerList)
-            {
-                if (p == PhotonNetwork.LocalPlayer) continue; // Saltar jugador local
-                
-                object teamObj;
-                if (p.CustomProperties.TryGetValue(PLAYER_TEAM, out teamObj) && teamObj != null)
-                {
-                    int team = (int)teamObj;
-                    if (team == TEAM_RED)
-                        redCount++;
-                    else if (team == TEAM_BLUE)
-                        blueCount++;
-                }
-            }
-            
-            // Asignar al equipo con menos jugadores
-            assignedTeam = (redCount <= blueCount) ? TEAM_RED : TEAM_BLUE;
-            
-            // Actualizar propiedades personalizadas
-            Hashtable props = new Hashtable { { PLAYER_TEAM, assignedTeam } };
-            PhotonNetwork.LocalPlayer.SetCustomProperties(props);
-        }
-
-        private void RebalanceTeams()
-        {
-            // Esta función podría ser llamada cuando un jugador sale para reequilibrar si es necesario
-            // Por ahora lo mantendremos simple y no forzaremos a los jugadores a cambiar de equipo
-        }
-
         private bool AreAllPlayersReady()
         {
             foreach (Player p in PhotonNetwork.PlayerList)
@@ -492,29 +400,39 @@ namespace Photon.Pun.Demo.Asteroids
         private void UpdateUI()
         {
             // Actualizar texto del equipo
-            TeamAssignmentText.text = "Equipo: " + (assignedTeam == TEAM_RED ? "Rojo" : "Azul");
-            TeamAssignmentText.color = (assignedTeam == TEAM_RED ? Color.red : Color.blue);
+            if (TeamAssignmentText != null)
+            {
+                TeamAssignmentText.text = "Equipo: " + (assignedTeam == TEAM_RED ? "Rojo" : "Azul");
+                TeamAssignmentText.color = (assignedTeam == TEAM_RED ? Color.red : Color.blue);
+            }
             
             // Actualizar estado visual de los iconos de héroe
             foreach (var entry in heroSelectionEntries.Values)
             {
-                entry.GetComponent<HeroSelectionEntry>().UpdateSelectionStatus();
-            }
-            
-            // Actualizar texto de estado del juego
-            int readyCount = 0;
-            int totalPlayers = PhotonNetwork.PlayerList.Length;
-            
-            foreach (Player p in PhotonNetwork.PlayerList)
-            {
-                object isReady;
-                if (p.CustomProperties.TryGetValue(PLAYER_HERO_READY, out isReady) && isReady != null && (bool)isReady)
+                HeroSelectionEntry entryComponent = entry.GetComponent<HeroSelectionEntry>();
+                if (entryComponent != null)
                 {
-                    readyCount++;
+                    entryComponent.UpdateSelectionStatus();
                 }
             }
             
-            GameStatusText.text = $"Jugadores Listos: {readyCount}/{totalPlayers}";
+            // Actualizar texto de estado del juego
+            if (GameStatusText != null)
+            {
+                int readyCount = 0;
+                int totalPlayers = PhotonNetwork.PlayerList.Length;
+                
+                foreach (Player p in PhotonNetwork.PlayerList)
+                {
+                    object isReady;
+                    if (p.CustomProperties.TryGetValue(PLAYER_HERO_READY, out isReady) && isReady != null && (bool)isReady)
+                    {
+                        readyCount++;
+                    }
+                }
+                
+                GameStatusText.text = $"Jugadores Listos: {readyCount}/{totalPlayers}";
+            }
         }
 
         #endregion

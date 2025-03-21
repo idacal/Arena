@@ -41,8 +41,8 @@ namespace Photon.Pun.Demo.Asteroids
             }
             
             AbilityDescriptionText.text = ability.Description;
-            CooldownText.text = $"CD: {ability.Cooldown}s";
-            ManaCostText.text = $"Maná: {ability.ManaCost}";
+            CooldownText.text = $"{ability.Cooldown}s";
+            ManaCostText.text = $"{ability.ManaCost}";
             AbilityTypeText.text = ability.AbilityType;
             
             // Estadísticas adicionales si están disponibles

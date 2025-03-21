@@ -15,6 +15,7 @@ MonoBehaviour:
   Id: 0
   Name: Kael
   Description: Kael desc test
+  IconSprite: {fileID: 21300000, guid: 2f82a78136d60494e9fd92d7683b8e81, type: 3}
   AvatarSprite: {fileID: 21300000, guid: 12332ee9875bf0a4aa6d8ccdc029a65f, type: 3}
   PrefabName: Kael
   Health: 200
