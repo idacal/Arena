@@ -6,11 +6,13 @@ using Photon.Realtime;
 namespace Photon.Pun.Demo.Asteroids
 {
     /// <summary>
-    /// This class manages hero data across scenes and ensures the selected hero data
-    /// is available in the gameplay scene.
+    /// Este manager gestiona los héroes en todo el juego (persiste entre escenas)
     /// </summary>
     public class HeroManager : MonoBehaviourPunCallbacks
     {
+        [Header("Configuración de Héroes")]
+        public List<HeroDataSO> AvailableHeroesSO;
+        
         // Constants for custom properties
         private const string PLAYER_SELECTED_HERO = "SelectedHero";
         private const string PLAYER_TEAM = "PlayerTeam";
@@ -40,8 +42,7 @@ namespace Photon.Pun.Demo.Asteroids
             }
         }
 
-        // List of available heroes
-        [SerializeField]
+        // Lista de héroes disponibles en formato de datos
         private List<HeroData> availableHeroes = new List<HeroData>();
         
         // Dictionary of hero prefabs indexed by hero ID
@@ -59,28 +60,66 @@ namespace Photon.Pun.Demo.Asteroids
             _instance = this;
             DontDestroyOnLoad(this.gameObject);
             
-            // Load hero prefabs
+            // Convertir ScriptableObjects a HeroData
+            ConvertScriptableObjectsToHeroData();
+            
+            // Cargar prefabs de héroes
             LoadHeroPrefabs();
         }
-
-        private void LoadHeroPrefabs()
+        
+        /// <summary>
+        /// Convierte los ScriptableObjects a HeroData
+        /// </summary>
+        private void ConvertScriptableObjectsToHeroData()
         {
-            // Here we would normally load prefabs from Resources folder
-            // For this example, we'll just set up placeholders
+            availableHeroes.Clear();
             
-            // In a real implementation, you might do something like:
-            // foreach (var hero in availableHeroes)
-            // {
-            //     GameObject prefab = Resources.Load<GameObject>("Heroes/" + hero.PrefabName);
-            //     if (prefab != null)
-            //     {
-            //         heroPrefabs.Add(hero.Id, prefab);
-            //     }
-            // }
+            foreach (var heroSO in AvailableHeroesSO)
+            {
+                if (heroSO != null)
+                {
+                    availableHeroes.Add(heroSO.ToHeroData());
+                }
+            }
+            
+            Debug.Log($"HeroManager: Cargados {availableHeroes.Count} héroes");
         }
 
         /// <summary>
-        /// Gets the hero data for the specified hero ID
+        /// Carga los prefabs de los héroes desde Resources
+        /// </summary>
+        private void LoadHeroPrefabs()
+        {
+            heroPrefabs.Clear();
+            
+            foreach (var hero in availableHeroes)
+            {
+                if (!string.IsNullOrEmpty(hero.PrefabName))
+                {
+                    GameObject prefab = Resources.Load<GameObject>("Heroes/" + hero.PrefabName);
+                    if (prefab != null)
+                    {
+                        heroPrefabs.Add(hero.Id, prefab);
+                        Debug.Log($"HeroManager: Cargado prefab para {hero.Name}");
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"HeroManager: No se encontró el prefab '{hero.PrefabName}' para el héroe {hero.Name}");
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Obtiene todos los datos de los héroes disponibles
+        /// </summary>
+        public List<HeroData> GetAllHeroes()
+        {
+            return availableHeroes;
+        }
+
+        /// <summary>
+        /// Obtiene los datos de un héroe por su ID
         /// </summary>
         public HeroData GetHeroData(int heroId)
         {
@@ -96,7 +135,7 @@ namespace Photon.Pun.Demo.Asteroids
         }
 
         /// <summary>
-        /// Gets the currently selected hero ID for the specified player
+        /// Obtiene el ID del héroe seleccionado por un jugador
         /// </summary>
         public int GetPlayerSelectedHeroId(Player player)
         {
@@ -110,7 +149,7 @@ namespace Photon.Pun.Demo.Asteroids
         }
 
         /// <summary>
-        /// Gets the team assignment for the specified player
+        /// Obtiene el equipo asignado a un jugador
         /// </summary>
         public int GetPlayerTeam(Player player)
         {
@@ -124,7 +163,7 @@ namespace Photon.Pun.Demo.Asteroids
         }
 
         /// <summary>
-        /// Instantiates the player's selected hero in the game world
+        /// Instancia el héroe seleccionado por un jugador en el mundo
         /// </summary>
         public GameObject InstantiatePlayerHero(Player player, Vector3 position, Quaternion rotation)
         {
@@ -136,21 +175,21 @@ namespace Photon.Pun.Demo.Asteroids
                 return null;
             }
             
-            // Get the hero prefab
+            // Obtener el prefab del héroe
             GameObject heroPrefab = null;
             
             if (heroPrefabs.TryGetValue(heroId, out heroPrefab) && heroPrefab != null)
             {
-                // Instantiate the hero
+                // Instanciar el héroe
                 if (player.IsLocal)
                 {
-                    // For the local player, use PhotonNetwork.Instantiate to ensure ownership
+                    // Para el jugador local, usar PhotonNetwork.Instantiate para asegurar propiedad
                     return PhotonNetwork.Instantiate(heroPrefab.name, position, rotation);
                 }
                 else
                 {
-                    // For remote players, just instantiate locally
-                    // This assumes the actual player object is created by the owner via PhotonNetwork.Instantiate
+                    // Para jugadores remotos, simplemente instanciar localmente
+                    // Esto asume que el objeto del jugador actual es creado por el propietario via PhotonNetwork.Instantiate
                     return Instantiate(heroPrefab, position, rotation);
                 }
             }
@@ -160,7 +199,7 @@ namespace Photon.Pun.Demo.Asteroids
         }
 
         /// <summary>
-        /// Gets a list of all heroes selected by players in the specified team
+        /// Obtiene una lista de todos los IDs de héroes seleccionados por jugadores en un equipo específico
         /// </summary>
         public List<int> GetTeamHeroIds(int team)
         {
@@ -182,14 +221,6 @@ namespace Photon.Pun.Demo.Asteroids
             }
             
             return heroIds;
-        }
-
-        /// <summary>
-        /// Gets all available heroes
-        /// </summary>
-        public List<HeroData> GetAvailableHeroes()
-        {
-            return availableHeroes;
         }
     }
 }

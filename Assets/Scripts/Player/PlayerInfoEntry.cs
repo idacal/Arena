@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using ExitGames.Client.Photon;
+using TMPro;
 using Photon.Realtime;
 
 namespace Photon.Pun.Demo.Asteroids
@@ -8,9 +9,9 @@ namespace Photon.Pun.Demo.Asteroids
     public class PlayerInfoEntry : MonoBehaviour
     {
         [Header("UI References")]
-        public Text PlayerNameText;
+        public TMP_Text PlayerNameText;
         public Image TeamColorImage;
-        public Text SelectedHeroText;
+        public TMP_Text SelectedHeroText;
         public Image ReadyStatusImage;
         
         // Constants for custom properties
@@ -25,24 +26,49 @@ namespace Photon.Pun.Demo.Asteroids
         private int playerId;
         private HeroSelectionManager heroSelectionManager;
 
+        /// <summary>
+        /// Inicializa la entrada con los datos del jugador
+        /// </summary>
         public void Initialize(int playerActorNumber, string playerName, HeroSelectionManager manager)
         {
+            Debug.Log($"PlayerInfoEntry: Inicializando entrada para {playerName} (ID: {playerActorNumber})");
+            
             playerId = playerActorNumber;
-            PlayerNameText.text = playerName;
+            
+            // Configurar el nombre del jugador
+            if (PlayerNameText != null)
+            {
+                PlayerNameText.text = playerName;
+            }
+            else
+            {
+                Debug.LogError("PlayerNameText no asignado en el inspector!");
+            }
+            
+            // Guardar referencia al manager
             heroSelectionManager = manager;
             
-            // Initially hide the ready status
-            ReadyStatusImage.gameObject.SetActive(false);
+            // Inicialmente ocultar el estado de listo
+            if (ReadyStatusImage != null)
+            {
+                ReadyStatusImage.gameObject.SetActive(false);
+            }
+            else
+            {
+                Debug.LogError("ReadyStatusImage no asignado en el inspector!");
+            }
             
-            // Update the display
+            // Actualizar la visualización
             UpdateDisplay();
         }
 
+        /// <summary>
+        /// Actualiza la visualización basada en las propiedades actuales del jugador
+        /// </summary>
         public void UpdateDisplay()
         {
+            // Buscar el jugador correspondiente a este ID
             Player targetPlayer = null;
-            
-            // Find the player with matching actor number
             foreach (Player p in PhotonNetwork.PlayerList)
             {
                 if (p.ActorNumber == playerId)
@@ -52,49 +78,84 @@ namespace Photon.Pun.Demo.Asteroids
                 }
             }
             
-            if (targetPlayer == null) return;
-            
-            // Update team color
-            object teamObj;
-            if (targetPlayer.CustomProperties.TryGetValue(PLAYER_TEAM, out teamObj) && teamObj != null)
+            // Si no se encuentra el jugador, salir
+            if (targetPlayer == null)
             {
-                int team = (int)teamObj;
-                TeamColorImage.color = (team == TEAM_RED) ? Color.red : Color.blue;
+                Debug.LogWarning($"No se encontró al jugador con ID {playerId}");
+                return;
             }
             
-            // Update selected hero
-            object heroIdObj;
-            if (targetPlayer.CustomProperties.TryGetValue(PLAYER_SELECTED_HERO, out heroIdObj) && heroIdObj != null)
+            // Actualizar el color del equipo
+            if (TeamColorImage != null)
             {
-                int heroId = (int)heroIdObj;
-                
-                if (heroId != -1)
+                object teamObj;
+                if (targetPlayer.CustomProperties.TryGetValue(PLAYER_TEAM, out teamObj) && teamObj != null)
                 {
-                    // Find the hero name from the available heroes
-                    string heroName = "Unknown";
-                    foreach (var hero in heroSelectionManager.AvailableHeroes)
-                    {
-                        if (hero.Id == heroId)
-                        {
-                            heroName = hero.Name;
-                            break;
-                        }
-                    }
-                    
-                    SelectedHeroText.text = "Hero: " + heroName;
+                    int team = (int)teamObj;
+                    TeamColorImage.color = (team == TEAM_RED) ? Color.red : Color.blue;
+                    TeamColorImage.gameObject.SetActive(true);
                 }
                 else
                 {
-                    SelectedHeroText.text = "Selecting...";
+                    // Si no tiene equipo asignado, ocultar o usar un color neutral
+                    TeamColorImage.color = Color.gray;
+                    TeamColorImage.gameObject.SetActive(true);
                 }
             }
-            
-            // Update ready status
-            object isReadyObj;
-            if (targetPlayer.CustomProperties.TryGetValue(PLAYER_HERO_READY, out isReadyObj) && isReadyObj != null)
+            else
             {
-                bool isReady = (bool)isReadyObj;
-                ReadyStatusImage.gameObject.SetActive(isReady);
+                Debug.LogError("TeamColorImage no asignado en el inspector!");
+            }
+            
+            // Actualizar el héroe seleccionado
+            if (SelectedHeroText != null)
+            {
+                object heroIdObj;
+                if (targetPlayer.CustomProperties.TryGetValue(PLAYER_SELECTED_HERO, out heroIdObj) && heroIdObj != null)
+                {
+                    int heroId = (int)heroIdObj;
+                    
+                    if (heroId != -1 && heroSelectionManager != null)
+                    {
+                        // Buscar el nombre del héroe
+                        HeroData heroData = heroSelectionManager.GetHeroById(heroId);
+                        if (heroData != null)
+                        {
+                            SelectedHeroText.text = "Héroe: " + heroData.Name;
+                        }
+                        else
+                        {
+                            SelectedHeroText.text = "Héroe: Desconocido";
+                        }
+                    }
+                    else
+                    {
+                        SelectedHeroText.text = "Seleccionando";
+                    }
+                }
+                else
+                {
+                    SelectedHeroText.text = "Sin selección";
+                }
+            }
+            else
+            {
+                Debug.LogError("SelectedHeroText no asignado en el inspector!");
+            }
+            
+            // Actualizar el estado de listo
+            if (ReadyStatusImage != null)
+            {
+                object isReadyObj;
+                if (targetPlayer.CustomProperties.TryGetValue(PLAYER_HERO_READY, out isReadyObj) && isReadyObj != null)
+                {
+                    bool isReady = (bool)isReadyObj;
+                    ReadyStatusImage.gameObject.SetActive(isReady);
+                }
+                else
+                {
+                    ReadyStatusImage.gameObject.SetActive(false);
+                }
             }
         }
     }

@@ -1,13 +1,14 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 namespace Photon.Pun.Demo.Asteroids
 {
     public class HeroSelectionPanel : MonoBehaviour
     {
         [Header("UI References")]
-        public Text RoomNameText;
-        public Text PlayerCountText;
+        public TMP_Text RoomNameText;
+        public TMP_Text PlayerCountText;
         public Button LeaveRoomButton;
         
         private HeroSelectionManager heroSelectionManager;
