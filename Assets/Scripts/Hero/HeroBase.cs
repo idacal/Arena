@@ -75,26 +75,44 @@ namespace Photon.Pun.Demo.Asteroids
             currentMana = maxMana;
         }
         
-        protected virtual void Start()
+        // Añade esto en la sección de [Header("References")] de HeroBase.cs
+public GameObject uiCanvasPrefab;  // Prefab del canvas UI para asignar automáticamente
+
+// Reemplaza/modifica el método Start() en HeroBase.cs
+protected virtual void Start()
+{
+    // Configurar héroe según los datos del jugador
+    if (photonView.IsMine)
+    {
+        // Cargar datos del héroe seleccionado
+        LoadHeroData();
+        
+        // Instanciar el canvas UI si tenemos el prefab y somos el jugador local
+        if (uiCanvasPrefab != null)
         {
-            // Configurar héroe según los datos del jugador
-            if (photonView.IsMine)
-            {
-                // Cargar datos del héroe seleccionado
-                LoadHeroData();
-            }
+            GameObject canvasInstance = Instantiate(uiCanvasPrefab, transform);
             
-            // Aplicar color del equipo
-            ApplyTeamColor();
-            
-            // Actualizar UI
-            if (uiController != null)
+            // Buscar el componente HeroUIController en el canvas instanciado
+            HeroUIController canvasUIController = canvasInstance.GetComponent<HeroUIController>();
+            if (canvasUIController != null)
             {
-                uiController.UpdateHealthBar(currentHealth, maxHealth);
-                uiController.UpdateManaBar(currentMana, maxMana);
-                uiController.SetPlayerName(photonView.Owner.NickName);
+                // Asignar referencias
+                uiController = canvasUIController;
             }
         }
+    }
+    
+    // Aplicar color del equipo
+    ApplyTeamColor();
+    
+    // Actualizar UI si existe el controlador
+    if (uiController != null)
+    {
+        uiController.UpdateHealthBar(currentHealth, maxHealth);
+        uiController.UpdateManaBar(currentMana, maxMana);
+        uiController.SetPlayerName(photonView.Owner.NickName);
+    }
+}
         
         protected virtual void Update()
         {

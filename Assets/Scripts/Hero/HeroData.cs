@@ -46,5 +46,8 @@ namespace Photon.Pun.Demo.Asteroids
         public float DamageAmount;
         public float Duration;
         public float Range;
+        
+        // Añadir referencia para el sonido
+        public AudioClip AbilitySound;
     }
 }

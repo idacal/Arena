@@ -29,21 +29,25 @@ namespace Photon.Pun.Demo.Asteroids
         /// <summary>
         /// Convierte el ScriptableObject a una estructura HeroAbility
         /// </summary>
-        public HeroAbility ToHeroAbility()
+        /// <summary>
+/// Convierte el ScriptableObject a una estructura HeroAbility
+/// </summary>
+    public HeroAbility ToHeroAbility()
+    {
+        return new HeroAbility
         {
-            return new HeroAbility
-            {
-                Name = this.Name,
-                Description = this.Description,
-                IconSprite = this.IconSprite,
-                Hotkey = this.Hotkey,
-                Cooldown = this.Cooldown,
-                ManaCost = this.ManaCost,
-                AbilityType = this.AbilityType,
-                DamageAmount = this.DamageAmount,
-                Duration = this.Duration,
-                Range = this.Range
-            };
-        }
+            Name = this.Name,
+            Description = this.Description,
+            IconSprite = this.IconSprite,
+            Hotkey = this.Hotkey,
+            Cooldown = this.Cooldown,
+            ManaCost = this.ManaCost,
+            AbilityType = this.AbilityType,
+            DamageAmount = this.DamageAmount,
+            Duration = this.Duration,
+            Range = this.Range,
+            AbilitySound = this.AbilitySound // Añadir sonido
+        };
+    }
     }
 }

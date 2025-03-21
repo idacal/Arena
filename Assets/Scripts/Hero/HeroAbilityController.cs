@@ -23,6 +23,9 @@ namespace Photon.Pun.Demo.Asteroids
         [Header("Ability Configuration")]
         public List<AbilitySlot> abilitySlots = new List<AbilitySlot>();
         
+        [Header("UI References")]
+        public GameAbilityUI gameAbilityUI;
+        
         // Referencias privadas
         private HeroBase heroBase;
         private Camera mainCamera;
@@ -51,6 +54,17 @@ namespace Photon.Pun.Demo.Asteroids
                 if (slot.hotkeyText != null && slot.abilityData != null)
                 {
                     slot.hotkeyText.text = slot.abilityData.Hotkey;
+                }
+            }
+            
+            // Buscar la referencia a la UI de habilidades si no está asignada
+            if (gameAbilityUI == null)
+            {
+                gameAbilityUI = GetComponentInChildren<GameAbilityUI>();
+                
+                if (gameAbilityUI == null)
+                {
+                    gameAbilityUI = FindObjectOfType<GameAbilityUI>();
                 }
             }
         }
@@ -118,6 +132,16 @@ namespace Photon.Pun.Demo.Asteroids
                     Debug.LogWarning($"No se encontró prefab para la habilidad {abilities[i].Name} en {prefabPath}");
                 }
             }
+            
+            // Actualizar la UI si existe
+            if (gameAbilityUI != null)
+            {
+                gameAbilityUI.RefreshAbilityUI();
+            }
+            else
+            {
+                Debug.LogWarning("No se encontró GameAbilityUI al configurar habilidades");
+            }
         }
         
         /// <summary>
@@ -130,6 +154,10 @@ namespace Photon.Pun.Demo.Asteroids
                 if (abilitySlots[i].cooldownRemaining > 0)
                 {
                     abilitySlots[i].cooldownRemaining -= Time.deltaTime;
+                    
+                    // Asegurarse de que no sea negativo
+                    if (abilitySlots[i].cooldownRemaining < 0)
+                        abilitySlots[i].cooldownRemaining = 0;
                     
                     // Actualizar imagen de cooldown si está configurada
                     if (abilitySlots[i].cooldownImage != null && abilitySlots[i].abilityData != null)
@@ -192,6 +220,17 @@ namespace Photon.Pun.Demo.Asteroids
         }
         
         /// <summary>
+        /// Método público para usar una habilidad desde un botón de UI
+        /// </summary>
+        public void OnAbilityButtonClicked(int slotIndex)
+        {
+            if (photonView.IsMine)
+            {
+                UseAbility(slotIndex);
+            }
+        }
+        
+        /// <summary>
         /// Implementación de IPunObservable
         /// </summary>
         public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
@@ -242,48 +281,82 @@ namespace Photon.Pun.Demo.Asteroids
             }
         }
         
+        /// <summary>
+        /// Obtiene los datos de habilidad por índice
+        /// </summary>
+        public HeroAbility GetAbilityData(int index)
+        {
+            if (index >= 0 && index < abilitySlots.Count)
+            {
+                return abilitySlots[index].abilityData;
+            }
+            return null;
+        }
+        
+        /// <summary>
+        /// Obtiene el tiempo de cooldown restante por índice
+        /// </summary>
+        public float GetCooldownRemaining(int index)
+        {
+            if (index >= 0 && index < abilitySlots.Count)
+            {
+                return abilitySlots[index].cooldownRemaining;
+            }
+            return 0f;
+        }
+        
         #region PHOTON RPC
         
         [PunRPC]
-        private void RPC_UseAbility(int slotIndex, Vector3 position, Vector3 direction, PhotonMessageInfo info)
+private void RPC_UseAbility(int slotIndex, Vector3 position, Vector3 direction, PhotonMessageInfo info)
+{
+    if (slotIndex < 0 || slotIndex >= abilitySlots.Count)
+        return;
+        
+    AbilitySlot slot = abilitySlots[slotIndex];
+    
+    // Verificar si tenemos datos de habilidad
+    if (slot.abilityData == null)
+        return;
+        
+    // Instanciar prefab de habilidad si existe
+    if (slot.abilityPrefab != null)
+    {
+        // Crear un GameObject para la habilidad
+        GameObject abilityObj = Instantiate(
+            slot.abilityPrefab, 
+            position, 
+            Quaternion.LookRotation(direction)
+        );
+        
+        // Configurar la habilidad
+        AbilityBehaviour abilityBehaviour = abilityObj.GetComponent<AbilityBehaviour>();
+        if (abilityBehaviour != null)
         {
-            if (slotIndex < 0 || slotIndex >= abilitySlots.Count)
-                return;
-                
-            AbilitySlot slot = abilitySlots[slotIndex];
-            
-            // Verificar si tenemos datos de habilidad
-            if (slot.abilityData == null)
-                return;
-                
-            // Instanciar prefab de habilidad si existe
-            if (slot.abilityPrefab != null)
-            {
-                // Crear un GameObject para la habilidad
-                GameObject abilityObj = Instantiate(
-                    slot.abilityPrefab, 
-                    position, 
-                    Quaternion.LookRotation(direction)
-                );
-                
-                // Configurar la habilidad
-                AbilityBehaviour abilityBehaviour = abilityObj.GetComponent<AbilityBehaviour>();
-                if (abilityBehaviour != null)
-                {
-                    abilityBehaviour.Initialize(
-                        heroBase,               // Caster
-                        slot.abilityData,       // Datos de habilidad
-                        info.Sender.ActorNumber // ID del jugador que la lanzó
-                    );
-                }
-            }
-            
-            // Reproducir efectos de sonido si es el cliente local
-            if (photonView.IsMine)
-            {
-                // Añadir reproducción de sonido aquí
-            }
+            abilityBehaviour.Initialize(
+                heroBase,               // Caster
+                slot.abilityData,       // Datos de habilidad
+                info.Sender.ActorNumber // ID del jugador que la lanzó
+            );
         }
+    }
+    
+    // Reproducir efectos de sonido si es el cliente local
+    if (photonView.IsMine)
+    {
+        // Reproducir sonido de habilidad si está configurado
+        if (slot.abilityData != null && slot.abilityData.AbilitySound != null)
+        {
+            AudioSource audioSource = GetComponent<AudioSource>();
+            if (audioSource == null)
+            {
+                audioSource = gameObject.AddComponent<AudioSource>();
+            }
+            
+            audioSource.PlayOneShot(slot.abilityData.AbilitySound);
+        }
+    }
+}
         
         #endregion
     }
