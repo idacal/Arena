@@ -36,6 +36,10 @@ namespace Photon.Pun.Demo.Asteroids
         [Header("References")]
         public HeroUIController uiController;
         public Animator animator;
+        public GameObject uiCanvasPrefab;  // Prefab del canvas UI para asignar automáticamente
+        
+        [Header("Debug")]
+        public bool debugMode = false;
         
         // Referencias privadas
         protected Rigidbody heroRigidbody;
@@ -75,44 +79,49 @@ namespace Photon.Pun.Demo.Asteroids
             currentMana = maxMana;
         }
         
-        // Añade esto en la sección de [Header("References")] de HeroBase.cs
-public GameObject uiCanvasPrefab;  // Prefab del canvas UI para asignar automáticamente
-
-// Reemplaza/modifica el método Start() en HeroBase.cs
-protected virtual void Start()
-{
-    // Configurar héroe según los datos del jugador
-    if (photonView.IsMine)
-    {
-        // Cargar datos del héroe seleccionado
-        LoadHeroData();
-        
-        // Instanciar el canvas UI si tenemos el prefab y somos el jugador local
-        if (uiCanvasPrefab != null)
+        protected virtual void Start()
         {
-            GameObject canvasInstance = Instantiate(uiCanvasPrefab, transform);
-            
-            // Buscar el componente HeroUIController en el canvas instanciado
-            HeroUIController canvasUIController = canvasInstance.GetComponent<HeroUIController>();
-            if (canvasUIController != null)
+            // Configurar héroe según los datos del jugador
+            if (photonView.IsMine)
             {
-                // Asignar referencias
-                uiController = canvasUIController;
+                // Cargar datos del héroe seleccionado
+                LoadHeroData();
+                
+                // Instanciar el canvas UI si tenemos el prefab y somos el jugador local
+                if (uiCanvasPrefab != null)
+                {
+                    GameObject canvasInstance = Instantiate(uiCanvasPrefab, transform);
+                    
+                    // Buscar el componente HeroUIController en el canvas instanciado
+                    HeroUIController canvasUIController = canvasInstance.GetComponent<HeroUIController>();
+                    if (canvasUIController != null)
+                    {
+                        // Asignar referencias
+                        uiController = canvasUIController;
+                    }
+                }
             }
+            
+            // Aplicar color del equipo
+            ApplyTeamColor();
+            
+            // Actualizar UI si existe el controlador
+            if (uiController != null)
+            {
+                uiController.UpdateHealthBar(currentHealth, maxHealth);
+                uiController.UpdateManaBar(currentMana, maxMana);
+                uiController.SetPlayerName(photonView.Owner.NickName);
+            }
+            
+            // Forzar visibilidad del modelo en todos los clientes
+            if (photonView.IsMine)
+            {
+                photonView.RPC("RPC_ForceModelUpdate", RpcTarget.AllBuffered);
+            }
+            
+            // Invocar de nuevo después de un breve retraso (por si hay problemas de timing)
+            Invoke("DelayedVisibilityCheck", 0.5f);
         }
-    }
-    
-    // Aplicar color del equipo
-    ApplyTeamColor();
-    
-    // Actualizar UI si existe el controlador
-    if (uiController != null)
-    {
-        uiController.UpdateHealthBar(currentHealth, maxHealth);
-        uiController.UpdateManaBar(currentMana, maxMana);
-        uiController.SetPlayerName(photonView.Owner.NickName);
-    }
-}
         
         protected virtual void Update()
         {
@@ -163,84 +172,6 @@ protected virtual void Start()
         /// <summary>
         /// Carga los datos del héroe desde el HeroManager
         /// </summary>
-        /// 
-        // Actualiza estos métodos en tu clase HeroBase para integrar las animaciones
-
-// En la clase HeroBase, modifica el método Die()
-// Actualiza estos métodos en tu clase HeroBase para integrar las animaciones
-
-// En la clase HeroBase, modifica el método Die()
-protected virtual void Die()
-{
-    if (_isDead)
-        return;
-        
-    _isDead = true;
-    
-    // Desactivar controles
-    if (heroCollider != null)
-        heroCollider.enabled = false;
-        
-    if (heroRigidbody != null)
-        heroRigidbody.isKinematic = true;
-        
-    // Reproducir animación de muerte
-    HeroMovementController moveController = GetComponent<HeroMovementController>();
-    if (moveController != null)
-    {
-        moveController.PlayDeathAnimation();
-    }
-    else if (animator != null)
-    {
-        animator.SetTrigger("Die");
-    }
-    
-    // Invocar evento de muerte
-    OnHeroDeath?.Invoke(this);
-    
-    // Iniciar respawn si es el jugador local
-    if (photonView.IsMine)
-    {
-        Invoke("Respawn", 5.0f); // 5 segundos para respawn
-    }
-}
-
-// En la clase HeroBase, modifica el método Respawn()
-protected virtual void Respawn()
-{
-    // Implementación básica, se puede mejorar para posicionar en spawn points, etc.
-    _isDead = false;
-    currentHealth = maxHealth;
-    currentMana = maxMana;
-    
-    // Reactivar componentes
-    if (heroCollider != null)
-        heroCollider.enabled = true;
-        
-    if (heroRigidbody != null)
-        heroRigidbody.isKinematic = false;
-        
-    // Reproducir animación de respawn
-    HeroMovementController moveController = GetComponent<HeroMovementController>();
-    if (moveController != null)
-    {
-        moveController.PlayRespawnAnimation();
-    }
-    else if (animator != null)
-    {
-        animator.SetTrigger("Respawn");
-    }
-    
-    // Invocar evento de respawn
-    OnHeroRespawn?.Invoke(this);
-    
-    // Actualizar UI
-    if (uiController != null)
-    {
-        uiController.UpdateHealthBar(currentHealth, maxHealth);
-        uiController.UpdateManaBar(currentMana, maxMana);
-    }
-}
         protected virtual void LoadHeroData()
         {
             // Obtener el ID del héroe seleccionado por el jugador
@@ -330,12 +261,93 @@ protected virtual void Respawn()
         /// <summary>
         /// Maneja la muerte del héroe
         /// </summary>
-        
+        protected virtual void Die()
+        {
+            if (_isDead)
+                return;
+                
+            _isDead = true;
+            
+            // Desactivar controles
+            if (heroCollider != null)
+                heroCollider.enabled = false;
+                
+            if (heroRigidbody != null)
+                heroRigidbody.isKinematic = true;
+                
+            // Reproducir animación de muerte si hay animador
+            if (animator != null)
+                animator.SetTrigger("Die");
+                
+            // Invocar evento de muerte
+            OnHeroDeath?.Invoke(this);
+            
+            // Iniciar respawn si es el jugador local
+            if (photonView.IsMine)
+            {
+                Invoke("Respawn", 5.0f); // 5 segundos para respawn
+            }
+        }
         
         /// <summary>
         /// Maneja el respawn del héroe
         /// </summary>
+        protected virtual void Respawn()
+        {
+            // Implementación básica, se puede mejorar para posicionar en spawn points, etc.
+            _isDead = false;
+            currentHealth = maxHealth;
+            currentMana = maxMana;
+            
+            // Reactivar componentes
+            if (heroCollider != null)
+                heroCollider.enabled = true;
+                
+            if (heroRigidbody != null)
+                heroRigidbody.isKinematic = false;
+                
+            // Reproducir animación si hay animador
+            if (animator != null)
+                animator.SetTrigger("Respawn");
+                
+            // Invocar evento de respawn
+            OnHeroRespawn?.Invoke(this);
+            
+            // Actualizar UI
+            if (uiController != null)
+            {
+                uiController.UpdateHealthBar(currentHealth, maxHealth);
+                uiController.UpdateManaBar(currentMana, maxMana);
+            }
+        }
         
+        /// <summary>
+        /// Verifica y corrige la visibilidad del modelo con retraso
+        /// </summary>
+        private void DelayedVisibilityCheck()
+        {
+            // Si los renderers siguen desactivados, activarlos
+            bool foundInvisibleRenderer = false;
+            Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+            
+            foreach (Renderer renderer in renderers)
+            {
+                if (!renderer.enabled)
+                {
+                    renderer.enabled = true;
+                    foundInvisibleRenderer = true;
+                    
+                    if (debugMode) {
+                        Debug.Log($"Activado renderer: {renderer.name} en modelo del héroe");
+                    }
+                }
+            }
+            
+            if (foundInvisibleRenderer && photonView.IsMine)
+            {
+                photonView.RPC("RPC_ForceModelUpdate", RpcTarget.Others);
+            }
+        }
         
         #endregion
         
@@ -379,6 +391,36 @@ protected virtual void Respawn()
             {
                 uiController.UpdateHealthBar(currentHealth, maxHealth);
                 uiController.ShowHealText(amount);
+            }
+        }
+        
+        [PunRPC]
+        private void RPC_ForceModelUpdate()
+        {
+            // Asegurarse de que todos los renderers están habilitados
+            Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+            foreach (Renderer renderer in renderers)
+            {
+                if (!renderer.enabled)
+                {
+                    renderer.enabled = true;
+                    
+                    if (debugMode) {
+                        Debug.Log($"RPC_ForceModelUpdate: Activado renderer {renderer.name}");
+                    }
+                }
+            }
+            
+            // Si hay animator, asegurarse de que está habilitado y trigger una actualización
+            if (animator != null)
+            {
+                animator.enabled = true;
+                animator.Rebind(); // Forza la actualización de la animación
+                animator.Update(0f); // Actualiza el estado del animator inmediatamente
+                
+                if (debugMode) {
+                    Debug.Log("RPC_ForceModelUpdate: Animator actualizado");
+                }
             }
         }
         

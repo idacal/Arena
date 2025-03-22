@@ -26,6 +26,9 @@ namespace Photon.Pun.Demo.Asteroids
         [Header("UI References")]
         public GameAbilityUI gameAbilityUI;
         
+        [Header("Debug")]
+        public bool debugMode = false;
+        
         // Referencias privadas
         private HeroBase heroBase;
         private Camera mainCamera;
@@ -89,135 +92,139 @@ namespace Photon.Pun.Demo.Asteroids
         /// <summary>
         /// Configura las habilidades del héroe según los datos proporcionados
         /// </summary>
-        // Método corregido para SetupAbilities en HeroAbilityController.cs
-
-public void SetupAbilities(List<HeroAbility> abilities)
-{
-    // Asegurarse de que tenemos suficientes slots
-    while (abilitySlots.Count < abilities.Count)
-    {
-        abilitySlots.Add(new AbilitySlot());
-    }
-    
-    // Obtener el nombre del héroe para búsqueda dinámica
-    string heroName = "";
-    if (heroBase != null)
-    {
-        heroName = heroBase.heroName;
-    }
-    
-    // Configurar cada habilidad
-    for (int i = 0; i < abilities.Count; i++)
-    {
-        abilitySlots[i].abilityData = abilities[i];
-        
-        // Asignar hotkey basada en el dato de la habilidad
-        switch (abilities[i].Hotkey.ToUpper())
+        public void SetupAbilities(List<HeroAbility> abilities)
         {
-            case "Q": abilitySlots[i].hotkey = KeyCode.Q; break;
-            case "W": abilitySlots[i].hotkey = KeyCode.W; break;
-            case "E": abilitySlots[i].hotkey = KeyCode.E; break;
-            case "R": abilitySlots[i].hotkey = KeyCode.R; break;
-            case "D": abilitySlots[i].hotkey = KeyCode.D; break;
-            case "F": abilitySlots[i].hotkey = KeyCode.F; break;
-            default: abilitySlots[i].hotkey = KeyCode.Alpha1 + i; break;
-        }
-        
-        // Actualizar texto de hotkey si está configurado
-        if (abilitySlots[i].hotkeyText != null)
-        {
-            abilitySlots[i].hotkeyText.text = abilities[i].Hotkey;
-        }
-        
-        // Limpiar espacios y caracteres especiales del nombre para usarlo en la ruta
-        string safeAbilityName = abilities[i].Name.Replace(" ", "").Replace(",", "").Replace(".", "");
-        
-        // PRIORIDAD 1: Buscar en la ruta específica del héroe
-        if (!string.IsNullOrEmpty(heroName))
-        {
-            // Limpiar espacios y caracteres especiales del nombre del héroe
-            string safeHeroName = heroName.Replace(" ", "").Replace(",", "").Replace(".", "");
-            
-            // Intentar primera con la estructura de carpetas con subcarpeta del héroe
-            string heroSpecificPath = $"Abilities/{heroName}/{safeAbilityName}";
-            GameObject abilityPrefab = Resources.Load<GameObject>(heroSpecificPath);
-            
-            if (abilityPrefab == null)
+            // Asegurarse de que tenemos suficientes slots
+            while (abilitySlots.Count < abilities.Count)
             {
-                // Intentar con nombre limpio del héroe
-                heroSpecificPath = $"Abilities/{safeHeroName}/{safeAbilityName}";
-                abilityPrefab = Resources.Load<GameObject>(heroSpecificPath);
+                abilitySlots.Add(new AbilitySlot());
             }
             
-            if (abilityPrefab != null)
+            // Obtener el nombre del héroe para búsqueda dinámica
+            string heroName = "";
+            if (heroBase != null)
             {
-                abilitySlots[i].abilityPrefab = abilityPrefab;
-                Debug.Log($"Prefab cargado desde ruta específica del héroe: {heroSpecificPath}");
-                continue; // Prefab encontrado, continuar con la siguiente habilidad
+                heroName = heroBase.heroName;
             }
-        }
-        
-        // PRIORIDAD 2: Buscar usando PrefabName del SO (si existiera y se hubiera transferido)
-        // Esto sería ideal si HeroAbility tuviera una propiedad PrefabName
-        
-        // PRIORIDAD 3: Buscar en la ruta genérica (como fallback)
-        string genericPath = $"Abilities/{safeAbilityName}";
-        GameObject genericPrefab = Resources.Load<GameObject>(genericPath);
-        
-        if (genericPrefab != null)
-        {
-            abilitySlots[i].abilityPrefab = genericPrefab;
-            Debug.Log($"Prefab cargado desde ruta genérica: {genericPath}");
-        }
-        else
-        {
-            Debug.LogWarning($"No se encontró prefab para la habilidad {abilities[i].Name} en {genericPath}");
             
-            // PRIORIDAD 4: Intentar rutas adicionales comunes
-            string[] alternativePaths = {
-                $"Abilities/Prefabs/{safeAbilityName}",
-                $"Prefabs/Abilities/{safeAbilityName}",
-                $"Resources/Abilities/{safeAbilityName}"
-            };
-            
-            foreach (string path in alternativePaths)
+            // Configurar cada habilidad
+            for (int i = 0; i < abilities.Count; i++)
             {
-                GameObject altPrefab = Resources.Load<GameObject>(path);
-                if (altPrefab != null)
+                abilitySlots[i].abilityData = abilities[i];
+                
+                // Asignar hotkey basada en el dato de la habilidad
+                switch (abilities[i].Hotkey.ToUpper())
                 {
-                    abilitySlots[i].abilityPrefab = altPrefab;
-                    Debug.Log($"Prefab cargado desde ruta alternativa: {path}");
-                    break;
+                    case "Q": abilitySlots[i].hotkey = KeyCode.Q; break;
+                    case "W": abilitySlots[i].hotkey = KeyCode.W; break;
+                    case "E": abilitySlots[i].hotkey = KeyCode.E; break;
+                    case "R": abilitySlots[i].hotkey = KeyCode.R; break;
+                    case "D": abilitySlots[i].hotkey = KeyCode.D; break;
+                    case "F": abilitySlots[i].hotkey = KeyCode.F; break;
+                    default: abilitySlots[i].hotkey = KeyCode.Alpha1 + i; break;
+                }
+                
+                // Actualizar texto de hotkey si está configurado
+                if (abilitySlots[i].hotkeyText != null)
+                {
+                    abilitySlots[i].hotkeyText.text = abilities[i].Hotkey;
+                }
+                
+                // Limpiar espacios y caracteres especiales del nombre para usarlo en la ruta
+                string safeAbilityName = abilities[i].Name.Replace(" ", "").Replace(",", "").Replace(".", "");
+                
+                // PRIORIDAD 1: Buscar en la ruta específica del héroe
+                if (!string.IsNullOrEmpty(heroName))
+                {
+                    // Limpiar espacios y caracteres especiales del nombre del héroe
+                    string safeHeroName = heroName.Replace(" ", "").Replace(",", "").Replace(".", "");
+                    
+                    // Intentar primera con la estructura de carpetas con subcarpeta del héroe
+                    string heroSpecificPath = $"Abilities/{heroName}/{safeAbilityName}";
+                    GameObject abilityPrefab = Resources.Load<GameObject>(heroSpecificPath);
+                    
+                    if (abilityPrefab == null)
+                    {
+                        // Intentar con nombre limpio del héroe
+                        heroSpecificPath = $"Abilities/{safeHeroName}/{safeAbilityName}";
+                        abilityPrefab = Resources.Load<GameObject>(heroSpecificPath);
+                    }
+                    
+                    if (abilityPrefab != null)
+                    {
+                        abilitySlots[i].abilityPrefab = abilityPrefab;
+                        if (debugMode) {
+                            Debug.Log($"Prefab cargado desde ruta específica del héroe: {heroSpecificPath}");
+                        }
+                        continue; // Prefab encontrado, continuar con la siguiente habilidad
+                    }
+                }
+                
+                // PRIORIDAD 2: Buscar usando PrefabName del SO (si existiera y se hubiera transferido)
+                // Esto sería ideal si HeroAbility tuviera una propiedad PrefabName
+                
+                // PRIORIDAD 3: Buscar en la ruta genérica (como fallback)
+                string genericPath = $"Abilities/{safeAbilityName}";
+                GameObject genericPrefab = Resources.Load<GameObject>(genericPath);
+                
+                if (genericPrefab != null)
+                {
+                    abilitySlots[i].abilityPrefab = genericPrefab;
+                    if (debugMode) {
+                        Debug.Log($"Prefab cargado desde ruta genérica: {genericPath}");
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning($"No se encontró prefab para la habilidad {abilities[i].Name} en {genericPath}");
+                    
+                    // PRIORIDAD 4: Intentar rutas adicionales comunes
+                    string[] alternativePaths = {
+                        $"Abilities/Prefabs/{safeAbilityName}",
+                        $"Prefabs/Abilities/{safeAbilityName}",
+                        $"Resources/Abilities/{safeAbilityName}"
+                    };
+                    
+                    foreach (string path in alternativePaths)
+                    {
+                        GameObject altPrefab = Resources.Load<GameObject>(path);
+                        if (altPrefab != null)
+                        {
+                            abilitySlots[i].abilityPrefab = altPrefab;
+                            if (debugMode) {
+                                Debug.Log($"Prefab cargado desde ruta alternativa: {path}");
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // Actualizar la UI si existe
+            if (gameAbilityUI != null)
+            {
+                gameAbilityUI.RefreshAbilityUI();
+            }
+            else
+            {
+                // Buscar la UI como componente hermano o hijo
+                gameAbilityUI = GetComponentInChildren<GameAbilityUI>();
+                
+                if (gameAbilityUI == null && transform.parent != null)
+                {
+                    gameAbilityUI = transform.parent.GetComponentInChildren<GameAbilityUI>();
+                }
+                
+                if (gameAbilityUI != null)
+                {
+                    gameAbilityUI.RefreshAbilityUI();
+                }
+                else
+                {
+                    Debug.LogWarning("No se encontró GameAbilityUI al configurar habilidades");
                 }
             }
         }
-    }
-    
-    // Actualizar la UI si existe
-    if (gameAbilityUI != null)
-    {
-        gameAbilityUI.RefreshAbilityUI();
-    }
-    else
-    {
-        // Buscar la UI como componente hermano o hijo
-        gameAbilityUI = GetComponentInChildren<GameAbilityUI>();
-        
-        if (gameAbilityUI == null && transform.parent != null)
-        {
-            gameAbilityUI = transform.parent.GetComponentInChildren<GameAbilityUI>();
-        }
-        
-        if (gameAbilityUI != null)
-        {
-            gameAbilityUI.RefreshAbilityUI();
-        }
-        else
-        {
-            Debug.LogWarning("No se encontró GameAbilityUI al configurar habilidades");
-        }
-    }
-}
         
         /// <summary>
         /// Actualiza los cooldowns de las habilidades
@@ -262,50 +269,37 @@ public void SetupAbilities(List<HeroAbility> abilities)
         /// <summary>
         /// Usa la habilidad en el slot especificado
         /// </summary>
-        // Actualiza el método UseAbility() en HeroAbilityController.cs
-
-private void UseAbility(int slotIndex)
-{
-    if (slotIndex < 0 || slotIndex >= abilitySlots.Count)
-        return;
-        
-    AbilitySlot slot = abilitySlots[slotIndex];
-    
-    // Verificar si está en cooldown
-    if (slot.cooldownRemaining > 0)
-        return;
-        
-    // Verificar si tenemos datos de habilidad
-    if (slot.abilityData == null)
-        return;
-        
-    // Verificar si tenemos suficiente maná
-    if (!heroBase.ConsumeMana(slot.abilityData.ManaCost))
-        return;
-        
-    // Aplicar cooldown
-    slot.cooldownRemaining = slot.abilityData.Cooldown;
-    
-    // Actualizar imagen de cooldown
-    if (slot.cooldownImage != null)
-    {
-        slot.cooldownImage.fillAmount = 1.0f;
-    }
-    
-    // Reproducir animación de ataque
-    HeroMovementController moveController = heroBase.GetComponent<HeroMovementController>();
-    if (moveController != null)
-    {
-        moveController.PlayAttackAnimation();
-    }
-    else if (heroBase.animator != null)
-    {
-        heroBase.animator.SetTrigger("Attack");
-    }
-    
-    // Lanzar la habilidad en el servidor
-    photonView.RPC("RPC_UseAbility", RpcTarget.All, slotIndex, transform.position, transform.forward);
-}
+        private void UseAbility(int slotIndex)
+        {
+            if (slotIndex < 0 || slotIndex >= abilitySlots.Count)
+                return;
+                
+            AbilitySlot slot = abilitySlots[slotIndex];
+            
+            // Verificar si está en cooldown
+            if (slot.cooldownRemaining > 0)
+                return;
+                
+            // Verificar si tenemos datos de habilidad
+            if (slot.abilityData == null)
+                return;
+                
+            // Verificar si tenemos suficiente maná
+            if (!heroBase.ConsumeMana(slot.abilityData.ManaCost))
+                return;
+                
+            // Aplicar cooldown
+            slot.cooldownRemaining = slot.abilityData.Cooldown;
+            
+            // Actualizar imagen de cooldown
+            if (slot.cooldownImage != null)
+            {
+                slot.cooldownImage.fillAmount = 1.0f;
+            }
+            
+            // Lanzar la habilidad en el servidor
+            photonView.RPC("RPC_UseAbility", RpcTarget.All, slotIndex, transform.position, transform.forward);
+        }
         
         /// <summary>
         /// Método público para usar una habilidad desde un botón de UI
@@ -393,58 +387,142 @@ private void UseAbility(int slotIndex)
             return 0f;
         }
         
+        /// <summary>
+        /// Obtiene la ruta relativa al directorio Resources para un prefab
+        /// </summary>
+        private string GetPrefabPathInResources(GameObject prefab)
+        {
+            if (prefab == null) return null;
+            
+            // No podemos obtener la ruta desde el prefab directamente, así que
+            // intentamos construirla a partir del nombre
+            
+            // Intento 1: Buscar en la ruta de habilidades con el nombre del héroe
+            string heroName = heroBase?.heroName;
+            if (!string.IsNullOrEmpty(heroName))
+            {
+                string path = $"Abilities/{heroName}/{prefab.name}";
+                GameObject test = Resources.Load<GameObject>(path);
+                if (test != null) return path;
+                
+                // Probar con nombre sin espacios
+                string sanitizedName = heroName.Replace(" ", "");
+                path = $"Abilities/{sanitizedName}/{prefab.name}";
+                test = Resources.Load<GameObject>(path);
+                if (test != null) return path;
+            }
+            
+            // Intento 2: Buscar directamente en Abilities
+            string directPath = $"Abilities/{prefab.name}";
+            GameObject directTest = Resources.Load<GameObject>(directPath);
+            if (directTest != null) return directPath;
+            
+            if (debugMode) {
+                Debug.LogWarning($"No se pudo determinar la ruta en Resources para {prefab.name}");
+            }
+            return null;
+        }
+        
         #region PHOTON RPC
         
         [PunRPC]
-private void RPC_UseAbility(int slotIndex, Vector3 position, Vector3 direction, PhotonMessageInfo info)
-{
-    if (slotIndex < 0 || slotIndex >= abilitySlots.Count)
-        return;
-        
-    AbilitySlot slot = abilitySlots[slotIndex];
-    
-    // Verificar si tenemos datos de habilidad
-    if (slot.abilityData == null)
-        return;
-        
-    // Instanciar prefab de habilidad si existe
-    if (slot.abilityPrefab != null)
-    {
-        // Crear un GameObject para la habilidad
-        GameObject abilityObj = Instantiate(
-            slot.abilityPrefab, 
-            position, 
-            Quaternion.LookRotation(direction)
-        );
-        
-        // Configurar la habilidad
-        AbilityBehaviour abilityBehaviour = abilityObj.GetComponent<AbilityBehaviour>();
-        if (abilityBehaviour != null)
+        private void RPC_UseAbility(int slotIndex, Vector3 position, Vector3 direction, PhotonMessageInfo info)
         {
-            abilityBehaviour.Initialize(
-                heroBase,               // Caster
-                slot.abilityData,       // Datos de habilidad
-                info.Sender.ActorNumber // ID del jugador que la lanzó
-            );
-        }
-    }
-    
-    // Reproducir efectos de sonido si es el cliente local
-    if (photonView.IsMine)
-    {
-        // Reproducir sonido de habilidad si está configurado
-        if (slot.abilityData != null && slot.abilityData.AbilitySound != null)
-        {
-            AudioSource audioSource = GetComponent<AudioSource>();
-            if (audioSource == null)
-            {
-                audioSource = gameObject.AddComponent<AudioSource>();
+            if (debugMode) {
+                Debug.Log($"RPC_UseAbility llamado para slot {slotIndex}. Soy dueño: {photonView.IsMine}");
             }
             
-            audioSource.PlayOneShot(slot.abilityData.AbilitySound);
+            if (slotIndex < 0 || slotIndex >= abilitySlots.Count)
+                return;
+                
+            AbilitySlot slot = abilitySlots[slotIndex];
+            
+            // Verificar si tenemos datos de habilidad
+            if (slot.abilityData == null)
+            {
+                Debug.LogWarning($"No hay datos de habilidad para el slot {slotIndex}");
+                return;
+            }
+            
+            // Instanciar prefab de habilidad si existe
+            if (slot.abilityPrefab != null)
+            {
+                if (debugMode) {
+                    Debug.Log($"Instanciando prefab para {slot.abilityData.Name}");
+                }
+                
+                // Crear un GameObject para la habilidad
+                GameObject abilityObj;
+                
+                // Si es el dueño, usar PhotonNetwork.Instantiate
+                if (photonView.IsMine)
+                {
+                    // Obtener la ruta relativa al Resources
+                    string prefabPath = GetPrefabPathInResources(slot.abilityPrefab);
+                    
+                    // Instantiate through PhotonNetwork
+                    if (!string.IsNullOrEmpty(prefabPath))
+                    {
+                        if (debugMode) {
+                            Debug.Log($"Instanciando vía Photon: {prefabPath}");
+                        }
+                        abilityObj = PhotonNetwork.Instantiate(prefabPath, position, Quaternion.LookRotation(direction));
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"No se pudo obtener ruta en Resources para {slot.abilityData.Name}, usando Instantiate local");
+                        abilityObj = Instantiate(slot.abilityPrefab, position, Quaternion.LookRotation(direction));
+                    }
+                }
+                else
+                {
+                    // Si no somos el dueño, usar Instantiate normal
+                    abilityObj = Instantiate(slot.abilityPrefab, position, Quaternion.LookRotation(direction));
+                }
+                
+                // Configurar la habilidad
+                AbilityBehaviour abilityBehaviour = abilityObj.GetComponent<AbilityBehaviour>();
+                if (abilityBehaviour != null)
+                {
+                    abilityBehaviour.Initialize(
+                        heroBase,                // Caster
+                        slot.abilityData,        // Datos de habilidad
+                        info.Sender.ActorNumber  // ID del jugador que la lanzó
+                    );
+                }
+                else
+                {
+                    Debug.LogError($"El prefab de habilidad no tiene un componente AbilityBehaviour: {slot.abilityPrefab.name}");
+                }
+            }
+            else
+            {
+                Debug.LogWarning($"No hay prefab asignado para la habilidad {slot.abilityData.Name}");
+            }
+            
+            // Activar animación
+            HeroMovementController moveController = heroBase.GetComponent<HeroMovementController>();
+            if (moveController != null)
+            {
+                moveController.PlayAttackAnimation();
+            }
+            
+            // Reproducir efectos de sonido si es el cliente local
+            if (photonView.IsMine)
+            {
+                // Reproducir sonido de habilidad si está configurado
+                if (slot.abilityData != null && slot.abilityData.AbilitySound != null)
+                {
+                    AudioSource audioSource = GetComponent<AudioSource>();
+                    if (audioSource == null)
+                    {
+                        audioSource = gameObject.AddComponent<AudioSource>();
+                    }
+                    
+                    audioSource.PlayOneShot(slot.abilityData.AbilitySound);
+                }
+            }
         }
-    }
-}
         
         #endregion
     }

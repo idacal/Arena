@@ -20,8 +20,12 @@ namespace Photon.Pun.Demo.Asteroids
         public string dieTrigger = "Die";
         public string respawnTrigger = "Respawn";
         
+        [Header("Debug")]
+        public bool debugMode = false;
+        
         // Referencias privadas
         private HeroBase heroBase;
+        private HeroAnimationSync animSync;
         
         // Cambiado de privado a público para permitir acceso desde BuffAbility
         public NavMeshAgent navAgent;
@@ -40,9 +44,6 @@ namespace Photon.Pun.Demo.Asteroids
         private float timeSinceLastPositionUpdate = 0f;
         private float positionUpdateInterval = 0.2f; // Actualizar cada 200ms
         
-        // Variables para debugging
-        private bool debugMode = false;
-        
         void Awake()
         {
             // Obtener componentes
@@ -57,6 +58,13 @@ namespace Photon.Pun.Demo.Asteroids
                     // Buscar animator en hijos si no está en el objeto principal
                     animator = GetComponentInChildren<Animator>();
                 }
+            }
+            
+            // Buscar HeroAnimationSync
+            animSync = GetComponent<HeroAnimationSync>();
+            if (animSync == null)
+            {
+                animSync = GetComponentInParent<HeroAnimationSync>();
             }
             
             // Debug message
@@ -206,7 +214,9 @@ namespace Photon.Pun.Demo.Asteroids
                 // Calcular velocidad normalizada para la animación (0-1)
                 float moveSpeed = navAgent.velocity.magnitude / navAgent.speed;
                 
-                // Aplicar el valor al parámetro de animación
+                // Para evitar pequeñas fluctuaciones, redondea valores muy pequeños a cero
+                if (moveSpeed < 0.05f) moveSpeed = 0f;
+                
                 animator.SetFloat(moveSpeedParameter, moveSpeed);
                 
                 // Debug opcional
@@ -222,11 +232,8 @@ namespace Photon.Pun.Demo.Asteroids
         /// </summary>
         private void TestAnimations()
         {
-            if (animator != null)
-            {
-                Debug.Log("Probando animación de ataque...");
-                animator.SetTrigger(attackTrigger);
-            }
+            PlayAttackAnimation();
+            Debug.Log("Probando animación de ataque...");
         }
         
         /// <summary>
@@ -296,7 +303,11 @@ namespace Photon.Pun.Demo.Asteroids
         /// </summary>
         public void PlayAttackAnimation()
         {
-            if (animator != null)
+            if (animSync != null)
+            {
+                animSync.TriggerAnimationForAll(attackTrigger);
+            }
+            else if (animator != null)
             {
                 animator.SetTrigger(attackTrigger);
             }
@@ -307,7 +318,11 @@ namespace Photon.Pun.Demo.Asteroids
         /// </summary>
         public void PlayDeathAnimation()
         {
-            if (animator != null)
+            if (animSync != null)
+            {
+                animSync.TriggerAnimationForAll(dieTrigger);
+            }
+            else if (animator != null)
             {
                 animator.SetTrigger(dieTrigger);
             }
@@ -318,7 +333,11 @@ namespace Photon.Pun.Demo.Asteroids
         /// </summary>
         public void PlayRespawnAnimation()
         {
-            if (animator != null)
+            if (animSync != null)
+            {
+                animSync.TriggerAnimationForAll(respawnTrigger);
+            }
+            else if (animator != null)
             {
                 animator.SetTrigger(respawnTrigger);
             }

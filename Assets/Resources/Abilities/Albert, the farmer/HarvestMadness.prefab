@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 4628166914243286855}
   - component: {fileID: 2457210732029297195}
   - component: {fileID: 4622625313734082455}
+  - component: {fileID: 3238252319721251229}
   m_Layer: 0
   m_Name: HarvestMadness
   m_TagString: Untagged
@@ -49,7 +50,7 @@ MonoBehaviour:
   Group: 0
   prefixField: -1
   Synchronization: 3
-  OwnershipTransfer: 0
+  OwnershipTransfer: 1
   observableSearch: 2
   ObservedComponents:
   - {fileID: 4622625313734082455}
@@ -90,3 +91,16 @@ MonoBehaviour:
   furyEffectPrefab: {fileID: 0}
   furyDuration: 6
   attackSpeedBonus: 100
+--- !u!114 &3238252319721251229
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5462789346991478595}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6965ac613f7e713408abb8eec4962bff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  debugMode: 1

@@ -20,6 +20,7 @@ GameObject:
   - component: {fileID: 4377486281178659590}
   - component: {fileID: 3269517159320140481}
   - component: {fileID: 7424854189262889703}
+  - component: {fileID: -129073883150696952}
   m_Layer: 0
   m_Name: HeroBase
   m_TagString: Untagged
@@ -253,6 +254,8 @@ MonoBehaviour:
   abilityController: {fileID: 7424854189262889703}
   uiController: {fileID: 0}
   animator: {fileID: 0}
+  uiCanvasPrefab: {fileID: 0}
+  debugMode: 0
 --- !u!114 &3269517159320140481
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -269,6 +272,10 @@ MonoBehaviour:
   targetDistance: 0.1
   animator: {fileID: 0}
   moveSpeedParameter: MoveSpeed
+  attackTrigger: Attack
+  dieTrigger: Die
+  respawnTrigger: Respawn
+  debugMode: 0
   navAgent: {fileID: 0}
 --- !u!114 &7424854189262889703
 MonoBehaviour:
@@ -284,3 +291,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   abilitySlots: []
   gameAbilityUI: {fileID: 0}
+  debugMode: 0
+--- !u!114 &-129073883150696952
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8450020148230160356}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71b4b7c7e1c6c6047850e3ee33862ddb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

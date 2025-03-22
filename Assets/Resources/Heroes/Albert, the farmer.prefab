@@ -2580,6 +2580,7 @@ GameObject:
   - component: {fileID: -7705321304214517472}
   - component: {fileID: 1129096755889270088}
   - component: {fileID: 1860633209005635629}
+  - component: {fileID: -6046582980940072358}
   m_Layer: 0
   m_Name: Albert, the farmer
   m_TagString: Untagged
@@ -2764,6 +2765,7 @@ MonoBehaviour:
   uiController: {fileID: 172655498075432403, guid: d2285228827d22b44b59630a257fb319, type: 3}
   animator: {fileID: 0}
   uiCanvasPrefab: {fileID: 8691770513599191608, guid: d2285228827d22b44b59630a257fb319, type: 3}
+  debugMode: 0
 --- !u!114 &1129096755889270088
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2783,6 +2785,7 @@ MonoBehaviour:
   attackTrigger: Attack
   dieTrigger: Die
   respawnTrigger: Respawn
+  debugMode: 0
   navAgent: {fileID: 0}
 --- !u!114 &1860633209005635629
 MonoBehaviour:
@@ -2798,6 +2801,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   abilitySlots: []
   gameAbilityUI: {fileID: 0}
+  debugMode: 0
+--- !u!114 &-6046582980940072358
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8713352010430717119}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71b4b7c7e1c6c6047850e3ee33862ddb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &9210927903783845167
 GameObject:
   m_ObjectHideFlags: 0

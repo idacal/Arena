@@ -49,6 +49,9 @@ MonoBehaviour:
   - BecomeIntangible
   - ExecuteCriticalAttack
   - MarkTarget
+  - RPC_TriggerAnimation
+  - RPC_EnsureVisibility
+  - RPC_ForceModelUpdate
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1
