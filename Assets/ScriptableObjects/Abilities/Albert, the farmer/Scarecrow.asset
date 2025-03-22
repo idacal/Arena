@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f002fe0d9fded9b4abca2a122dabef8e, type: 3}
+  m_Name: Scarecrow
+  m_EditorClassIdentifier: 
+  Name: Scarecrow
+  Description: Spawn a scarecrow to limit the enemy to get into a position
+  IconSprite: {fileID: 21300000, guid: a11e274865ce1984dbf926ec0b0e71e2, type: 3}
+  Hotkey: E
+  Cooldown: 10
+  ManaCost: 50
+  AbilityType: Activa
+  DamageAmount: 0
+  Duration: 0
+  Range: 0
+  AbilityPrefab: {fileID: 5313538048827016762, guid: 95c3f4ed991e566438a4d2fed81615de, type: 3}
+  AbilitySound: {fileID: 0}

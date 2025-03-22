@@ -2760,8 +2760,8 @@ MonoBehaviour:
   moveSpeed: 5
   armor: 20
   magicResistance: 20
-  abilityController: {fileID: 0}
-  uiController: {fileID: 0}
+  abilityController: {fileID: 1860633209005635629}
+  uiController: {fileID: 172655498075432403, guid: d2285228827d22b44b59630a257fb319, type: 3}
   animator: {fileID: 0}
   uiCanvasPrefab: {fileID: 8691770513599191608, guid: d2285228827d22b44b59630a257fb319, type: 3}
 --- !u!114 &1129096755889270088
