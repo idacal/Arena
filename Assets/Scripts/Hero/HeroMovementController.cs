@@ -16,6 +16,9 @@ namespace Photon.Pun.Demo.Asteroids
         [Header("Animation")]
         public Animator animator;
         public string moveSpeedParameter = "MoveSpeed";
+        public string attackTrigger = "Attack";
+        public string dieTrigger = "Die";
+        public string respawnTrigger = "Respawn";
         
         // Referencias privadas
         private HeroBase heroBase;
@@ -37,6 +40,9 @@ namespace Photon.Pun.Demo.Asteroids
         private float timeSinceLastPositionUpdate = 0f;
         private float positionUpdateInterval = 0.2f; // Actualizar cada 200ms
         
+        // Variables para debugging
+        private bool debugMode = false;
+        
         void Awake()
         {
             // Obtener componentes
@@ -46,62 +52,77 @@ namespace Photon.Pun.Demo.Asteroids
             if (animator == null)
             {
                 animator = GetComponent<Animator>();
+                if (animator == null)
+                {
+                    // Buscar animator en hijos si no está en el objeto principal
+                    animator = GetComponentInChildren<Animator>();
+                }
+            }
+            
+            // Debug message
+            if (animator == null && photonView.IsMine)
+            {
+                Debug.LogWarning("No se encontró un componente Animator en " + gameObject.name + ". Las animaciones no funcionarán.");
             }
         }
         
-        // Añade este método en la clase HeroMovementController
-private void ConfigureNavMeshAgent()
-{
-    // Configurar el NavMeshAgent con la velocidad del héroe
-    navAgent.speed = heroBase.moveSpeed;
-    navAgent.angularSpeed = rotationSpeed * 100;
-    navAgent.stoppingDistance = targetDistance;
-    
-    // Ajustes adicionales importantes para evitar caídas
-    navAgent.radius = 0.5f; // Ajusta este valor al radio del collider de tu personaje
-    navAgent.height = 2.0f; // Ajusta este valor a la altura del collider de tu personaje
-    navAgent.baseOffset = 0.0f; // Ajusta este valor si los pies del personaje no están alineados con el suelo
-    
-    // Estos valores mejoran la precisión del movimiento
-    navAgent.acceleration = 8.0f;
-    navAgent.angularSpeed = 120;
-    
-    // Esto ayuda a que el agente no se "separe" del personaje
-    navAgent.updatePosition = true;
-    navAgent.updateRotation = true;
-    
-    // Evita que el NavMeshAgent y el Rigidbody compitan por el control
-    Rigidbody rb = GetComponent<Rigidbody>();
-    if (rb != null)
-    {
-        // Si tienes un Rigidbody, configúralo así:
-        rb.isKinematic = true; // Deja que NavMeshAgent maneje la física
-        // O alternativamente:
-        // navAgent.updatePosition = false; // Si quieres que el Rigidbody maneje la física
-    }
-}
-
-// Reemplaza el método Start con este:
-void Start()
-{
-    // Solo controlar si es el jugador local
-    if (!photonView.IsMine)
-    {
-        // Desactivar el NavMeshAgent para jugadores remotos
-        navAgent.enabled = false;
-        return;
-    }
-    
-    // Obtener la cámara principal
-    mainCamera = Camera.main;
-    
-    // Configurar el NavMeshAgent de manera apropiada
-    ConfigureNavMeshAgent();
-    
-    // Inicializar posición objetivo
-    targetPosition = transform.position;
-    latestTargetPosition = targetPosition;
-}
+        void Start()
+        {
+            // Solo controlar si es el jugador local
+            if (!photonView.IsMine)
+            {
+                // Desactivar el NavMeshAgent para jugadores remotos
+                navAgent.enabled = false;
+                return;
+            }
+            
+            // Obtener la cámara principal
+            mainCamera = Camera.main;
+            
+            // Configurar el NavMeshAgent de manera apropiada
+            ConfigureNavMeshAgent();
+            
+            // Inicializar posición objetivo
+            targetPosition = transform.position;
+            latestTargetPosition = targetPosition;
+        }
+        
+        /// <summary>
+        /// Configura el NavMeshAgent con los valores apropiados para evitar problemas
+        /// </summary>
+        private void ConfigureNavMeshAgent()
+        {
+            // Configurar el NavMeshAgent con la velocidad del héroe
+            navAgent.speed = heroBase.moveSpeed;
+            navAgent.angularSpeed = rotationSpeed * 100;
+            navAgent.stoppingDistance = targetDistance;
+            
+            // Ajustes adicionales importantes para evitar caídas
+            navAgent.radius = 0.5f; // Ajusta este valor al radio del collider de tu personaje
+            navAgent.height = 2.0f; // Ajusta este valor a la altura del collider de tu personaje
+            navAgent.baseOffset = 0.0f; // Ajusta este valor si los pies del personaje no están alineados con el suelo
+            
+            // Estos valores mejoran la precisión del movimiento
+            navAgent.acceleration = 8.0f;
+            navAgent.angularSpeed = 120;
+            
+            // Esto ayuda a que el agente no se "separe" del personaje
+            navAgent.updatePosition = true;
+            navAgent.updateRotation = true;
+            
+            // Evita que el NavMeshAgent y el Rigidbody compitan por el control
+            Rigidbody rb = GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                // Si tienes un Rigidbody, configúralo así:
+                rb.isKinematic = true; // Deja que NavMeshAgent maneje la física
+            }
+            
+            if (debugMode && photonView.IsMine)
+            {
+                Debug.Log($"NavMeshAgent configurado para {gameObject.name}. Speed: {navAgent.speed}, Radius: {navAgent.radius}, Height: {navAgent.height}");
+            }
+        }
         
         void Update()
         {
@@ -121,6 +142,12 @@ void Start()
             
             // Actualizar animaciones
             UpdateAnimation();
+            
+            // Test de animaciones (solo para debug)
+            if (debugMode && Input.GetKeyDown(KeyCode.T))
+            {
+                TestAnimations();
+            }
             
             // Actualizar datos para sincronización
             timeSinceLastPositionUpdate += Time.deltaTime;
@@ -176,8 +203,29 @@ void Start()
         {
             if (animator != null)
             {
+                // Calcular velocidad normalizada para la animación (0-1)
                 float moveSpeed = navAgent.velocity.magnitude / navAgent.speed;
+                
+                // Aplicar el valor al parámetro de animación
                 animator.SetFloat(moveSpeedParameter, moveSpeed);
+                
+                // Debug opcional
+                if (debugMode && photonView.IsMine && Time.frameCount % 60 == 0)
+                {
+                    Debug.Log($"MoveSpeed: {moveSpeed}, Velocity: {navAgent.velocity.magnitude}");
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Método para probar animaciones manualmente (activado con tecla T si debugMode es true)
+        /// </summary>
+        private void TestAnimations()
+        {
+            if (animator != null)
+            {
+                Debug.Log("Probando animación de ataque...");
+                animator.SetTrigger(attackTrigger);
             }
         }
         
@@ -240,6 +288,39 @@ void Start()
                 {
                     animator.SetFloat(moveSpeedParameter, 0f);
                 }
+            }
+        }
+        
+        /// <summary>
+        /// Reproduce la animación de ataque
+        /// </summary>
+        public void PlayAttackAnimation()
+        {
+            if (animator != null)
+            {
+                animator.SetTrigger(attackTrigger);
+            }
+        }
+        
+        /// <summary>
+        /// Reproduce la animación de muerte
+        /// </summary>
+        public void PlayDeathAnimation()
+        {
+            if (animator != null)
+            {
+                animator.SetTrigger(dieTrigger);
+            }
+        }
+        
+        /// <summary>
+        /// Reproduce la animación de respawn
+        /// </summary>
+        public void PlayRespawnAnimation()
+        {
+            if (animator != null)
+            {
+                animator.SetTrigger(respawnTrigger);
             }
         }
         
@@ -337,5 +418,22 @@ void Start()
         }
         
         #endregion
+        
+        /// <summary>
+        /// Visualización de debug en el editor
+        /// </summary>
+        void OnDrawGizmos()
+        {
+            if (navAgent != null && navAgent.enabled && Application.isPlaying)
+            {
+                // Dibuja una esfera en el punto de destino
+                Gizmos.color = Color.green;
+                Gizmos.DrawSphere(navAgent.destination, 0.3f);
+                
+                // Dibuja una línea desde la posición actual hasta el destino
+                Gizmos.color = Color.blue;
+                Gizmos.DrawLine(transform.position, navAgent.destination);
+            }
+        }
     }
 }

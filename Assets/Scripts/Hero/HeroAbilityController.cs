@@ -187,37 +187,50 @@ namespace Photon.Pun.Demo.Asteroids
         /// <summary>
         /// Usa la habilidad en el slot especificado
         /// </summary>
-        private void UseAbility(int slotIndex)
-        {
-            if (slotIndex < 0 || slotIndex >= abilitySlots.Count)
-                return;
-                
-            AbilitySlot slot = abilitySlots[slotIndex];
-            
-            // Verificar si está en cooldown
-            if (slot.cooldownRemaining > 0)
-                return;
-                
-            // Verificar si tenemos datos de habilidad
-            if (slot.abilityData == null)
-                return;
-                
-            // Verificar si tenemos suficiente maná
-            if (!heroBase.ConsumeMana(slot.abilityData.ManaCost))
-                return;
-                
-            // Aplicar cooldown
-            slot.cooldownRemaining = slot.abilityData.Cooldown;
-            
-            // Actualizar imagen de cooldown
-            if (slot.cooldownImage != null)
-            {
-                slot.cooldownImage.fillAmount = 1.0f;
-            }
-            
-            // Lanzar la habilidad en el servidor
-            photonView.RPC("RPC_UseAbility", RpcTarget.All, slotIndex, transform.position, transform.forward);
-        }
+        // Actualiza el método UseAbility() en HeroAbilityController.cs
+
+private void UseAbility(int slotIndex)
+{
+    if (slotIndex < 0 || slotIndex >= abilitySlots.Count)
+        return;
+        
+    AbilitySlot slot = abilitySlots[slotIndex];
+    
+    // Verificar si está en cooldown
+    if (slot.cooldownRemaining > 0)
+        return;
+        
+    // Verificar si tenemos datos de habilidad
+    if (slot.abilityData == null)
+        return;
+        
+    // Verificar si tenemos suficiente maná
+    if (!heroBase.ConsumeMana(slot.abilityData.ManaCost))
+        return;
+        
+    // Aplicar cooldown
+    slot.cooldownRemaining = slot.abilityData.Cooldown;
+    
+    // Actualizar imagen de cooldown
+    if (slot.cooldownImage != null)
+    {
+        slot.cooldownImage.fillAmount = 1.0f;
+    }
+    
+    // Reproducir animación de ataque
+    HeroMovementController moveController = heroBase.GetComponent<HeroMovementController>();
+    if (moveController != null)
+    {
+        moveController.PlayAttackAnimation();
+    }
+    else if (heroBase.animator != null)
+    {
+        heroBase.animator.SetTrigger("Attack");
+    }
+    
+    // Lanzar la habilidad en el servidor
+    photonView.RPC("RPC_UseAbility", RpcTarget.All, slotIndex, transform.position, transform.forward);
+}
         
         /// <summary>
         /// Método público para usar una habilidad desde un botón de UI

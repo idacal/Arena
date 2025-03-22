@@ -418,6 +418,7 @@ MonoBehaviour:
   AvailableHeroesSO:
   - {fileID: 11400000, guid: 14f640571f1383945bbd30dc78f06eb8, type: 2}
   - {fileID: 11400000, guid: 25250400121953240856c26352b51db0, type: 2}
+  - {fileID: 11400000, guid: d7894738dd6c2484dad62afa6e740270, type: 2}
   debugMode: 1
 --- !u!4 &553502945
 Transform:

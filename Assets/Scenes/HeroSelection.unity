@@ -2610,7 +2610,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0.000005967721}
+  m_AnchoredPosition: {x: 0, y: 0.00009128973}
   m_SizeDelta: {x: 0, y: 300}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &1087525489
@@ -3236,7 +3236,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 422330859}
   m_Direction: 2
   m_Value: 0
-  m_Size: 0.9999708
+  m_Size: 0.99980634
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -3893,6 +3893,7 @@ MonoBehaviour:
   HeroScriptableObjects:
   - {fileID: 11400000, guid: 14f640571f1383945bbd30dc78f06eb8, type: 2}
   - {fileID: 11400000, guid: 25250400121953240856c26352b51db0, type: 2}
+  - {fileID: 11400000, guid: d7894738dd6c2484dad62afa6e740270, type: 2}
   AvailableHeroes: []
 --- !u!4 &1810467749
 Transform:

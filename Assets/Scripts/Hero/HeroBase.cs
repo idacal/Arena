@@ -163,6 +163,84 @@ protected virtual void Start()
         /// <summary>
         /// Carga los datos del héroe desde el HeroManager
         /// </summary>
+        /// 
+        // Actualiza estos métodos en tu clase HeroBase para integrar las animaciones
+
+// En la clase HeroBase, modifica el método Die()
+// Actualiza estos métodos en tu clase HeroBase para integrar las animaciones
+
+// En la clase HeroBase, modifica el método Die()
+protected virtual void Die()
+{
+    if (_isDead)
+        return;
+        
+    _isDead = true;
+    
+    // Desactivar controles
+    if (heroCollider != null)
+        heroCollider.enabled = false;
+        
+    if (heroRigidbody != null)
+        heroRigidbody.isKinematic = true;
+        
+    // Reproducir animación de muerte
+    HeroMovementController moveController = GetComponent<HeroMovementController>();
+    if (moveController != null)
+    {
+        moveController.PlayDeathAnimation();
+    }
+    else if (animator != null)
+    {
+        animator.SetTrigger("Die");
+    }
+    
+    // Invocar evento de muerte
+    OnHeroDeath?.Invoke(this);
+    
+    // Iniciar respawn si es el jugador local
+    if (photonView.IsMine)
+    {
+        Invoke("Respawn", 5.0f); // 5 segundos para respawn
+    }
+}
+
+// En la clase HeroBase, modifica el método Respawn()
+protected virtual void Respawn()
+{
+    // Implementación básica, se puede mejorar para posicionar en spawn points, etc.
+    _isDead = false;
+    currentHealth = maxHealth;
+    currentMana = maxMana;
+    
+    // Reactivar componentes
+    if (heroCollider != null)
+        heroCollider.enabled = true;
+        
+    if (heroRigidbody != null)
+        heroRigidbody.isKinematic = false;
+        
+    // Reproducir animación de respawn
+    HeroMovementController moveController = GetComponent<HeroMovementController>();
+    if (moveController != null)
+    {
+        moveController.PlayRespawnAnimation();
+    }
+    else if (animator != null)
+    {
+        animator.SetTrigger("Respawn");
+    }
+    
+    // Invocar evento de respawn
+    OnHeroRespawn?.Invoke(this);
+    
+    // Actualizar UI
+    if (uiController != null)
+    {
+        uiController.UpdateHealthBar(currentHealth, maxHealth);
+        uiController.UpdateManaBar(currentMana, maxMana);
+    }
+}
         protected virtual void LoadHeroData()
         {
             // Obtener el ID del héroe seleccionado por el jugador
@@ -252,65 +330,12 @@ protected virtual void Start()
         /// <summary>
         /// Maneja la muerte del héroe
         /// </summary>
-        protected virtual void Die()
-        {
-            if (_isDead)
-                return;
-                
-            _isDead = true;
-            
-            // Desactivar controles
-            if (heroCollider != null)
-                heroCollider.enabled = false;
-                
-            if (heroRigidbody != null)
-                heroRigidbody.isKinematic = true;
-                
-            // Reproducir animación de muerte si hay animador
-            if (animator != null)
-                animator.SetTrigger("Die");
-                
-            // Invocar evento de muerte
-            OnHeroDeath?.Invoke(this);
-            
-            // Iniciar respawn si es el jugador local
-            if (photonView.IsMine)
-            {
-                Invoke("Respawn", 5.0f); // 5 segundos para respawn
-            }
-        }
+        
         
         /// <summary>
         /// Maneja el respawn del héroe
         /// </summary>
-        protected virtual void Respawn()
-        {
-            // Implementación básica, se puede mejorar para posicionar en spawn points, etc.
-            _isDead = false;
-            currentHealth = maxHealth;
-            currentMana = maxMana;
-            
-            // Reactivar componentes
-            if (heroCollider != null)
-                heroCollider.enabled = true;
-                
-            if (heroRigidbody != null)
-                heroRigidbody.isKinematic = false;
-                
-            // Reproducir animación si hay animador
-            if (animator != null)
-                animator.SetTrigger("Respawn");
-                
-            // Invocar evento de respawn
-            OnHeroRespawn?.Invoke(this);
-            
-            // Actualizar UI
-            if (uiController != null)
-            {
-                uiController.UpdateHealthBar(currentHealth, maxHealth);
-                uiController.UpdateManaBar(currentMana, maxMana);
-            }
-        }
+        
         
         #endregion
         
