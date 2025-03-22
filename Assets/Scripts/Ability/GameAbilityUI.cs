@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
+using System.Text;
 
 namespace Photon.Pun.Demo.Asteroids
 {
@@ -16,6 +17,8 @@ namespace Photon.Pun.Demo.Asteroids
             public TMP_Text hotkeyText;        // Texto de hotkey (Q, W, E, R)
             public TMP_Text cooldownText;      // Texto para mostrar tiempo restante de cooldown
             public TMP_Text manaCostText;      // Texto para mostrar costo de maná
+            public TMP_Text abilityNameText;   // Texto para mostrar nombre de la habilidad
+            public TMP_Text abilityInfoText;   // Texto para mostrar información adicional (duración, daño, rango)
             public Button abilityButton;       // Botón para activar la habilidad
             public int slotIndex;              // Índice del slot correspondiente
         }
@@ -29,12 +32,18 @@ namespace Photon.Pun.Demo.Asteroids
         public bool useHorizontalLayout = true; // Si es falso, usará layout vertical
         public Vector2 slotSize = new Vector2(80, 80); // Tamaño de cada slot
 
+        [Header("Debug Options")]
+        public bool enableDebugOutput = true;  // Mostrar mensajes de depuración
+        public bool createDebugLabels = true;  // Crear etiquetas de depuración visual
+        public Color debugTextColor = Color.yellow; // Color para el texto de depuración
+
         [Header("References")]
         public HeroAbilityController abilityController;
         
         // Lista dinámica de slots de UI
         private List<AbilitySlotUI> abilitySlots = new List<AbilitySlotUI>();
         private HeroBase heroBase;
+        private List<GameObject> debugObjects = new List<GameObject>();
 
         void Awake()
         {
@@ -85,7 +94,7 @@ namespace Photon.Pun.Demo.Asteroids
             
             if (abilityController == null)
             {
-                Debug.LogError("No se encontró HeroAbilityController. La UI de habilidades no funcionará correctamente.");
+                DebugLog("No se encontró HeroAbilityController. La UI de habilidades no funcionará correctamente.", true);
             }
         }
 
@@ -118,9 +127,12 @@ namespace Photon.Pun.Demo.Asteroids
         {
             if (abilityController == null)
             {
-                Debug.LogWarning("No se encontró el controlador de habilidades.");
+                DebugLog("No se encontró el controlador de habilidades.", true);
                 return;
             }
+            
+            // Limpiar objetos de depuración anteriores
+            ClearDebugObjects();
             
             // Antes de crear nuevos slots, limpiar los existentes
             ClearAbilitySlots();
@@ -128,20 +140,35 @@ namespace Photon.Pun.Demo.Asteroids
             // Verificar si hay habilidades para mostrar
             if (abilityController.abilitySlots.Count == 0)
             {
-                Debug.LogWarning("No hay habilidades configuradas para este héroe.");
+                DebugLog("No hay habilidades configuradas para este héroe.", true);
                 return;
             }
             
-            Debug.Log($"Creando {abilityController.abilitySlots.Count} slots de habilidades");
+            DebugLog($"Creando {abilityController.abilitySlots.Count} slots de habilidades");
             
             // Crear un slot de UI para cada habilidad en el controlador
             for (int i = 0; i < abilityController.abilitySlots.Count; i++)
             {
-                HeroAbilityController.AbilitySlot abilityData = abilityController.abilitySlots[i];
-                
-                // Crear slot de UI
-                AbilitySlotUI uiSlot = CreateAbilitySlot(i, abilityData);
-                abilitySlots.Add(uiSlot);
+                if (i < abilityController.abilitySlots.Count)
+                {
+                    HeroAbilityController.AbilitySlot abilityData = abilityController.abilitySlots[i];
+                    
+                    if (abilityData != null && abilityData.abilityData != null)
+                    {
+                        DebugLog($"Creando slot para habilidad: {abilityData.abilityData.Name} (Slot {i})");
+                        
+                        // Crear slot de UI
+                        AbilitySlotUI uiSlot = CreateAbilitySlot(i, abilityData);
+                        if (uiSlot != null)
+                        {
+                            abilitySlots.Add(uiSlot);
+                        }
+                    }
+                    else
+                    {
+                        DebugLog($"Datos nulos para el slot {i}", true);
+                    }
+                }
             }
             
             // Organizar los slots
@@ -156,47 +183,172 @@ namespace Photon.Pun.Demo.Asteroids
             // Verificar si tenemos un prefab
             if (abilitySlotPrefab == null)
             {
-                Debug.LogError("No hay prefab configurado para los slots de habilidad. Crea un prefab y asígnalo en el inspector.");
+                DebugLog("No hay prefab configurado para los slots de habilidad. Crea un prefab y asígnalo en el inspector.", true);
+                return null;
+            }
+            
+            // Verificar los datos de habilidad
+            if (abilityData == null || abilityData.abilityData == null)
+            {
+                DebugLog($"Datos de habilidad nulos para el slot {index}", true);
                 return null;
             }
             
             // Instanciar el prefab
             GameObject slotObject = Instantiate(abilitySlotPrefab, slotsContainer);
-            slotObject.name = $"AbilitySlot_{index}";
+            slotObject.name = $"AbilitySlot_{index}_{abilityData.abilityData.Name}";
             
             // Crear la estructura del slot de UI
             AbilitySlotUI uiSlot = new AbilitySlotUI();
             uiSlot.slotObject = slotObject;
             uiSlot.slotIndex = index;
             
-            // Intentar encontrar los componentes en el prefab
-            uiSlot.abilityIcon = slotObject.GetComponentInChildren<Image>();
+            // Obtener componentes principales de UI
             uiSlot.abilityButton = slotObject.GetComponent<Button>();
             
-            // Si hay un transform llamado "CooldownOverlay", buscar la imagen allí
-            Transform cooldownTransform = slotObject.transform.Find("CooldownOverlay");
-            if (cooldownTransform != null)
+            // Encontrar todos los componentes Text y Image
+            TMP_Text[] allTexts = slotObject.GetComponentsInChildren<TMP_Text>(true);
+            Image[] allImages = slotObject.GetComponentsInChildren<Image>(true);
+            
+            // Imprimir todos los textos encontrados para depuración
+            DebugLog($"Encontrados {allTexts.Length} componentes TMP_Text en el slot {index}:");
+            foreach (TMP_Text text in allTexts)
             {
-                uiSlot.cooldownOverlay = cooldownTransform.GetComponent<Image>();
+                DebugLog($"  - {text.name} (GameObject: {text.gameObject.name})");
             }
             
-            // Buscar los textos por nombre
-            Transform hotkeyTransform = slotObject.transform.Find("HotkeyText");
-            if (hotkeyTransform != null)
+            // Imprimir todas las imágenes encontradas para depuración
+            DebugLog($"Encontrados {allImages.Length} componentes Image en el slot {index}:");
+            foreach (Image image in allImages)
             {
-                uiSlot.hotkeyText = hotkeyTransform.GetComponent<TMP_Text>();
+                DebugLog($"  - {image.name} (GameObject: {image.gameObject.name})");
             }
             
-            Transform cooldownTextTransform = slotObject.transform.Find("CooldownText");
-            if (cooldownTextTransform != null)
+            // Asignar componentes basados en nombres
+            foreach (TMP_Text text in allTexts)
             {
-                uiSlot.cooldownText = cooldownTextTransform.GetComponent<TMP_Text>();
+                // Usar el nombre del objeto o el nombre del componente para identificarlo
+                string componentName = text.gameObject.name;
+                
+                if (componentName.Contains("HotkeyText"))
+                {
+                    uiSlot.hotkeyText = text;
+                    DebugLog($"Asignado HotkeyText: {componentName}");
+                }
+                else if (componentName.Contains("CooldownText"))
+                {
+                    uiSlot.cooldownText = text;
+                    DebugLog($"Asignado CooldownText: {componentName}");
+                }
+                else if (componentName.Contains("ManaCostText"))
+                {
+                    uiSlot.manaCostText = text;
+                    DebugLog($"Asignado ManaCostText: {componentName}");
+                }
+                else if (componentName.Contains("AbilityNameText") || componentName.Contains("NameText"))
+                {
+                    uiSlot.abilityNameText = text;
+                    DebugLog($"Asignado AbilityNameText: {componentName}");
+                }
+                else if (componentName.Contains("InfoText") || componentName.Contains("DescriptionText"))
+                {
+                    uiSlot.abilityInfoText = text;
+                    DebugLog($"Asignado AbilityInfoText: {componentName}");
+                }
             }
             
-            Transform manaCostTransform = slotObject.transform.Find("ManaCostText");
-            if (manaCostTransform != null)
+            // Si no encontramos específicamente el AbilityNameText, buscar por contenido
+            if (uiSlot.abilityNameText == null)
             {
-                uiSlot.manaCostText = manaCostTransform.GetComponent<TMP_Text>();
+                // Crear un texto temporal para el nombre de la habilidad si no existe
+                DebugLog($"No se encontró AbilityNameText para {abilityData.abilityData.Name}, buscando alternativas o creando uno nuevo");
+                
+                // Buscar un texto que no tenga asignación aún
+                foreach (TMP_Text text in allTexts)
+                {
+                    if (text != uiSlot.hotkeyText && 
+                        text != uiSlot.cooldownText && 
+                        text != uiSlot.manaCostText &&
+                        text != uiSlot.abilityInfoText)
+                    {
+                        uiSlot.abilityNameText = text;
+                        DebugLog($"Usando texto sin asignar como AbilityNameText: {text.gameObject.name}");
+                        break;
+                    }
+                }
+                
+                // Si todavía no tenemos un texto para el nombre, crear uno nuevo
+                if (uiSlot.abilityNameText == null && createDebugLabels)
+                {
+                    GameObject nameTextObj = new GameObject("AbilityNameText_Created");
+                    nameTextObj.transform.SetParent(slotObject.transform);
+                    RectTransform rt = nameTextObj.AddComponent<RectTransform>();
+                    rt.anchoredPosition = new Vector2(0, -40); // Posicionar debajo del icono
+                    rt.sizeDelta = new Vector2(100, 20);
+                    
+                    TMP_Text nameText = nameTextObj.AddComponent<TextMeshProUGUI>();
+                    nameText.fontSize = 12;
+                    nameText.alignment = TextAlignmentOptions.Center;
+                    nameText.color = debugTextColor;
+                    
+                    uiSlot.abilityNameText = nameText;
+                    DebugLog("Creado nuevo AbilityNameText");
+                    
+                    // Añadir a la lista de objetos de depuración
+                    debugObjects.Add(nameTextObj);
+                }
+            }
+            
+            // Lo mismo para el texto de información adicional
+            if (uiSlot.abilityInfoText == null && createDebugLabels)
+            {
+                GameObject infoTextObj = new GameObject("AbilityInfoText_Created");
+                infoTextObj.transform.SetParent(slotObject.transform);
+                RectTransform rt = infoTextObj.AddComponent<RectTransform>();
+                rt.anchoredPosition = new Vector2(0, -60); // Posicionar debajo del nombre
+                rt.sizeDelta = new Vector2(120, 40);
+                
+                TMP_Text infoText = infoTextObj.AddComponent<TextMeshProUGUI>();
+                infoText.fontSize = 10;
+                infoText.alignment = TextAlignmentOptions.Center;
+                infoText.color = debugTextColor;
+                
+                uiSlot.abilityInfoText = infoText;
+                DebugLog("Creado nuevo AbilityInfoText");
+                
+                // Añadir a la lista de objetos de depuración
+                debugObjects.Add(infoTextObj);
+            }
+            
+            // Asignar imágenes
+            foreach (Image image in allImages)
+            {
+                string componentName = image.gameObject.name;
+                
+                if (componentName.Contains("AbilityIcon") || componentName.Contains("Icon"))
+                {
+                    uiSlot.abilityIcon = image;
+                    DebugLog($"Asignado AbilityIcon: {componentName}");
+                }
+                else if (componentName.Contains("CooldownOverlay") || componentName.Contains("Overlay"))
+                {
+                    uiSlot.cooldownOverlay = image;
+                    DebugLog($"Asignado CooldownOverlay: {componentName}");
+                }
+            }
+            
+            // Si no encontramos un icono específico, usar el primer Image que no sea el overlay
+            if (uiSlot.abilityIcon == null)
+            {
+                foreach (Image image in allImages)
+                {
+                    if (image != uiSlot.cooldownOverlay)
+                    {
+                        uiSlot.abilityIcon = image;
+                        DebugLog($"Usando imagen alternativa como AbilityIcon: {image.gameObject.name}");
+                        break;
+                    }
+                }
             }
             
             // Configurar el slot con los datos de la habilidad
@@ -212,27 +364,79 @@ namespace Photon.Pun.Demo.Asteroids
         {
             if (abilityData.abilityData == null)
             {
-                Debug.LogWarning($"No hay datos de habilidad para el slot {uiSlot.slotIndex}");
+                DebugLog($"No hay datos de habilidad para el slot {uiSlot.slotIndex}", true);
                 return;
             }
+            
+            // Guardar datos para depuración
+            string abilityName = abilityData.abilityData.Name;
+            string abilityHotkey = abilityData.abilityData.Hotkey;
+            int manaCost = abilityData.abilityData.ManaCost;
+            float damage = abilityData.abilityData.DamageAmount;
+            float duration = abilityData.abilityData.Duration;
+            float range = abilityData.abilityData.Range;
             
             // Configurar icono
             if (uiSlot.abilityIcon != null && abilityData.abilityData.IconSprite != null)
             {
                 uiSlot.abilityIcon.sprite = abilityData.abilityData.IconSprite;
                 uiSlot.abilityIcon.enabled = true;
+                DebugLog($"Icono configurado para {abilityName}");
+            }
+            else
+            {
+                DebugLog($"No se pudo configurar el icono para {abilityName}. abilityIcon nulo: {uiSlot.abilityIcon == null}, IconSprite nulo: {abilityData.abilityData.IconSprite == null}", true);
             }
             
             // Configurar texto de hotkey
             if (uiSlot.hotkeyText != null)
             {
-                uiSlot.hotkeyText.text = abilityData.abilityData.Hotkey;
+                uiSlot.hotkeyText.text = abilityHotkey;
+                DebugLog($"Hotkey configurado para {abilityName}: {abilityHotkey}");
             }
             
             // Configurar texto de costo de maná
             if (uiSlot.manaCostText != null)
             {
-                uiSlot.manaCostText.text = abilityData.abilityData.ManaCost.ToString();
+                uiSlot.manaCostText.text = manaCost.ToString();
+                DebugLog($"Mana cost configurado para {abilityName}: {manaCost}");
+            }
+            
+            // Configurar texto de nombre de habilidad
+            if (uiSlot.abilityNameText != null)
+            {
+                uiSlot.abilityNameText.text = abilityName;
+                DebugLog($"Ability name configurado para {abilityName}");
+                
+                // Hacer un log del estado del texto después de configurarlo
+                DebugLog($"AbilityNameText después de configurar: text='{uiSlot.abilityNameText.text}', " +
+                      $"enabled={uiSlot.abilityNameText.enabled}, " +
+                      $"gameObject.active={uiSlot.abilityNameText.gameObject.activeSelf}, " +
+                      $"color={uiSlot.abilityNameText.color}, " +
+                      $"alpha={uiSlot.abilityNameText.color.a}, " +
+                      $"fontSize={uiSlot.abilityNameText.fontSize}");
+            }
+            else
+            {
+                DebugLog($"AbilityNameText es nulo para {abilityName}, no se puede configurar el nombre", true);
+            }
+            
+            // Configurar texto de información adicional (daño, duración, rango)
+            if (uiSlot.abilityInfoText != null)
+            {
+                StringBuilder infoText = new StringBuilder();
+                
+                if (damage > 0)
+                    infoText.AppendLine($"DMG: {damage}");
+                
+                if (duration > 0)
+                    infoText.AppendLine($"DUR: {duration}s");
+                
+                if (range > 0)
+                    infoText.AppendLine($"RNG: {range}");
+                
+                uiSlot.abilityInfoText.text = infoText.ToString();
+                DebugLog($"Ability info configurado para {abilityName}: {infoText}");
             }
             
             // Inicializar overlay de cooldown (inicialmente invisible)
@@ -274,6 +478,19 @@ namespace Photon.Pun.Demo.Asteroids
             }
             
             abilitySlots.Clear();
+        }
+        
+        /// <summary>
+        /// Limpia los objetos de depuración creados
+        /// </summary>
+        private void ClearDebugObjects()
+        {
+            foreach (GameObject obj in debugObjects)
+            {
+                Destroy(obj);
+            }
+            
+            debugObjects.Clear();
         }
         
         /// <summary>
@@ -399,6 +616,42 @@ namespace Photon.Pun.Demo.Asteroids
             {
                 abilityController.OnAbilityButtonClicked(index);
             }
+        }
+        
+        /// <summary>
+        /// Muestra un mensaje de depuración si está habilitado
+        /// </summary>
+        private void DebugLog(string message, bool isError = false)
+        {
+            if (enableDebugOutput)
+            {
+                if (isError)
+                    Debug.LogError($"[GameAbilityUI] {message}");
+                else
+                    Debug.Log($"[GameAbilityUI] {message}");
+            }
+        }
+        
+        /// <summary>
+        /// Busca un hijo recursivamente por nombre
+        /// </summary>
+        private Transform FindChildRecursively(Transform parent, string name)
+        {
+            foreach (Transform child in parent)
+            {
+                if (child.name.Contains(name))
+                {
+                    return child;
+                }
+                
+                Transform result = FindChildRecursively(child, name);
+                if (result != null)
+                {
+                    return result;
+                }
+            }
+            
+            return null;
         }
     }
 }

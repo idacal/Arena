@@ -61,6 +61,25 @@ namespace Photon.Pun.Demo.Asteroids
             {
                 Debug.LogError("[HeroUIController] No se pudo encontrar el HeroBase asociado a este UI");
             }
+            
+            // Auto-find UI references if not assigned
+            if (heroNameText == null)
+            {
+                heroNameText = transform.FindDeepChild<TMP_Text>("Hero Name");
+                if (heroNameText == null)
+                    Debug.LogWarning("[HeroUIController] No se pudo encontrar el elemento Hero Name");
+                else
+                    Debug.Log("[HeroUIController] Se encontró automáticamente Hero Name");
+            }
+            
+            if (playerNameText == null)
+            {
+                playerNameText = transform.FindDeepChild<TMP_Text>("PlayerName");
+                if (playerNameText == null)
+                    Debug.LogWarning("[HeroUIController] No se pudo encontrar el elemento PlayerName");
+                else
+                    Debug.Log("[HeroUIController] Se encontró automáticamente PlayerName");
+            }
         }
         
         void Start()
@@ -81,6 +100,28 @@ namespace Photon.Pun.Demo.Asteroids
             
             // Verificar referencias importantes
             CheckReferences();
+            
+            // Set hero name and player name
+            if (heroOwner != null)
+            {
+                // Set hero name
+                if (heroNameText != null)
+                {
+                    heroNameText.text = heroOwner.heroName;
+                    Debug.Log("[HeroUIController] Hero name set to: " + heroOwner.heroName);
+                }
+                
+                // Set player name if it exists
+                if (playerNameText != null && heroOwner.photonView != null && heroOwner.photonView.Owner != null)
+                {
+                    playerNameText.text = heroOwner.photonView.Owner.NickName;
+                    Debug.Log("[HeroUIController] Player name set to: " + heroOwner.photonView.Owner.NickName);
+                }
+            }
+            else
+            {
+                Debug.LogError("[HeroUIController] No heroOwner assigned, can't set hero or player name");
+            }
         }
         
         /// <summary>
@@ -136,6 +177,7 @@ namespace Photon.Pun.Demo.Asteroids
             if (healthText == null) missingRefs += "healthText, ";
             if (manaText == null) missingRefs += "manaText, ";
             if (playerNameText == null) missingRefs += "playerNameText, ";
+            if (heroNameText == null) missingRefs += "heroNameText, ";
             
             if (missingRefs != "")
             {
@@ -193,6 +235,11 @@ namespace Photon.Pun.Demo.Asteroids
             if (playerNameText != null)
             {
                 playerNameText.text = name;
+                Debug.Log("[HeroUIController] Player name set to: " + name);
+            }
+            else
+            {
+                Debug.LogWarning("[HeroUIController] playerNameText is null, can't set player name");
             }
         }
         
@@ -204,6 +251,11 @@ namespace Photon.Pun.Demo.Asteroids
             if (heroNameText != null)
             {
                 heroNameText.text = name;
+                Debug.Log("[HeroUIController] Hero name set to: " + name);
+            }
+            else
+            {
+                Debug.LogWarning("[HeroUIController] heroNameText is null, can't set hero name");
             }
         }
         
@@ -314,6 +366,29 @@ namespace Photon.Pun.Demo.Asteroids
             
             // Destruir el objeto al terminar
             Destroy(textObj);
+        }
+    }
+    
+    // Extension method to find child transforms recursively
+    public static class TransformExtensions
+    {
+        public static T FindDeepChild<T>(this Transform parent, string name) where T : Component
+        {
+            foreach (Transform child in parent)
+            {
+                if (child.name == name)
+                {
+                    T component = child.GetComponent<T>();
+                    if (component != null)
+                        return component;
+                }
+                
+                T result = child.FindDeepChild<T>(name);
+                if (result != null)
+                    return result;
+            }
+            
+            return null;
         }
     }
 }
