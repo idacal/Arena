@@ -49,28 +49,59 @@ namespace Photon.Pun.Demo.Asteroids
             }
         }
         
-        void Start()
-        {
-            // Solo controlar si es el jugador local
-            if (!photonView.IsMine)
-            {
-                // Desactivar el NavMeshAgent para jugadores remotos
-                navAgent.enabled = false;
-                return;
-            }
-            
-            // Obtener la cámara principal
-            mainCamera = Camera.main;
-            
-            // Configurar el NavMeshAgent con la velocidad del héroe
-            navAgent.speed = heroBase.moveSpeed;
-            navAgent.angularSpeed = rotationSpeed * 100;
-            navAgent.stoppingDistance = targetDistance;
-            
-            // Inicializar posición objetivo
-            targetPosition = transform.position;
-            latestTargetPosition = targetPosition;
-        }
+        // Añade este método en la clase HeroMovementController
+private void ConfigureNavMeshAgent()
+{
+    // Configurar el NavMeshAgent con la velocidad del héroe
+    navAgent.speed = heroBase.moveSpeed;
+    navAgent.angularSpeed = rotationSpeed * 100;
+    navAgent.stoppingDistance = targetDistance;
+    
+    // Ajustes adicionales importantes para evitar caídas
+    navAgent.radius = 0.5f; // Ajusta este valor al radio del collider de tu personaje
+    navAgent.height = 2.0f; // Ajusta este valor a la altura del collider de tu personaje
+    navAgent.baseOffset = 0.0f; // Ajusta este valor si los pies del personaje no están alineados con el suelo
+    
+    // Estos valores mejoran la precisión del movimiento
+    navAgent.acceleration = 8.0f;
+    navAgent.angularSpeed = 120;
+    
+    // Esto ayuda a que el agente no se "separe" del personaje
+    navAgent.updatePosition = true;
+    navAgent.updateRotation = true;
+    
+    // Evita que el NavMeshAgent y el Rigidbody compitan por el control
+    Rigidbody rb = GetComponent<Rigidbody>();
+    if (rb != null)
+    {
+        // Si tienes un Rigidbody, configúralo así:
+        rb.isKinematic = true; // Deja que NavMeshAgent maneje la física
+        // O alternativamente:
+        // navAgent.updatePosition = false; // Si quieres que el Rigidbody maneje la física
+    }
+}
+
+// Reemplaza el método Start con este:
+void Start()
+{
+    // Solo controlar si es el jugador local
+    if (!photonView.IsMine)
+    {
+        // Desactivar el NavMeshAgent para jugadores remotos
+        navAgent.enabled = false;
+        return;
+    }
+    
+    // Obtener la cámara principal
+    mainCamera = Camera.main;
+    
+    // Configurar el NavMeshAgent de manera apropiada
+    ConfigureNavMeshAgent();
+    
+    // Inicializar posición objetivo
+    targetPosition = transform.position;
+    latestTargetPosition = targetPosition;
+}
         
         void Update()
         {
