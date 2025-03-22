@@ -3,22 +3,41 @@ using Photon.Pun;
 
 namespace Photon.Pun.Demo.Asteroids
 {
-    // ¡Importante! Añade este script a TODOS los prefabs de habilidades
-    public class NetworkAbilityHelper : MonoBehaviourPun
+    // Añade este script a TODOS los prefabs de habilidades
+    public class NetworkAbilityHelper : MonoBehaviourPun, IPunObservable
     {
         [Tooltip("Si está marcado, se mostrarán mensajes de depuración detallados")]
         public bool debugMode = false;
         
+        // Referencia al AbilityBehaviour para verificar propiedad
+        private AbilityBehaviour abilityBehaviour;
+        
+        // Indicador de si este objeto fue creado por nuestro photonView
+        private bool wasCreatedByMe = false;
+        
+        // Tick de vida para verificar si la habilidad debe destruirse
+        private float lifetimeTick = 0;
+        
         void Awake()
         {
+            // Obtener referencia al AbilityBehaviour
+            abilityBehaviour = GetComponent<AbilityBehaviour>();
+            
             // Asegurarse de que todos los renderers están activos al inicio
             ActivateAllRenderers();
+            
+            // Verificar si somos el creador
+            wasCreatedByMe = photonView.IsMine;
+            
+            if (debugMode) {
+                Debug.Log($"[NetworkAbilityHelper] Awake para {gameObject.name}. IsMine: {photonView.IsMine}, ViewID: {photonView.ViewID}");
+            }
         }
         
         void Start()
         {
             if (debugMode) {
-                Debug.Log($"[NetworkAbilityHelper] Inicializado para {gameObject.name}. IsMine: {photonView.IsMine}, ViewID: {photonView.ViewID}");
+                Debug.Log($"[NetworkAbilityHelper] Start para {gameObject.name}. IsMine: {photonView.IsMine}, ViewID: {photonView.ViewID}");
             }
             
             // Sincronizar la visualización en todos los clientes
@@ -27,8 +46,27 @@ namespace Photon.Pun.Demo.Asteroids
                 photonView.RPC("RPC_EnsureVisibility", RpcTarget.AllBuffered);
             }
             
-            // Segunda comprobación con retraso
+            // Segunda comprobación con retraso para asegurar visibilidad
             Invoke("DelayedVisibilityCheck", 0.2f);
+        }
+        
+        void Update()
+        {
+            // Si somos el dueño de la habilidad, controlar la destrucción
+            if (wasCreatedByMe && abilityBehaviour != null)
+            {
+                lifetimeTick += Time.deltaTime;
+                
+                // Si hemos excedido el tiempo de vida, destruir en red
+                if (lifetimeTick >= abilityBehaviour.lifetime && abilityBehaviour.lifetime > 0)
+                {
+                    if (debugMode) {
+                        Debug.Log($"[NetworkAbilityHelper] Destruyendo {gameObject.name} por timeout");
+                    }
+                    
+                    PhotonNetwork.Destroy(gameObject);
+                }
+            }
         }
         
         [PunRPC]
@@ -63,6 +101,33 @@ namespace Photon.Pun.Demo.Asteroids
                     }
                 }
             }
+            
+            // Activar todos los efectos de partículas
+            ParticleSystem[] particles = GetComponentsInChildren<ParticleSystem>(true);
+            foreach (ParticleSystem ps in particles)
+            {
+                if (!ps.isPlaying)
+                {
+                    ps.gameObject.SetActive(true);
+                    ps.Play(true);
+                    if (debugMode) {
+                        Debug.Log($"[NetworkAbilityHelper] Activado ParticleSystem: {ps.name}");
+                    }
+                }
+            }
+            
+            // Activar todos los Trail Renderers
+            TrailRenderer[] trails = GetComponentsInChildren<TrailRenderer>(true);
+            foreach (TrailRenderer trail in trails)
+            {
+                if (!trail.enabled)
+                {
+                    trail.enabled = true;
+                    if (debugMode) {
+                        Debug.Log($"[NetworkAbilityHelper] Activado TrailRenderer: {trail.name}");
+                    }
+                }
+            }
         }
         
         private void CreateAllVisuals()
@@ -80,7 +145,9 @@ namespace Photon.Pun.Demo.Asteroids
             
             // Verificar si ya existe una visualización
             Transform areaVisual = transform.Find("AreaVisual");
-            if (areaVisual != null) return;
+            Transform networkCreatedVisual = transform.Find("NetworkCreatedVisual");
+            
+            if (areaVisual != null || networkCreatedVisual != null) return;
             
             // Crear visualización del área manualmente
             CreateAOEVisual(aoeAbility.radius, new Color(1f, 1f, 0f, 0.5f));
@@ -108,7 +175,9 @@ namespace Photon.Pun.Demo.Asteroids
             
             // Crear círculo visual si no existe
             Transform circleVisual = transform.Find("CircleVisual");
-            if (circleVisual == null)
+            Transform networkCreatedVisual = transform.Find("NetworkCreatedVisual");
+            
+            if (circleVisual == null && networkCreatedVisual == null)
             {
                 CreateAOEVisual(scarecrow.radius, scarecrow.areaColor);
                 if (debugMode) {
@@ -229,6 +298,23 @@ namespace Photon.Pun.Demo.Asteroids
             }
             
             return new Material(shader);
+        }
+        
+        // Implementación para sincronización en red
+        public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
+        {
+            // Si estamos enviando datos (somos el dueño del objeto)
+            if (stream.IsWriting)
+            {
+                // Enviar tiempo de vida restante
+                stream.SendNext(lifetimeTick);
+            }
+            // Si estamos recibiendo datos
+            else
+            {
+                // Recibir tiempo de vida
+                lifetimeTick = (float)stream.ReceiveNext();
+            }
         }
     }
 }

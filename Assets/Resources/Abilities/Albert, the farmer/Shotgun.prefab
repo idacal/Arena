@@ -141,6 +141,9 @@ MonoBehaviour:
   flyingParticles: {fileID: 0}
   knockbackForce: 5
   knockbackDuration: 0.5
+  muzzleFlash: {fileID: 0}
+  shotgunSound: {fileID: 0}
+  shellEjectionDelay: 0.2
 --- !u!96 &7056298748962357741
 TrailRenderer:
   serializedVersion: 3

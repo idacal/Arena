@@ -30,6 +30,9 @@ namespace Photon.Pun.Demo.Asteroids
         // Lista de objetivos ya impactados para evitar múltiples impactos
         protected List<int> hitTargets = new List<int>();
         
+        // Flag para controlar si la destrucción está en curso
+        private bool isBeingDestroyed = false;
+        
         /// <summary>
         /// Inicializa la habilidad con datos específicos
         /// </summary>
@@ -105,7 +108,27 @@ namespace Photon.Pun.Demo.Asteroids
             // Crear efecto de impacto si existe
             if (impactEffectPrefab != null)
             {
-                Instantiate(impactEffectPrefab, target.transform.position + Vector3.up, Quaternion.identity);
+                // Usar PhotonNetwork.Instantiate si estamos en red
+                if (photonView.IsMine)
+                {
+                    // Intentar obtener ruta relativa a Resources
+                    string path = impactEffectPrefab.name;
+                    GameObject impactObj = Resources.Load<GameObject>("Effects/" + path);
+                    
+                    if (impactObj != null)
+                    {
+                        PhotonNetwork.Instantiate("Effects/" + path, 
+                            target.transform.position + Vector3.up, 
+                            Quaternion.identity);
+                    }
+                    else
+                    {
+                        // Fallback a Instantiate local
+                        Instantiate(impactEffectPrefab, 
+                            target.transform.position + Vector3.up, 
+                            Quaternion.identity);
+                    }
+                }
             }
             
             // Si debe destruirse al impactar
@@ -128,11 +151,32 @@ namespace Photon.Pun.Demo.Asteroids
         /// </summary>
         protected virtual void DestroyAbility()
         {
+            // Evitar múltiples destrucciones
+            if (isBeingDestroyed)
+                return;
+                
+            isBeingDestroyed = true;
+            
             // Cancelar cualquier Invoke pendiente
             CancelInvoke();
             
-            // Destruir el GameObject
-            Destroy(gameObject);
+            // Si somos el dueño del objeto, destruirlo en red
+            if (photonView.IsMine)
+            {
+                // Informar sobre la destrucción para debug
+                Debug.Log($"[AbilityBehaviour] Destruyendo {gameObject.name} en red. IsMine: {photonView.IsMine}, ViewID: {photonView.ViewID}");
+                
+                // Usar PhotonNetwork.Destroy para objetos creados con PhotonNetwork.Instantiate
+                PhotonNetwork.Destroy(gameObject);
+            }
+            else
+            {
+                // Si no somos el dueño, solo liberamos recursos locales
+                Debug.Log($"[AbilityBehaviour] Destrucción local de {gameObject.name}. No somos dueños, ViewID: {photonView.ViewID}");
+                
+                // Podemos desactivar el GameObject para ocultarlo mientras esperamos que el dueño lo destruya
+                gameObject.SetActive(false);
+            }
         }
         
         /// <summary>
@@ -151,6 +195,9 @@ namespace Photon.Pun.Demo.Asteroids
                 {
                     stream.SendNext(targetId);
                 }
+                
+                // Enviar estado de destrucción
+                stream.SendNext(isBeingDestroyed);
             }
             else
             {
@@ -163,6 +210,16 @@ namespace Photon.Pun.Demo.Asteroids
                 for (int i = 0; i < hitCount; i++)
                 {
                     hitTargets.Add((int)stream.ReceiveNext());
+                }
+                
+                // Leer estado de destrucción
+                bool remoteIsBeingDestroyed = (bool)stream.ReceiveNext();
+                
+                // Si el dueño marcó el objeto para destrucción, ocultarlo localmente
+                if (remoteIsBeingDestroyed && !isBeingDestroyed)
+                {
+                    isBeingDestroyed = true;
+                    gameObject.SetActive(false);
                 }
             }
         }

@@ -33,6 +33,9 @@ namespace Photon.Pun.Demo.Asteroids
         private HeroBase heroBase;
         private Camera mainCamera;
         
+        // Variable para controlar tiempo entre instanciaciones
+        private float lastAbilityTime = 0f;
+        
         void Awake()
         {
             // Obtener componentes
@@ -387,42 +390,6 @@ namespace Photon.Pun.Demo.Asteroids
             return 0f;
         }
         
-        /// <summary>
-        /// Obtiene la ruta relativa al directorio Resources para un prefab
-        /// </summary>
-        private string GetPrefabPathInResources(GameObject prefab)
-        {
-            if (prefab == null) return null;
-            
-            // No podemos obtener la ruta desde el prefab directamente, así que
-            // intentamos construirla a partir del nombre
-            
-            // Intento 1: Buscar en la ruta de habilidades con el nombre del héroe
-            string heroName = heroBase?.heroName;
-            if (!string.IsNullOrEmpty(heroName))
-            {
-                string path = $"Abilities/{heroName}/{prefab.name}";
-                GameObject test = Resources.Load<GameObject>(path);
-                if (test != null) return path;
-                
-                // Probar con nombre sin espacios
-                string sanitizedName = heroName.Replace(" ", "");
-                path = $"Abilities/{sanitizedName}/{prefab.name}";
-                test = Resources.Load<GameObject>(path);
-                if (test != null) return path;
-            }
-            
-            // Intento 2: Buscar directamente en Abilities
-            string directPath = $"Abilities/{prefab.name}";
-            GameObject directTest = Resources.Load<GameObject>(directPath);
-            if (directTest != null) return directPath;
-            
-            if (debugMode) {
-                Debug.LogWarning($"No se pudo determinar la ruta en Resources para {prefab.name}");
-            }
-            return null;
-        }
-        
         #region PHOTON RPC
         
         [PunRPC]
@@ -466,7 +433,18 @@ namespace Photon.Pun.Demo.Asteroids
                         if (debugMode) {
                             Debug.Log($"Instanciando vía Photon: {prefabPath}");
                         }
-                        abilityObj = PhotonNetwork.Instantiate(prefabPath, position, Quaternion.LookRotation(direction));
+                        
+                        // Añadir un tiempo aleatorio pequeño para evitar que dos clientes intenten
+                        // crear el mismo objeto en el mismo frame
+                        if (Random.value > 0.5f) {
+                            // Añadir un pequeño retraso para evitar conflictos de red
+                            StartCoroutine(DelayedInstantiate(prefabPath, position, Quaternion.LookRotation(direction), 
+                                           slot.abilityData, info.Sender.ActorNumber));
+                            return;
+                        } 
+                        else {
+                            abilityObj = PhotonNetwork.Instantiate(prefabPath, position, Quaternion.LookRotation(direction));
+                        }
                     }
                     else
                     {
@@ -476,8 +454,15 @@ namespace Photon.Pun.Demo.Asteroids
                 }
                 else
                 {
-                    // Si no somos el dueño, usar Instantiate normal
-                    abilityObj = Instantiate(slot.abilityPrefab, position, Quaternion.LookRotation(direction));
+                    // Si no somos el dueño y ha pasado tiempo suficiente desde la última habilidad,
+                    // creamos una instancia local para visualización
+                    if (Time.time - lastAbilityTime > 0.5f) {
+                        abilityObj = Instantiate(slot.abilityPrefab, position, Quaternion.LookRotation(direction));
+                        lastAbilityTime = Time.time;
+                    } else {
+                        // Ya se creó una recientemente, probablemente ya está en red
+                        return;
+                    }
                 }
                 
                 // Configurar la habilidad
@@ -522,6 +507,81 @@ namespace Photon.Pun.Demo.Asteroids
                     audioSource.PlayOneShot(slot.abilityData.AbilitySound);
                 }
             }
+        }
+        
+        // Coroutine para instanciar con un pequeño retraso
+        private System.Collections.IEnumerator DelayedInstantiate(string prefabPath, Vector3 position, 
+                                                               Quaternion rotation, HeroAbility abilityData, 
+                                                               int senderActorNumber)
+        {
+            // Esperamos un tiempo aleatorio muy corto
+            yield return new WaitForSeconds(Random.Range(0.02f, 0.05f));
+            
+            // Instanciamos la habilidad
+            GameObject abilityObj = PhotonNetwork.Instantiate(prefabPath, position, rotation);
+            
+            // Configurar la habilidad
+            AbilityBehaviour abilityBehaviour = abilityObj.GetComponent<AbilityBehaviour>();
+            if (abilityBehaviour != null)
+            {
+                abilityBehaviour.Initialize(
+                    heroBase,        // Caster
+                    abilityData,     // Datos de habilidad
+                    senderActorNumber // ID del jugador que la lanzó
+                );
+            }
+            
+            lastAbilityTime = Time.time;
+        }
+        
+        /// <summary>
+        /// Obtiene la ruta relativa al directorio Resources para un prefab
+        /// </summary>
+        private string GetPrefabPathInResources(GameObject prefab)
+        {
+            if (prefab == null) return null;
+            
+            // Lista de rutas posibles para buscar
+            string[] possiblePaths = new string[] {
+                // Ruta específica del héroe
+                $"Abilities/{heroBase?.heroName}/{prefab.name}",
+                // Ruta con nombre sanitizado del héroe
+                $"Abilities/{SanitizeName(heroBase?.heroName)}/{prefab.name}",
+                // Ruta directa de habilidades
+                $"Abilities/{prefab.name}",
+                // Rutas alternativas comunes
+                $"Abilities/Prefabs/{prefab.name}",
+                $"Prefabs/Abilities/{prefab.name}",
+                // Fallback directo
+                prefab.name
+            };
+            
+            // Probar cada ruta
+            foreach (string path in possiblePaths)
+            {
+                GameObject test = Resources.Load<GameObject>(path);
+                if (test != null)
+                {
+                    if (debugMode) {
+                        Debug.Log($"Encontrada ruta válida: {path}");
+                    }
+                    return path;
+                }
+            }
+            
+            if (debugMode) {
+                Debug.LogWarning($"No se pudo determinar la ruta en Resources para {prefab.name}. Rutas probadas: " + 
+                                string.Join(", ", possiblePaths));
+            }
+            
+            return null;
+        }
+        
+        // Método auxiliar para limpiar nombres
+        private string SanitizeName(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return "";
+            return name.Replace(" ", "").Replace(",", "").Replace(".", "");
         }
         
         #endregion

@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using Photon.Pun;
 
 namespace Photon.Pun.Demo.Asteroids
 {
@@ -35,22 +36,12 @@ namespace Photon.Pun.Demo.Asteroids
         
         private void CreateAreaVisual()
         {
-            // Método 1: Usar LineRenderer para el círculo
+            // Usar la utilidad para crear materiales seguros
             GameObject circleObj = new GameObject("AreaVisual");
             circleObj.transform.SetParent(transform);
             circleObj.transform.localPosition = new Vector3(0, 0.05f, 0);
             
-            LineRenderer lineRenderer = circleObj.AddComponent<LineRenderer>();
-            lineRenderer.useWorldSpace = false;
-            lineRenderer.loop = true;
-            lineRenderer.positionCount = 60;
-            lineRenderer.startWidth = 0.1f;
-            lineRenderer.endWidth = 0.1f;
-            
-            // Configurar material y color
-            lineRenderer.material = new Material(Shader.Find("Sprites/Default"));
-            lineRenderer.startColor = areaColor;
-            lineRenderer.endColor = areaColor;
+            LineRenderer lineRenderer = ShaderSafetyUtility.CreateSafeLineRenderer(circleObj, areaColor, 0.1f, 60);
             
             // Crear puntos del círculo
             float deltaTheta = (2f * Mathf.PI) / (lineRenderer.positionCount - 1);
@@ -77,12 +68,15 @@ namespace Photon.Pun.Demo.Asteroids
                 // Eliminar collider
                 DestroyImmediate(areaObj.GetComponent<Collider>());
                 
-                // Crear material semitransparente
-                Material areaMaterial = new Material(Shader.Find("Transparent/Diffuse"));
-                areaMaterial.color = new Color(areaColor.r, areaColor.g, areaColor.b, 0.2f);
+                // Crear material seguro
+                Material areaMaterial = ShaderSafetyUtility.CreateSafeMaterial("Transparent/Diffuse", 
+                    new Color(areaColor.r, areaColor.g, areaColor.b, 0.2f));
                 
-                Renderer renderer = areaObj.GetComponent<Renderer>();
-                renderer.material = areaMaterial;
+                if (areaMaterial != null)
+                {
+                    Renderer renderer = areaObj.GetComponent<Renderer>();
+                    renderer.material = areaMaterial;
+                }
                 
                 // Añadir efecto de pulso
                 AreaPulseEffect pulseEffect = areaObj.AddComponent<AreaPulseEffect>();
@@ -95,6 +89,16 @@ namespace Photon.Pun.Demo.Asteroids
         }
         
         private void CreateBombs()
+        {
+            // Usar el PhotonView para sincronizar la creación de bombas
+            if (photonView.IsMine)
+            {
+                photonView.RPC("RPC_CreateBombs", RpcTarget.AllBuffered);
+            }
+        }
+        
+        [PunRPC]
+        private void RPC_CreateBombs()
         {
             if (bombPrefab != null)
             {
@@ -152,13 +156,15 @@ namespace Photon.Pun.Demo.Asteroids
                 col.isTrigger = true;
                 col.radius = 0.6f;
                 
-                // Crear material para la bomba
-                Material bombMaterial = new Material(Shader.Find("Standard"));
-                bombMaterial.color = Color.yellow;
-                bombMaterial.EnableKeyword("_EMISSION");
-                bombMaterial.SetColor("_EmissionColor", new Color(1f, 0.8f, 0.2f) * 1.5f);
+                // Crear material seguro para la bomba
+                Material bombMaterial = ShaderSafetyUtility.CreateSafeMaterial("Standard", Color.yellow);
                 
-                bomb.GetComponent<Renderer>().material = bombMaterial;
+                if (bombMaterial != null)
+                {
+                    bombMaterial.EnableKeyword("_EMISSION");
+                    bombMaterial.SetColor("_EmissionColor", new Color(1f, 0.8f, 0.2f) * 1.5f);
+                    bomb.GetComponent<Renderer>().material = bombMaterial;
+                }
                 
                 // Añadir efecto de intermitencia
                 bomb.AddComponent<BombBlinkEffect>();
@@ -275,10 +281,14 @@ namespace Photon.Pun.Demo.Asteroids
             // Eliminar collider
             DestroyImmediate(shockwave.GetComponent<Collider>());
             
-            // Material de la onda expansiva
-            Material shockwaveMaterial = new Material(Shader.Find("Transparent/Diffuse"));
-            shockwaveMaterial.color = new Color(1f, 0.5f, 0f, 0.7f);
-            shockwave.GetComponent<Renderer>().material = shockwaveMaterial;
+            // Material seguro para la onda expansiva
+            Material shockwaveMaterial = ShaderSafetyUtility.CreateSafeMaterial("Transparent/Diffuse", 
+                new Color(1f, 0.5f, 0f, 0.7f));
+                
+            if (shockwaveMaterial != null)
+            {
+                shockwave.GetComponent<Renderer>().material = shockwaveMaterial;
+            }
             
             // Añadir script para animar la explosión
             ShockwaveAnimation animation = explosionObj.AddComponent<ShockwaveAnimation>();
@@ -343,16 +353,22 @@ namespace Photon.Pun.Demo.Asteroids
         private Renderer rend;
         private float time = 0f;
         private float blinkSpeed;
+        private Material material;
         
         void Start()
         {
             rend = GetComponent<Renderer>();
-            blinkSpeed = Random.Range(3f, 5f); // Velocidad aleatoria para cada bomba
+            if (rend != null && rend.material != null)
+            {
+                // Crear una copia del material para no afectar a otros objetos
+                material = rend.material;
+                blinkSpeed = Random.Range(3f, 5f); // Velocidad aleatoria para cada bomba
+            }
         }
         
         void Update()
         {
-            if (rend != null && rend.material != null)
+            if (rend != null && material != null)
             {
                 time += Time.deltaTime * blinkSpeed;
                 
@@ -363,7 +379,7 @@ namespace Photon.Pun.Demo.Asteroids
                 Color baseColor = new Color(1f, 0.8f, 0.2f);
                 
                 // Aplicar el parpadeo a la emisión
-                rend.material.SetColor("_EmissionColor", baseColor * (1f + blink * 2f));
+                material.SetColor("_EmissionColor", baseColor * (1f + blink * 2f));
             }
         }
     }

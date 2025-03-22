@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using Photon.Pun;
 
 namespace Photon.Pun.Demo.Asteroids
 {
@@ -79,18 +80,9 @@ namespace Photon.Pun.Demo.Asteroids
             circleVisual.transform.SetParent(transform);
             circleVisual.transform.localPosition = new Vector3(0, 0.05f, 0);
             
-            // Añadir LineRenderer
-            LineRenderer lineRenderer = circleVisual.AddComponent<LineRenderer>();
-            lineRenderer.useWorldSpace = false;
-            lineRenderer.loop = true;
-            lineRenderer.positionCount = 60;
-            lineRenderer.startWidth = 0.1f;
-            lineRenderer.endWidth = 0.1f;
-            
-            // Configurar material y color
-            lineRenderer.material = new Material(Shader.Find("Sprites/Default"));
-            lineRenderer.startColor = areaColor;
-            lineRenderer.endColor = areaColor;
+            // Usar nuestro helper para crear un LineRenderer seguro
+            LineRenderer lineRenderer = ShaderSafetyUtility.CreateSafeLineRenderer(
+                circleVisual, areaColor, 0.1f, 60);
             
             // Crear puntos del círculo
             float deltaTheta = (2f * Mathf.PI) / (lineRenderer.positionCount - 1);
@@ -115,10 +107,15 @@ namespace Photon.Pun.Demo.Asteroids
             // Eliminar collider
             DestroyImmediate(areaShadow.GetComponent<Collider>());
             
-            // Material para el área sombreada
-            Material areaMaterial = new Material(Shader.Find("Transparent/Diffuse"));
-            areaMaterial.color = new Color(areaColor.r, areaColor.g, areaColor.b, 0.15f);
-            areaShadow.GetComponent<Renderer>().material = areaMaterial;
+            // Usar nuestro helper para crear un material seguro
+            Material areaMaterial = ShaderSafetyUtility.CreateSafeMaterial(
+                "Transparent/Diffuse", 
+                new Color(areaColor.r, areaColor.g, areaColor.b, 0.15f));
+            
+            if (areaMaterial != null && areaShadow.GetComponent<Renderer>() != null)
+            {
+                areaShadow.GetComponent<Renderer>().material = areaMaterial;
+            }
             
             Debug.Log("ScarecrowAbility: Visualización del círculo creada con éxito");
         }
@@ -126,6 +123,22 @@ namespace Photon.Pun.Demo.Asteroids
         private void CreateScarecrow()
         {
             Debug.Log("ScarecrowAbility: Creando espantapájaros...");
+            
+            if (photonView.IsMine)
+            {
+                photonView.RPC("RPC_CreateScarecrow", RpcTarget.AllBuffered);
+            }
+        }
+        
+        [PunRPC]
+        private void RPC_CreateScarecrow()
+        {
+            // Verificar si ya existe un espantapájaros
+            Transform existingScarecrow = transform.Find("BasicScarecrow");
+            if (existingScarecrow != null)
+            {
+                return; // Ya existe, no crear otro
+            }
             
             // Verificar si tenemos un prefab
             if (scarecrowPrefab != null)
@@ -171,13 +184,16 @@ namespace Photon.Pun.Demo.Asteroids
             head.transform.localPosition = new Vector3(0, 2.5f, 0);
             head.transform.localScale = new Vector3(0.7f, 0.7f, 0.7f);
             
-            // Material
-            Material scarecrowMaterial = new Material(Shader.Find("Standard"));
-            scarecrowMaterial.color = new Color(0.7f, 0.5f, 0.3f);
+            // Material seguro
+            Material scarecrowMaterial = ShaderSafetyUtility.CreateSafeMaterial(
+                "Standard", new Color(0.7f, 0.5f, 0.3f));
             
-            body.GetComponent<Renderer>().material = scarecrowMaterial;
-            arms.GetComponent<Renderer>().material = scarecrowMaterial;
-            head.GetComponent<Renderer>().material = scarecrowMaterial;
+            if (scarecrowMaterial != null)
+            {
+                body.GetComponent<Renderer>().material = scarecrowMaterial;
+                arms.GetComponent<Renderer>().material = scarecrowMaterial;
+                head.GetComponent<Renderer>().material = scarecrowMaterial;
+            }
             
             return scarecrow;
         }
@@ -198,10 +214,28 @@ namespace Photon.Pun.Demo.Asteroids
                 // Actualizar tiempo del último impacto para este objetivo
                 lastFearTimes[targetId] = Time.time;
                 
-                // Aplicar el efecto de miedo
-                ApplyFearEffect(target);
+                // Aplicar el efecto de miedo a través de RPC para sincronizar el efecto en todos los clientes
+                if (photonView.IsMine)
+                {
+                    photonView.RPC("RPC_ApplyFearEffect", RpcTarget.All, targetId);
+                }
                 
                 Debug.Log($"ScarecrowAbility: Aplicado efecto de miedo a {target.heroName}");
+            }
+        }
+        
+        [PunRPC]
+        private void RPC_ApplyFearEffect(int targetViewID)
+        {
+            // Encontrar el objetivo por su ViewID
+            PhotonView targetView = PhotonView.Find(targetViewID);
+            if (targetView != null)
+            {
+                HeroBase target = targetView.GetComponent<HeroBase>();
+                if (target != null)
+                {
+                    ApplyFearEffect(target);
+                }
             }
         }
         
@@ -287,7 +321,16 @@ namespace Photon.Pun.Demo.Asteroids
                 ScarecrowAbility parentAbility = GetComponentInParent<ScarecrowAbility>();
                 if (parentAbility != null)
                 {
-                    Destroy(parentAbility.gameObject);
+                    // Si la habilidad tiene un PhotonView y es el dueño, usar PhotonNetwork.Destroy
+                    if (parentAbility.photonView != null && parentAbility.photonView.IsMine)
+                    {
+                        PhotonNetwork.Destroy(parentAbility.gameObject);
+                    }
+                    else
+                    {
+                        // Si no somos el dueño, solo desactivar localmente
+                        parentAbility.gameObject.SetActive(false);
+                    }
                 }
                 else
                 {

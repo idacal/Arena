@@ -16,8 +16,8 @@ MonoBehaviour:
   Description: Shotgun test
   IconSprite: {fileID: 21300000, guid: 5edd95f497c016b438f5e7c9ef43187e, type: 3}
   Hotkey: Q
-  Cooldown: 10
-  ManaCost: 50
+  Cooldown: 1
+  ManaCost: 1
   AbilityType: Activa
   DamageAmount: 0
   Duration: 0
