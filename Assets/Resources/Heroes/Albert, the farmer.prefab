@@ -2786,6 +2786,10 @@ MonoBehaviour:
   attackTrigger: Attack
   dieTrigger: Die
   respawnTrigger: Respawn
+  groundCheckDistance: 1
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 0
   debugMode: 0
   navAgent: {fileID: 0}
 --- !u!114 &1860633209005635629
