@@ -1,13 +1,18 @@
 using UnityEngine;
+using Photon.Pun;
 
 namespace Photon.Pun.Demo.Asteroids
 {
     public class AlbertFuryAbility : BuffAbility
     {
         [Header("Fury Settings")]
-        public GameObject furyEffectPrefab;    // Efecto visual de "poder"
         public float furyDuration = 6f;         // Duración del estado de furia
         public float attackSpeedBonus = 100f;   // Bonus de velocidad de ataque
+        
+        [Header("Visual Settings")]
+        public Color particleColor = new Color(1f, 0.5f, 0f, 0.7f); // Color naranja para las partículas
+        public float particleSize = 0.2f;       // Tamaño pequeño para las partículas
+        public int particleCount = 15;          // Cantidad reducida de partículas
         
         private GameObject furyEffect;
         
@@ -25,149 +30,126 @@ namespace Photon.Pun.Demo.Asteroids
             // Llamar a la inicialización base que aplicará el buff
             base.OnAbilityInitialized();
             
-            // Crear efecto visual de furia
-            if (furyEffectPrefab != null && caster != null)
+            // Usar el PhotonView para sincronizar la creación del efecto en todos los clientes
+            if (photonView.IsMine)
             {
-                furyEffect = Instantiate(furyEffectPrefab, caster.transform.position, Quaternion.identity);
-                furyEffect.transform.SetParent(caster.transform);
-            }
-            else
-            {
-                // Si no hay prefab, crear un efecto básico
-                CreateBasicFuryEffect();
+                photonView.RPC("RPC_CreateFuryEffect", RpcTarget.AllBuffered);
             }
         }
         
-        private void CreateBasicFuryEffect()
+        [PunRPC]
+        private void RPC_CreateFuryEffect()
         {
-            if (caster == null) return;
+            // Verificar que tenemos el caster y que no hay un efecto ya creado
+            if (caster == null)
+            {
+                Debug.LogWarning("AlbertFuryAbility: No se encontró caster para crear el efecto");
+                return;
+            }
             
+            // Limpiar efecto existente si hay alguno
+            if (furyEffect != null)
+            {
+                Destroy(furyEffect);
+                furyEffect = null;
+            }
+            
+            // Crear el efecto visual
+            CreateSimpleParticleEffect();
+        }
+        
+        private void CreateSimpleParticleEffect()
+        {
             // Crear un objeto para el efecto
-            GameObject effectObj = new GameObject("FuryEffect");
+            GameObject effectObj = new GameObject("SimpleFuryEffect");
+            effectObj.transform.position = caster.transform.position + Vector3.up; // Posicionar a la altura del personaje
             effectObj.transform.SetParent(caster.transform);
-            effectObj.transform.localPosition = Vector3.zero;
+            effectObj.transform.localPosition = new Vector3(0, 1.0f, 0);
             
-            // Crear sistema de partículas básico
+            // Crear sistema de partículas
             ParticleSystem particles = effectObj.AddComponent<ParticleSystem>();
+            
+            // Configurar todas las propiedades con el sistema detenido
             var main = particles.main;
-            main.startColor = new Color(1f, 0.5f, 0f, 0.7f);  // Naranja
-            main.startSize = 0.5f;
-            main.startSpeed = 2f;
-            main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.duration = duration;
-            main.loop = true;
+            main.startColor = particleColor;
+            main.startSize = particleSize;
+            main.startSpeed = 0.5f;
+            main.startLifetime = 1.0f;
+            main.maxParticles = particleCount * 2;
             
+            // Emisión
             var emission = particles.emission;
-            emission.rateOverTime = 20f;
+            emission.rateOverTime = particleCount;
             
+            // Forma
             var shape = particles.shape;
             shape.shapeType = ParticleSystemShapeType.Sphere;
-            shape.radius = 1.5f;
-            shape.radiusThickness = 0f;  // Emitir desde la superficie
+            shape.radius = 0.3f;
+            shape.radiusThickness = 1.0f;
             
-            // Añadir un Light para simular el "aura" de energía
-            GameObject lightObj = new GameObject("FuryLight");
-            lightObj.transform.SetParent(effectObj.transform);
-            lightObj.transform.localPosition = Vector3.zero;
+            // Color over lifetime
+            var colorModule = particles.colorOverLifetime;
+            colorModule.enabled = true;
+            Gradient gradient = new Gradient();
+            gradient.SetKeys(
+                new GradientColorKey[] { new GradientColorKey(particleColor, 0.0f), new GradientColorKey(particleColor, 0.7f) },
+                new GradientAlphaKey[] { new GradientAlphaKey(0.7f, 0.0f), new GradientAlphaKey(0.0f, 1.0f) }
+            );
+            colorModule.color = gradient;
             
-            Light light = lightObj.AddComponent<Light>();
-            light.type = LightType.Point;
-            light.color = new Color(1f, 0.5f, 0f);  // Naranja
-            light.intensity = 1.5f;
-            light.range = 3f;
+            // Iniciar el sistema
+            particles.Play();
             
             // Guardar referencia
             furyEffect = effectObj;
-            
-            // Crear efecto simple de líneas de energía
-            CreateEnergyLines(furyEffect.transform);
-        }
-        
-        private void CreateEnergyLines(Transform parent)
-        {
-            // Crear varias líneas de energía que suben desde el personaje
-            int lineCount = 8;
-            for (int i = 0; i < lineCount; i++)
-            {
-                GameObject lineObj = new GameObject("EnergyLine_" + i);
-                lineObj.transform.SetParent(parent);
-                lineObj.transform.localPosition = Vector3.zero;
-                
-                // Crear LineRenderer
-                LineRenderer line = lineObj.AddComponent<LineRenderer>();
-                line.material = new Material(Shader.Find("Sprites/Default"));
-                line.startColor = new Color(1f, 0.5f, 0f, 0.8f);  // Naranja
-                line.endColor = new Color(1f, 0.8f, 0f, 0f);      // Amarillo transparente
-                line.startWidth = 0.05f;
-                line.endWidth = 0.02f;
-                line.positionCount = 2;
-                
-                // Posición inicial y final
-                float angle = (i / (float)lineCount) * 360f * Mathf.Deg2Rad;
-                Vector3 direction = new Vector3(Mathf.Cos(angle), 0, Mathf.Sin(angle));
-                line.SetPosition(0, Vector3.up * 1f); // Desde la mitad del personaje
-                line.SetPosition(1, Vector3.up * 3f + direction * 0.5f); // Hacia arriba y afuera
-                
-                // Añadir componente para animar la línea
-                EnergyLineAnimation animator = lineObj.AddComponent<EnergyLineAnimation>();
-                animator.line = line;
-                animator.speed = Random.Range(0.5f, 1.5f);
-                animator.height = Random.Range(2.5f, 4f);
-                animator.radius = Random.Range(0.3f, 0.7f);
-            }
         }
         
         protected override void DestroyAbility()
         {
-            // Destruir efecto de furia
+            // Sincronizar destrucción de efectos visuales
+            if (photonView.IsMine)
+            {
+                photonView.RPC("RPC_DestroyFuryEffect", RpcTarget.AllBuffered);
+            }
+            
+            // Luego llamar a la destrucción base que quitará el buff
+            base.DestroyAbility();
+        }
+        
+        [PunRPC]
+        private void RPC_DestroyFuryEffect()
+        {
+            // Detener y destruir el efecto visual
             if (furyEffect != null)
             {
-                // Desacoplar del padre para que termine correctamente
-                furyEffect.transform.SetParent(null);
-                
-                // Configurar para autodestrucción
-                ParticleSystem particles = furyEffect.GetComponent<ParticleSystem>();
-                if (particles != null)
+                ParticleSystem ps = furyEffect.GetComponent<ParticleSystem>();
+                if (ps != null)
                 {
-                    var main = particles.main;
-                    main.loop = false;
-                    Destroy(furyEffect, main.duration + main.startLifetime.constantMax);
+                    ps.Stop(true);
+                    
+                    // Desacoplar para una destrucción limpia
+                    furyEffect.transform.SetParent(null);
+                    
+                    // Destruir después de que terminen las partículas
+                    Destroy(furyEffect, 2f);
                 }
                 else
                 {
                     Destroy(furyEffect);
                 }
+                
+                furyEffect = null;
             }
-            
-            // Continuar con la destrucción normal
-            base.DestroyAbility();
         }
-    }
-    
-    // Clase auxiliar para animar las líneas de energía
-    public class EnergyLineAnimation : MonoBehaviour
-    {
-        public LineRenderer line;
-        public float speed = 1f;
-        public float height = 3f;
-        public float radius = 0.5f;
         
-        private float time = 0f;
-        
-        void Update()
+        // Limpieza en caso de destrucción inesperada
+        void OnDestroy()
         {
-            if (line == null) return;
-            
-            time += Time.deltaTime * speed;
-            
-            // Animar la línea
-            float yOffset = Mathf.Sin(time) * 0.5f;
-            float xOffset = Mathf.Cos(time * 0.7f) * 0.3f;
-            float zOffset = Mathf.Sin(time * 0.5f) * 0.3f;
-            
-            // Actualizar posición final
-            Vector3 endPos = new Vector3(xOffset, height + yOffset, zOffset);
-            line.SetPosition(1, endPos);
+            if (furyEffect != null)
+            {
+                Destroy(furyEffect);
+                furyEffect = null;
+            }
         }
     }
 }
