@@ -220,35 +220,55 @@ namespace Photon.Pun.Demo.Asteroids
         /// <summary>
         /// Configura la cámara para seguir al héroe local
         /// </summary>
-        private void SetupCameraForLocalHero(GameObject heroInstance)
+        /// <summary>
+/// Configura la cámara para el héroe local con comportamiento estilo MOBA
+/// </summary>
+private void SetupCameraForLocalHero(GameObject heroInstance)
+{
+    Camera mainCamera = Camera.main;
+    if (mainCamera != null)
+    {
+        // Eliminar los componentes de cámara existentes
+        CameraFollow existingFollow = mainCamera.gameObject.GetComponent<CameraFollow>();
+        if (existingFollow != null)
         {
-            Camera mainCamera = Camera.main;
-            if (mainCamera != null)
-            {
-                // Posicionar la cámara inicialmente
-                mainCamera.transform.position = heroInstance.transform.position + new Vector3(0, 10, -5);
-                mainCamera.transform.LookAt(heroInstance.transform);
-                
-                // Si ya existe un componente CameraFollow, eliminarlo
-                CameraFollow existingFollow = mainCamera.gameObject.GetComponent<CameraFollow>();
-                if (existingFollow != null)
-                {
-                    Destroy(existingFollow);
-                }
-                
-                // Añadir componente de seguimiento
-                CameraFollow cameraFollow = mainCamera.gameObject.AddComponent<CameraFollow>();
-                cameraFollow.target = heroInstance.transform;
-                cameraFollow.offset = new Vector3(0, 10, -5);
-                cameraFollow.smoothSpeed = 0.125f;
-                
-                LogInfo("Cámara configurada para seguir al héroe local.");
-            }
-            else
-            {
-                Debug.LogWarning("No se encontró la cámara principal. No se pudo configurar el seguimiento de cámara.");
-            }
+            Destroy(existingFollow);
         }
+        
+        
+        PhotonMOBACamera existingPhotonCamera = mainCamera.gameObject.GetComponent<PhotonMOBACamera>();
+        if (existingPhotonCamera != null)
+        {
+            Destroy(existingPhotonCamera);
+        }
+        
+        // Añadir el nuevo controlador de cámara
+        PhotonMOBACamera cameraController = mainCamera.gameObject.AddComponent<PhotonMOBACamera>();
+        
+        // Configurar controlador de cámara
+        cameraController.target = heroInstance.transform;
+        cameraController.cameraHeight = 10f;
+        cameraController.cameraDistance = 10f;
+        cameraController.cameraPitch = 60f;
+        
+        // Configurar bordes del mapa
+        cameraController.mapMinX = -150f;
+        cameraController.mapMaxX = 150f;
+        cameraController.mapMinZ = -150f;
+        cameraController.mapMaxZ = 150f;
+        
+        // Configurar teclas de control
+        cameraController.centerOnPlayerKey = KeyCode.Space;
+        cameraController.cameraDragKey = KeyCode.Mouse2;
+        
+        LogInfo("Cámara MOBA configurada para el héroe local.");
+        LogInfo("Controles: ESPACIO para centrar, RUEDA para arrastrar, BORDES para mover, SCROLL para zoom");
+    }
+    else
+    {
+        Debug.LogWarning("No se encontró la cámara principal. No se pudo configurar el seguimiento de cámara.");
+    }
+}
         
         /// <summary>
         /// Muestra mensajes de depuración

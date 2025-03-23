@@ -60,6 +60,12 @@ MonoBehaviour:
   - RPC_InitializeShotgun
   - RPC_OnHitEnvironment
   - RPC_InitializeShotgunProjectile
+  - RPC_CreateFuryEffect
+  - RPC_StopFuryEffect
+  - RPC_DestroyFuryEffect
+  - RPC_ForceKinematic
+  - RPC_SetMovingState
+  - RPC_SyncPosition
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1
