@@ -160,43 +160,46 @@ namespace Photon.Pun.Demo.Asteroids
         }
         
         private GameObject CreateBasicScarecrow()
-        {
-            // Crear un espantapájaros básico con primitivas
-            GameObject scarecrow = new GameObject("BasicScarecrow");
-            scarecrow.transform.SetParent(transform);
-            scarecrow.transform.localPosition = Vector3.zero;
-            
-            // Cuerpo
-            GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            body.transform.SetParent(scarecrow.transform);
-            body.transform.localPosition = new Vector3(0, 1, 0);
-            body.transform.localScale = new Vector3(0.5f, 2, 0.5f);
-            
-            // Brazos
-            GameObject arms = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            arms.transform.SetParent(scarecrow.transform);
-            arms.transform.localPosition = new Vector3(0, 1.5f, 0);
-            arms.transform.localScale = new Vector3(2, 0.2f, 0.2f);
-            
-            // Cabeza
-            GameObject head = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            head.transform.SetParent(scarecrow.transform);
-            head.transform.localPosition = new Vector3(0, 2.5f, 0);
-            head.transform.localScale = new Vector3(0.7f, 0.7f, 0.7f);
-            
-            // Material seguro
-            Material scarecrowMaterial = ShaderSafetyUtility.CreateSafeMaterial(
-                "Standard", new Color(0.7f, 0.5f, 0.3f));
-            
-            if (scarecrowMaterial != null)
-            {
-                body.GetComponent<Renderer>().material = scarecrowMaterial;
-                arms.GetComponent<Renderer>().material = scarecrowMaterial;
-                head.GetComponent<Renderer>().material = scarecrowMaterial;
-            }
-            
-            return scarecrow;
-        }
+{
+    // Crear un espantapájaros básico con primitivas (30% más pequeño)
+    GameObject scarecrow = new GameObject("BasicScarecrow");
+    scarecrow.transform.SetParent(transform);
+    scarecrow.transform.localPosition = Vector3.zero;
+    
+    // Factor de escala (70% del tamaño original = 30% más pequeño)
+    float scaleFactor = 0.7f;
+    
+    // Cuerpo
+    GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+    body.transform.SetParent(scarecrow.transform);
+    body.transform.localPosition = new Vector3(0, 1 * scaleFactor, 0);
+    body.transform.localScale = new Vector3(0.5f * scaleFactor, 2 * scaleFactor, 0.5f * scaleFactor);
+    
+    // Brazos
+    GameObject arms = GameObject.CreatePrimitive(PrimitiveType.Cube);
+    arms.transform.SetParent(scarecrow.transform);
+    arms.transform.localPosition = new Vector3(0, 1.5f * scaleFactor, 0);
+    arms.transform.localScale = new Vector3(2 * scaleFactor, 0.2f * scaleFactor, 0.2f * scaleFactor);
+    
+    // Cabeza
+    GameObject head = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+    head.transform.SetParent(scarecrow.transform);
+    head.transform.localPosition = new Vector3(0, 2.5f * scaleFactor, 0);
+    head.transform.localScale = new Vector3(0.7f * scaleFactor, 0.7f * scaleFactor, 0.7f * scaleFactor);
+    
+    // Material seguro
+    Material scarecrowMaterial = ShaderSafetyUtility.CreateSafeMaterial(
+        "Standard", new Color(0.7f, 0.5f, 0.3f));
+    
+    if (scarecrowMaterial != null)
+    {
+        body.GetComponent<Renderer>().material = scarecrowMaterial;
+        arms.GetComponent<Renderer>().material = scarecrowMaterial;
+        head.GetComponent<Renderer>().material = scarecrowMaterial;
+    }
+    
+    return scarecrow;
+}
         
         // En lugar de override CheckTargetsInArea, usamos el método ProcessImpact
         protected override void ProcessImpact(HeroBase target)

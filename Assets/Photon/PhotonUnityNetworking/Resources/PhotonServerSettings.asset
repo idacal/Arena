@@ -52,6 +52,14 @@ MonoBehaviour:
   - RPC_TriggerAnimation
   - RPC_EnsureVisibility
   - RPC_ForceModelUpdate
+  - RPC_ApplyFearEffect
+  - RPC_ApplyKnockback
+  - RPC_CreateBombs
+  - RPC_CreateScarecrow
+  - RPC_InitializeProjectile
+  - RPC_InitializeShotgun
+  - RPC_OnHitEnvironment
+  - RPC_InitializeShotgunProjectile
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

@@ -22,5 +22,5 @@ MonoBehaviour:
   DamageAmount: 0
   Duration: 0
   Range: 0
-  AbilityPrefab: {fileID: 2516510942242827973, guid: c3d1be1ad69546e4a859c5a62f3731cf, type: 3}
+  AbilityPrefab: {fileID: 7171029268720117425, guid: 6f7104b830f3cea4192c33ee27a3c948, type: 3}
   AbilitySound: {fileID: 0}
