@@ -24,6 +24,9 @@ namespace Photon.Pun.Demo.Asteroids
         public float groundCheckDistance = 1.0f;     // Distance to check below the character
         public LayerMask groundLayer;                // Layer(s) considered as ground
         
+        [Header("Click Indicator")]
+        public GameObject clickIndicatorPrefab;      // Opcional: Prefab del indicador de clic
+        
         [Header("Debug")]
         public bool debugMode = false;
         
@@ -60,6 +63,9 @@ namespace Photon.Pun.Demo.Asteroids
         private float groundCheckInterval = 0.05f; // Check 20 times per second
         private int failedGroundChecks = 0;
         private const int MAX_FAILED_CHECKS = 5;
+        
+        // Indicador de clic
+        private ClickIndicator playerClickIndicator;
         
         void Awake()
         {
@@ -129,6 +135,60 @@ namespace Photon.Pun.Demo.Asteroids
             // Sync initial state
             syncMadeRigidbodyKinematic = true;
             photonView.RPC("RPC_ForceKinematic", RpcTarget.Others, true);
+            
+            // Inicializar el indicador de clic (solo para el jugador local)
+            InitializeClickIndicator();
+        }
+        
+        /// <summary>
+        /// Inicializa el indicador de clic para este jugador
+        /// </summary>
+        private void InitializeClickIndicator()
+        {
+            // Si tenemos un prefab, instanciarlo
+            if (clickIndicatorPrefab != null)
+            {
+                GameObject indicatorObj = Instantiate(clickIndicatorPrefab);
+                playerClickIndicator = indicatorObj.GetComponent<ClickIndicator>();
+                
+                // Si el objeto no tiene el componente, añadirlo
+                if (playerClickIndicator == null)
+                {
+                    playerClickIndicator = indicatorObj.AddComponent<ClickIndicator>();
+                }
+            }
+            else
+            {
+                // Crear un indicador básico si no hay prefab
+                GameObject indicatorObj = new GameObject("ClickIndicator");
+                playerClickIndicator = indicatorObj.AddComponent<ClickIndicator>();
+            }
+            
+            // Configurar el color según el equipo
+            if (playerClickIndicator != null && heroBase != null)
+            {
+                // Definir color según el equipo (rojo o azul)
+                Color teamColor = (heroBase.teamId == 0) ? 
+                    new Color(1f, 0.3f, 0.3f, 0.5f) : // Rojo para equipo 0
+                    new Color(0.3f, 0.5f, 1f, 0.5f);  // Azul para equipo 1
+                
+                // Si el campo es privado, usar reflection para acceder a él
+                var colorField = typeof(ClickIndicator).GetField("indicatorColor", 
+                    System.Reflection.BindingFlags.Instance | 
+                    System.Reflection.BindingFlags.NonPublic |
+                    System.Reflection.BindingFlags.Public);
+                    
+                if (colorField != null)
+                {
+                    colorField.SetValue(playerClickIndicator, teamColor);
+                }
+            }
+            
+            // Inicialmente desactivado
+            if (playerClickIndicator != null)
+            {
+                playerClickIndicator.gameObject.SetActive(false);
+            }
         }
         
         /// <summary>
@@ -526,6 +586,12 @@ namespace Photon.Pun.Demo.Asteroids
                             
                             // Send moving state to all
                             photonView.RPC("RPC_SetMovingState", RpcTarget.Others, true);
+                            
+                            // NUEVO: Mostrar indicador de clic
+                            if (playerClickIndicator != null)
+                            {
+                                playerClickIndicator.ShowAt(hit.point);
+                            }
                         }
                         else
                         {
@@ -543,6 +609,12 @@ namespace Photon.Pun.Demo.Asteroids
                                 
                                 // Send moving state to all
                                 photonView.RPC("RPC_SetMovingState", RpcTarget.Others, true);
+                                
+                                // NUEVO: Mostrar indicador de clic
+                                if (playerClickIndicator != null)
+                                {
+                                    playerClickIndicator.ShowAt(hit.point);
+                                }
                             }
                         }
                     }
@@ -681,6 +753,12 @@ namespace Photon.Pun.Demo.Asteroids
                     
                     // Send moving state to all
                     photonView.RPC("RPC_SetMovingState", RpcTarget.Others, true);
+                    
+                    // Mostrar indicador de clic
+                    if (playerClickIndicator != null)
+                    {
+                        playerClickIndicator.ShowAt(destination);
+                    }
                 }
                 else
                 {
@@ -697,6 +775,12 @@ namespace Photon.Pun.Demo.Asteroids
                         
                         // Send moving state to all
                         photonView.RPC("RPC_SetMovingState", RpcTarget.Others, true);
+                        
+                        // Mostrar indicador de clic
+                        if (playerClickIndicator != null)
+                        {
+                            playerClickIndicator.ShowAt(destination);
+                        }
                     }
                 }
             }
@@ -1029,6 +1113,12 @@ namespace Photon.Pun.Demo.Asteroids
             // Clean up
             CancelInvoke();
             StopAllCoroutines();
+            
+            // Destruir el indicador de clic
+            if (playerClickIndicator != null)
+            {
+                Destroy(playerClickIndicator.gameObject);
+            }
         }
         
         /// <summary>

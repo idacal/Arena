@@ -2789,7 +2789,8 @@ MonoBehaviour:
   groundCheckDistance: 1
   groundLayer:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 8
+  clickIndicatorPrefab: {fileID: 5770143663549293496, guid: 445dda5bfe94e2d4c85fee74151d7bf7, type: 3}
   debugMode: 0
   navAgent: {fileID: 0}
 --- !u!114 &1860633209005635629
