@@ -18,7 +18,10 @@ GameObject:
   - component: {fileID: 4335451185115575402}
   - component: {fileID: 4521720130656764793}
   - component: {fileID: 1813505054255203606}
-  m_Layer: 0
+  - component: {fileID: 3229754241829438205}
+  - component: {fileID: 705297385010450245}
+  - component: {fileID: -1005495877090459590}
+  m_Layer: 6
   m_Name: HeroBase
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -65,6 +68,7 @@ MonoBehaviour:
   - {fileID: 4335451185115575402}
   - {fileID: 4521720130656764793}
   - {fileID: 1813505054255203606}
+  - {fileID: 705297385010450245}
   sceneViewId: 0
   InstantiationId: 0
   isRuntimeInstantiated: 0
@@ -94,7 +98,7 @@ Rigidbody:
   m_IsKinematic: 0
   m_Interpolate: 0
   m_Constraints: 0
-  m_CollisionDetection: 0
+  m_CollisionDetection: 1
 --- !u!195 &3156214201177610185
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -181,6 +185,10 @@ MonoBehaviour:
   animator: {fileID: 0}
   uiCanvasPrefab: {fileID: 8691770513599191608, guid: d2285228827d22b44b59630a257fb319, type: 3}
   debugMode: 0
+  attackRange: 2
+  attackType: 0
+  basicAttackProjectilePrefab: {fileID: 0}
+  showCombatDebug: 0
 --- !u!114 &4335451185115575402
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -234,3 +242,62 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 71b4b7c7e1c6c6047850e3ee33862ddb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &3229754241829438205
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7797997275947316863}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4f047e7e7cad0e64baca227466b6facf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  targetingRange: 15
+  targetableLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  autoTargetEnemiesInRange: 1
+  autoTargetInterval: 0.5
+  targetIndicatorPrefab: {fileID: 0}
+  indicatorHeight: 2
+  allyIndicatorColor: {r: 0, g: 1, b: 0, a: 1}
+  enemyIndicatorColor: {r: 1, g: 0, b: 0, a: 1}
+--- !u!114 &705297385010450245
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7797997275947316863}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 77b33698440928c4a9c2266ba5364666, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  healthRegenRate: 1
+  respawnTime: 5
+  healthSlider: {fileID: 0}
+  damageTextPrefab: {fileID: 0}
+  floatingTextAnchor: {fileID: 0}
+  deathEffectPrefab: {fileID: 0}
+  damageSound: {fileID: 0}
+  deathSound: {fileID: 0}
+--- !u!114 &-1005495877090459590
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7797997275947316863}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2250f4935cc1dd14e8bf219e8c7b4bec, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  projectilePrefab: {fileID: 0}
+  projectileSpawnPoint: {fileID: 0}
+  muzzleFlashPrefab: {fileID: 0}
+  attackSound: {fileID: 0}
+  meleeAttackEffectPrefab: {fileID: 0}

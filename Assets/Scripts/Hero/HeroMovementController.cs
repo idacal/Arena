@@ -51,7 +51,7 @@ namespace Photon.Pun.Demo.Asteroids
         private bool latestIsMoving;
         private float timeSinceLastPositionUpdate = 0f;
         private float positionUpdateInterval = 0.2f; // Actualizar cada 200ms
-        private bool syncMadeRigidbodyKinematic = true; // Para sincronizar el estado del Rigidbody
+        private bool syncMadeRigidbodyKinematic = false; // Para sincronizar el estado del Rigidbody
         
         // Collider and Rigidbody references
         private Collider characterCollider;
@@ -113,12 +113,67 @@ namespace Photon.Pun.Demo.Asteroids
             // Make sure we configure Rigidbody for both local and remote players
             SafeConfigureRigidbody();
             
+            // Ensure NavMeshAgent is assigned
+            if (navAgent == null)
+            {
+                navAgent = GetComponent<NavMeshAgent>();
+                Debug.Log($"[HeroMovementController] NavMeshAgent obtenido manualmente: {(navAgent != null ? "éxito" : "FALLO")}");
+            }
+            
             // Solo controlar si es el jugador local
             if (!photonView.IsMine)
             {
-                // Desactivar el NavMeshAgent para jugadores remotos
-                navAgent.enabled = false;
+                // MODIFICADO: No desactivar completamente el NavMeshAgent para permitir colisiones
+                // Configurar NavMeshAgent para clientes remotos (importante para colisiones)
+                if (navAgent != null)
+                {
+                    // Mantener el NavMeshAgent habilitado, pero con algunas propiedades especiales
+                    navAgent.updatePosition = false;   // No actualizar la posición basada en NavMesh
+                    navAgent.updateRotation = false;   // No actualizar la rotación
+                    navAgent.isStopped = true;         // Detener el movimiento automático
+                    navAgent.updateUpAxis = false;     // No actualizar el eje Y
+                    
+                    // MODIFICADO: Permitir colisiones físicas activando rigidbody
+                    if (characterRigidbody != null)
+                    {
+                        characterRigidbody.isKinematic = false;
+                        characterRigidbody.detectCollisions = true;  // Asegurar que las colisiones sigan activas
+                        characterRigidbody.collisionDetectionMode = CollisionDetectionMode.Continuous;
+                    }
+                    
+                    Debug.Log($"[HeroMovementController] Cliente remoto - NavMeshAgent configurado en modo colisión para {gameObject.name}");
+                }
                 return;
+            }
+            
+            // Este código solo se ejecuta para el jugador LOCAL
+            
+            // Asegurarse de que el NavMeshAgent está activado para el jugador local
+            if (navAgent != null)
+            {
+                if (!navAgent.enabled)
+                {
+                    Debug.LogWarning($"[HeroMovementController] NavMeshAgent estaba desactivado para jugador local, activándolo ahora en {gameObject.name}");
+                    navAgent.enabled = true;
+                }
+                
+                // Asegurarse que está configurado correctamente para el jugador local
+                navAgent.updatePosition = true;
+                navAgent.updateRotation = true;
+                navAgent.isStopped = false;
+                navAgent.updateUpAxis = true;
+                
+                Debug.Log($"[HeroMovementController] Estado de NavMeshAgent para jugador local: {(navAgent.enabled ? "ACTIVO" : "INACTIVO")} - {gameObject.name}");
+                
+                // Verificar si está en un NavMesh válido
+                if (!navAgent.isOnNavMesh)
+                {
+                    Debug.LogWarning($"[HeroMovementController] ¡ADVERTENCIA! NavMeshAgent no está en un NavMesh válido - {gameObject.name}");
+                }
+            }
+            else
+            {
+                Debug.LogError($"[HeroMovementController] ¡ERROR CRÍTICO! NavMeshAgent es NULL para jugador local - {gameObject.name}");
             }
             
             // Obtener la cámara principal
@@ -132,12 +187,46 @@ namespace Photon.Pun.Demo.Asteroids
             // Ensure we start grounded
             CheckGrounded();
             
-            // Sync initial state
-            syncMadeRigidbodyKinematic = true;
-            photonView.RPC("RPC_ForceKinematic", RpcTarget.Others, true);
+            // MODIFICADO: No hacemos kinematic el Rigidbody para permitir colisiones
+            syncMadeRigidbodyKinematic = false;
+            photonView.RPC("RPC_ForceKinematic", RpcTarget.Others, false);
             
             // Inicializar el indicador de clic (solo para el jugador local)
             InitializeClickIndicator();
+            
+            // Doble verificación después de 1 segundo
+            Invoke("VerifyNavMeshAgentState", 1.0f);
+        }
+        
+        /// <summary>
+        /// Verifica el estado del NavMeshAgent después de un pequeño retraso
+        /// </summary>
+        private void VerifyNavMeshAgentState()
+        {
+            if (!photonView.IsMine) return;
+            
+            if (navAgent != null)
+            {
+                if (!navAgent.enabled)
+                {
+                    Debug.LogWarning($"[HeroMovementController] NavMeshAgent se desactivó después de Start, reactivándolo - {gameObject.name}");
+                    navAgent.enabled = true;
+                }
+                
+                // Verificar si está en un NavMesh válido
+                if (!navAgent.isOnNavMesh)
+                {
+                    Debug.LogWarning($"[HeroMovementController] Después de 1s, NavMeshAgent sigue sin estar en NavMesh válido - {gameObject.name}");
+                    
+                    // Intentar warp a una posición cercana
+                    NavMeshHit hit;
+                    if (NavMesh.SamplePosition(transform.position, out hit, 5f, NavMesh.AllAreas))
+                    {
+                        Debug.Log($"[HeroMovementController] Intentando warp a posición válida en NavMesh - {gameObject.name}");
+                        navAgent.Warp(hit.position);
+                    }
+                }
+            }
         }
         
         /// <summary>
@@ -200,10 +289,10 @@ namespace Photon.Pun.Demo.Asteroids
             {
                 // Make sure the Rigidbody has these critical settings
                 characterRigidbody.freezeRotation = true; // Prevent tipping over
-                characterRigidbody.constraints = RigidbodyConstraints.FreezeRotation; // Another way to freeze rotation
+                characterRigidbody.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ; // Free Y rotation
                 
-                // Start with kinematic enabled to prevent initial falling
-                characterRigidbody.isKinematic = true;
+                // MODIFICADO: Permitir colisiones físicas estableciendo isKinematic = false
+                characterRigidbody.isKinematic = false;
                 characterRigidbody.velocity = Vector3.zero;
                 
                 // Also increase collision detection quality
@@ -211,10 +300,14 @@ namespace Photon.Pun.Demo.Asteroids
                 
                 // Add some drag to prevent sliding
                 characterRigidbody.drag = 5f;
+                characterRigidbody.angularDrag = 0.5f;
+                
+                // Permitir detección de colisiones
+                characterRigidbody.detectCollisions = true;
                 
                 if (debugMode)
                 {
-                    Debug.Log($"Rigidbody configured: isKinematic=true, " +
+                    Debug.Log($"Rigidbody configurado: isKinematic=false, " +
                              $"constraints={characterRigidbody.constraints}, " +
                              $"detection={characterRigidbody.collisionDetectionMode}");
                 }
@@ -283,28 +376,29 @@ namespace Photon.Pun.Demo.Asteroids
         }
         
         /// <summary>
-        /// Ensures the Rigidbody is kinematic when not moving to prevent falling
+        /// Ensures the Rigidbody is properly configured when not moving
         /// </summary>
         private void EnsureKinematicWhenStill()
         {
             if (characterRigidbody != null && !isMoving)
             {
-                // When not moving, force kinematic to prevent falling
-                if (!characterRigidbody.isKinematic)
+                // MODIFICADO: Mantenemos isKinematic=false para permitir colisiones
+                // pero minimizamos el efecto de la física en el personaje
+                if (characterRigidbody.isKinematic)
                 {
-                    if (debugMode)
-                        Debug.Log("Setting Rigidbody to kinematic while standing still");
-                        
+                    characterRigidbody.isKinematic = false;
                     characterRigidbody.velocity = Vector3.zero;
-                    characterRigidbody.isKinematic = true;
                     
-                    // Send RPC to all other clients to make their Rigidbody kinematic too
+                    // Sync with other clients
                     if (syncMadeRigidbodyKinematic != characterRigidbody.isKinematic)
                     {
                         syncMadeRigidbodyKinematic = characterRigidbody.isKinematic;
-                        photonView.RPC("RPC_ForceKinematic", RpcTarget.Others, true);
+                        photonView.RPC("RPC_ForceKinematic", RpcTarget.Others, false);
                     }
                 }
+                
+                // Reducir la velocidad a cero cuando no se mueve
+                characterRigidbody.velocity = Vector3.zero;
             }
         }
         
@@ -315,16 +409,16 @@ namespace Photon.Pun.Demo.Asteroids
         {
             if (characterRigidbody != null && isMoving)
             {
-                // For this implementation, we keep the Rigidbody kinematic even during movement
-                // The NavMeshAgent will handle movement.
-                characterRigidbody.isKinematic = true;
-                characterRigidbody.velocity = Vector3.zero;
+                // MODIFICADO: Mantenemos isKinematic=false para permitir colisiones
+                // El NavMeshAgent moverá el personaje y las colisiones físicas seguirán funcionando
+                characterRigidbody.isKinematic = false;
+                characterRigidbody.velocity = Vector3.zero; // Reset velocity
                 
                 // Sync with other clients
                 if (syncMadeRigidbodyKinematic != characterRigidbody.isKinematic)
                 {
                     syncMadeRigidbodyKinematic = characterRigidbody.isKinematic;
-                    photonView.RPC("RPC_ForceKinematic", RpcTarget.Others, true);
+                    photonView.RPC("RPC_ForceKinematic", RpcTarget.Others, false);
                 }
             }
         }
@@ -437,11 +531,11 @@ namespace Photon.Pun.Demo.Asteroids
                 if (characterRigidbody != null)
                 {
                     characterRigidbody.velocity = Vector3.zero;
-                    characterRigidbody.isKinematic = true;
+                    characterRigidbody.isKinematic = false;
                     
                     // Sync with other clients
-                    syncMadeRigidbodyKinematic = true;
-                    photonView.RPC("RPC_ForceKinematic", RpcTarget.Others, true);
+                    syncMadeRigidbodyKinematic = false;
+                    photonView.RPC("RPC_ForceKinematic", RpcTarget.Others, false);
                 }
             }
         }
@@ -457,16 +551,15 @@ namespace Photon.Pun.Demo.Asteroids
             // Only restore non-kinematic state if we're safely grounded
             if (isGrounded && characterRigidbody != null)
             {
-                // For this implementation, we'll keep it kinematic to be safe
-                characterRigidbody.isKinematic = true;
+                characterRigidbody.isKinematic = false;
                 
                 // Sync with other clients
-                syncMadeRigidbodyKinematic = true;
-                photonView.RPC("RPC_ForceKinematic", RpcTarget.Others, true);
+                syncMadeRigidbodyKinematic = false;
+                photonView.RPC("RPC_ForceKinematic", RpcTarget.Others, false);
                 
                 if (debugMode)
                 {
-                    Debug.Log($"Kept Rigidbody kinematic for stability");
+                    Debug.Log($"Restaurado Rigidbody no-kinematic para permitir colisiones");
                 }
             }
         }
@@ -548,11 +641,11 @@ namespace Photon.Pun.Demo.Asteroids
             if (characterRigidbody != null)
             {
                 characterRigidbody.velocity = Vector3.zero;
-                characterRigidbody.isKinematic = true;
+                characterRigidbody.isKinematic = false;
                 
                 // Sync with other clients
-                syncMadeRigidbodyKinematic = true;
-                photonView.RPC("RPC_ForceKinematic", RpcTarget.Others, true);
+                syncMadeRigidbodyKinematic = false;
+                photonView.RPC("RPC_ForceKinematic", RpcTarget.Others, false);
             }
         }
         
@@ -724,11 +817,11 @@ namespace Photon.Pun.Demo.Asteroids
                 }
             }
             
-            // IMPORTANT: Keep the remote character's Rigidbody kinematic to prevent falling
-            if (characterRigidbody != null && !characterRigidbody.isKinematic)
+            // MODIFICADO: Permitir colisiones físicas en clientes remotos
+            if (characterRigidbody != null && characterRigidbody.isKinematic)
             {
-                characterRigidbody.velocity = Vector3.zero;
-                characterRigidbody.isKinematic = true;
+                characterRigidbody.isKinematic = false;
+                characterRigidbody.detectCollisions = true;
             }
         }
         
@@ -812,15 +905,15 @@ namespace Photon.Pun.Demo.Asteroids
                 // Store position when we stop
                 lastValidPosition = transform.position;
                 
-                // Force kinematic when stopping
+                // MODIFICADO: Mantener isKinematic=false para permitir colisiones pero detener movimiento
                 if (characterRigidbody != null)
                 {
                     characterRigidbody.velocity = Vector3.zero;
-                    characterRigidbody.isKinematic = true;
+                    characterRigidbody.isKinematic = false;
                     
                     // Sync with other clients
-                    syncMadeRigidbodyKinematic = true;
-                    photonView.RPC("RPC_ForceKinematic", RpcTarget.Others, true);
+                    syncMadeRigidbodyKinematic = false;
+                    photonView.RPC("RPC_ForceKinematic", RpcTarget.Others, false);
                 }
                 
                 // Only send RPC if we were moving before
@@ -954,24 +1047,25 @@ namespace Photon.Pun.Demo.Asteroids
             
             if (!moving && characterRigidbody != null)
             {
-                // When stopping, force kinematic mode
+                // MODIFICADO: Mantener isKinematic=false para permitir colisiones pero detener movimiento
                 characterRigidbody.velocity = Vector3.zero;
-                characterRigidbody.isKinematic = true;
+                characterRigidbody.isKinematic = false;
             }
         }
         
         [PunRPC]
         private void RPC_ForceKinematic(bool kinematic)
         {
-            // Force Rigidbody to be kinematic on remote clients
+            // MODIFICADO: Ignorar valores true, siempre mantener isKinematic=false para permitir colisiones
             if (characterRigidbody != null)
             {
                 characterRigidbody.velocity = Vector3.zero;
-                characterRigidbody.isKinematic = kinematic;
+                characterRigidbody.isKinematic = false; // Siempre false para asegurar colisiones
+                characterRigidbody.detectCollisions = true;
                 
                 if (debugMode)
                 {
-                    Debug.Log($"RPC_ForceKinematic: Set Rigidbody.isKinematic = {kinematic}");
+                    Debug.Log($"RPC_ForceKinematic: Manteniendo Rigidbody.isKinematic = false para permitir colisiones");
                 }
             }
         }
@@ -985,11 +1079,11 @@ namespace Photon.Pun.Demo.Asteroids
             // Also update our lastValidPosition
             lastValidPosition = position;
             
-            // Reset velocity and ensure kinematic
+            // Reset velocity and ensure kinematic is false
             if (characterRigidbody != null)
             {
                 characterRigidbody.velocity = Vector3.zero;
-                characterRigidbody.isKinematic = true;
+                characterRigidbody.isKinematic = false;
             }
             
             if (debugMode)
@@ -1013,15 +1107,15 @@ namespace Photon.Pun.Demo.Asteroids
                 }
                 isMoving = false;
                 
-                // Make Rigidbody kinematic when stunned
+                // MODIFICADO: Mantener isKinematic=false para permitir colisiones
                 if (characterRigidbody != null)
                 {
                     characterRigidbody.velocity = Vector3.zero;
-                    characterRigidbody.isKinematic = true;
+                    characterRigidbody.isKinematic = false;
                     
                     // Sync with other clients
-                    syncMadeRigidbodyKinematic = true;
-                    photonView.RPC("RPC_ForceKinematic", RpcTarget.Others, true);
+                    syncMadeRigidbodyKinematic = false;
+                    photonView.RPC("RPC_ForceKinematic", RpcTarget.Others, false);
                 }
                 
                 // Update the remote movement state too
@@ -1029,11 +1123,11 @@ namespace Photon.Pun.Demo.Asteroids
             }
             else
             {
-                // Even on remote clients, ensure kinematic
+                // MODIFICADO: Mantener isKinematic=false para clientes remotos
                 if (characterRigidbody != null)
                 {
                     characterRigidbody.velocity = Vector3.zero;
-                    characterRigidbody.isKinematic = true;
+                    characterRigidbody.isKinematic = false;
                 }
                 
                 // Update local state
@@ -1067,15 +1161,15 @@ namespace Photon.Pun.Demo.Asteroids
                 }
                 isMoving = false;
                 
-                // Make Rigidbody kinematic when rooted
+                // MODIFICADO: Mantener isKinematic=false para permitir colisiones
                 if (characterRigidbody != null)
                 {
                     characterRigidbody.velocity = Vector3.zero;
-                    characterRigidbody.isKinematic = true;
+                    characterRigidbody.isKinematic = false;
                     
                     // Sync with other clients
-                    syncMadeRigidbodyKinematic = true;
-                    photonView.RPC("RPC_ForceKinematic", RpcTarget.Others, true);
+                    syncMadeRigidbodyKinematic = false;
+                    photonView.RPC("RPC_ForceKinematic", RpcTarget.Others, false);
                 }
                 
                 // Update the remote movement state too
@@ -1083,11 +1177,11 @@ namespace Photon.Pun.Demo.Asteroids
             }
             else
             {
-                // Even on remote clients, ensure kinematic
+                // MODIFICADO: Mantener isKinematic=false para clientes remotos
                 if (characterRigidbody != null)
                 {
                     characterRigidbody.velocity = Vector3.zero;
-                    characterRigidbody.isKinematic = true;
+                    characterRigidbody.isKinematic = false;
                 }
                 
                 // Update local state

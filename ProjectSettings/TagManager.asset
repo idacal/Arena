@@ -5,6 +5,9 @@ TagManager:
   serializedVersion: 2
   tags:
   - Bullet
+  - Projectile
+  - BlueTeam
+  - RedTeam
   layers:
   - Default
   - TransparentFX
@@ -15,9 +18,9 @@ TagManager:
   - Player
   - Enemy team
   - Allied team
-  - 
-  - 
-  - 
+  - RedTeam
+  - BlueTeam
+  - Projectile
   - 
   - 
   - 

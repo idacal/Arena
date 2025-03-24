@@ -41,15 +41,44 @@ namespace Photon.Pun.Demo.Asteroids
         [Header("Debug")]
         public bool debugMode = false;
         
-        // Referencias privadas
-        protected Rigidbody heroRigidbody;
-        protected Collider heroCollider;
-        protected bool _isDead = false;   // Cambiado a privado con un getter público
+        [Header("Combat Settings")]
+        [SerializeField] protected float attackRange = 2f; // Para melee será corto, para rango será mayor
+        [SerializeField] protected AttackType attackType = AttackType.Melee;
+        [SerializeField] protected GameObject basicAttackProjectilePrefab; // Solo necesario para attackType = Ranged
+
+        [Header("Combat Debug")]
+        [SerializeField] protected bool showCombatDebug = false;
+        
+        // Variables de control internas
+        protected float attackCooldown = 0f;
+        protected HeroBase currentTarget;
+        protected bool isAttacking = false;
         
         // Eventos
         public delegate void HeroEvent(HeroBase hero);
         public event HeroEvent OnHeroDeath;
         public event HeroEvent OnHeroRespawn;
+        
+        // Eventos de combate
+        public delegate void HealthChangedDelegate(float currentHealth, float maxHealth);
+        public event HealthChangedDelegate OnHealthChanged;
+        
+        public delegate void HeroDiedDelegate(HeroBase hero);
+        public event HeroDiedDelegate OnHeroDied;
+        
+        // Constante para propiedad de equipo en Photon
+        private const string PLAYER_TEAM = "PlayerTeam";
+        
+        public enum AttackType
+        {
+            Melee,
+            Ranged
+        }
+        
+        // Referencias privadas
+        protected Rigidbody heroRigidbody;
+        protected Collider heroCollider;
+        protected bool _isDead = false;   // Cambiado a privado con un getter público
         
         // Propiedad pública para acceder al estado de muerte
         public bool IsDead => _isDead;
@@ -81,46 +110,120 @@ namespace Photon.Pun.Demo.Asteroids
         
         protected virtual void Start()
         {
-            // Configurar héroe según los datos del jugador
             if (photonView.IsMine)
             {
-                // Cargar datos del héroe seleccionado
-                LoadHeroData();
+                animator = GetComponentInChildren<Animator>();
+                uiController = GetComponent<HeroUIController>();
                 
-                // Instanciar el canvas UI si tenemos el prefab y somos el jugador local
-                if (uiCanvasPrefab != null)
+                // Configuración inicial
+                currentHealth = maxHealth;
+                currentMana = maxMana;
+                
+                // Inicializar controlador de UI si no existe
+                if (uiController == null && uiCanvasPrefab != null)
                 {
-                    GameObject canvasInstance = Instantiate(uiCanvasPrefab, transform);
-                    
-                    // Buscar el componente HeroUIController en el canvas instanciado
-                    HeroUIController canvasUIController = canvasInstance.GetComponent<HeroUIController>();
-                    if (canvasUIController != null)
+                    GameObject uiCanvas = Instantiate(uiCanvasPrefab, transform);
+                    uiController = uiCanvas.GetComponent<HeroUIController>();
+                    if (uiController != null)
                     {
-                        // Asignar referencias
-                        uiController = canvasUIController;
+                        uiController.Initialize(this);
+                    }
+                }
+                
+                // Verificar que el NavMeshAgent está activado (muy importante para la colisión)
+                UnityEngine.AI.NavMeshAgent navAgent = GetComponent<UnityEngine.AI.NavMeshAgent>();
+                if (navAgent != null)
+                {
+                    if (!navAgent.enabled)
+                    {
+                        navAgent.enabled = true;
+                        Debug.LogWarning($"[HeroBase] NavMeshAgent estaba desactivado en Start, activándolo para {heroName}");
+                    }
+                    
+                    Debug.Log($"[HeroBase] Estado de NavMeshAgent en Start: {(navAgent.enabled ? "ACTIVO" : "INACTIVO")} - {heroName}");
+                }
+                else
+                {
+                    Debug.LogError($"[HeroBase] ¡Error grave! No se encontró NavMeshAgent en {heroName}");
+                }
+                
+                // Verificar que el teamId sea correcto según los datos del jugador
+                Player player = photonView.Owner;
+                if (player != null)
+                {
+                    // Obtener la propiedad de equipo desde el objeto Player (usando la constante correcta)
+                    if (player.CustomProperties.TryGetValue(PLAYER_TEAM, out object teamObj))
+                    {
+                        int networkTeamId = (int)teamObj;
+                        if (teamId != networkTeamId)
+                        {
+                            Debug.LogWarning($"[HeroBase] Corrigiendo teamId incorrecto: {teamId} -> {networkTeamId} para {heroName}");
+                            teamId = networkTeamId;
+                        }
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[HeroBase] El jugador no tiene configurada la propiedad '{PLAYER_TEAM}'. Usando teamId por defecto: {teamId}");
+                    }
+                }
+                
+                // Aplicar color de equipo según teamId
+                ApplyTeamColor();
+                
+                // Configurar layer según equipo usando LayerManager
+                LayerManager.SetTeamLayerAndTag(gameObject, teamId);
+                
+                // Validar que los layers existen en el proyecto
+                LayerManager.ValidateLayersAndTags();
+                
+                // Si tenemos photonView, sincronizamos la inicialización
+                if (PhotonNetwork.IsConnected)
+                {
+                    Debug.Log($"[HeroBase] Sincronizando equipo a todos los clientes: teamId={teamId} para {heroName}");
+                    photonView.RPC("RPC_SyncTeamConfig", RpcTarget.AllBuffered, teamId);
+                    photonView.RPC("RPC_ForceModelUpdate", RpcTarget.OthersBuffered);
+                }
+                
+                // Programar una verificación final del NavMeshAgent
+                Invoke("CheckNavMeshAgentDelayed", 0.5f);
+            }
+            else
+            {
+                // Para clientes remotos, asegurar que al menos el tag sea correcto desde el principio
+                Player owner = photonView.Owner;
+                if (owner != null && owner.CustomProperties.TryGetValue(PLAYER_TEAM, out object teamObj))
+                {
+                    int networkTeamId = (int)teamObj;
+                    if (teamId != networkTeamId)
+                    {
+                        teamId = networkTeamId;
+                        Debug.Log($"[HeroBase] Cliente remoto: Actualizado teamId={teamId} para {heroName}");
                     }
                 }
             }
             
-            // Aplicar color del equipo
-            ApplyTeamColor();
+            LoadHeroData();
+        }
+        
+        /// <summary>
+        /// Verifica el estado del NavMeshAgent después de un breve retraso 
+        /// para asegurarnos de que no se desactive por otra parte del código
+        /// </summary>
+        private void CheckNavMeshAgentDelayed()
+        {
+            if (!photonView.IsMine) return;
             
-            // Actualizar UI si existe el controlador
-            if (uiController != null)
+            UnityEngine.AI.NavMeshAgent navAgent = GetComponent<UnityEngine.AI.NavMeshAgent>();
+            if (navAgent != null)
             {
-                uiController.UpdateHealthBar(currentHealth, maxHealth);
-                uiController.UpdateManaBar(currentMana, maxMana);
-                uiController.SetPlayerName(photonView.Owner.NickName);
+                if (!navAgent.enabled)
+                {
+                    navAgent.enabled = true;
+                    Debug.LogWarning($"[HeroBase] NavMeshAgent se desactivó después de Start, reactivándolo para {heroName}");
+                }
+                
+                Debug.Log($"[HeroBase] Estado final de NavMeshAgent: {(navAgent.enabled ? "ACTIVO" : "INACTIVO")} - {heroName}");
             }
-            
-            // Forzar visibilidad del modelo en todos los clientes
-            if (photonView.IsMine)
-            {
-                photonView.RPC("RPC_ForceModelUpdate", RpcTarget.AllBuffered);
-            }
-            
-            // Invocar de nuevo después de un breve retraso (por si hay problemas de timing)
-            Invoke("DelayedVisibilityCheck", 0.5f);
         }
         
         protected virtual void Update()
@@ -133,6 +236,12 @@ namespace Photon.Pun.Demo.Asteroids
             
             // Regeneración de maná
             RegenerateMana();
+            
+            // Actualizar cooldown de ataque
+            if (attackCooldown > 0)
+            {
+                attackCooldown -= Time.deltaTime;
+            }
         }
         
         #endregion
@@ -422,6 +531,85 @@ namespace Photon.Pun.Demo.Asteroids
                     Debug.Log("RPC_ForceModelUpdate: Animator actualizado");
                 }
             }
+            
+            // Verificar NavMeshAgent para jugador local
+            if (photonView.IsMine)
+            {
+                // Obtener el controlador de movimiento
+                HeroMovementController movementController = GetComponent<HeroMovementController>();
+                if (movementController != null)
+                {
+                    // Obtener NavMeshAgent
+                    UnityEngine.AI.NavMeshAgent navAgent = GetComponent<UnityEngine.AI.NavMeshAgent>();
+                    
+                    if (navAgent != null)
+                    {
+                        // Asegurarse de que está activado para el jugador local
+                        if (!navAgent.enabled)
+                        {
+                            navAgent.enabled = true;
+                            Debug.Log($"RPC_ForceModelUpdate: NavMeshAgent reactivado para {gameObject.name}");
+                        }
+                        
+                        // Verificar si está en un NavMesh válido
+                        if (!navAgent.isOnNavMesh)
+                        {
+                            Debug.LogWarning($"RPC_ForceModelUpdate: NavMeshAgent no está en NavMesh válido - {gameObject.name}");
+                            
+                            // Intentar recuperar la posición
+                            UnityEngine.AI.NavMeshHit hit;
+                            if (UnityEngine.AI.NavMesh.SamplePosition(transform.position, out hit, 5f, UnityEngine.AI.NavMesh.AllAreas))
+                            {
+                                navAgent.Warp(hit.position);
+                                Debug.Log($"RPC_ForceModelUpdate: Corregida posición en NavMesh para {gameObject.name}");
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"RPC_ForceModelUpdate: No se encontró NavMeshAgent en {gameObject.name}");
+                    }
+                }
+            }
+        }
+        
+        [PunRPC]
+        private void RPC_SyncTeamConfig(int teamId)
+        {
+            // Asignar layer y tag según el teamId, incluso en clientes remotos
+            this.teamId = teamId;
+            
+            Debug.Log($"[HeroBase] RPC_SyncTeamConfig para {gameObject.name}: Recibido teamId={teamId}, photonView.IsMine={photonView.IsMine}");
+            
+            // Aplicar el color del equipo
+            ApplyTeamColor();
+            
+            // Configurar layer y tag correctamente según el teamId
+            string expectedTag = teamId == 0 ? LayerManager.TAG_RED_TEAM : LayerManager.TAG_BLUE_TEAM;
+            LayerManager.SetTeamLayerAndTag(gameObject, teamId);
+            
+            // Verificación para asegurar que el tag fue asignado correctamente
+            if (gameObject.tag != expectedTag)
+            {
+                Debug.LogError($"[HeroBase] ERROR DE TAG: El tag debería ser {expectedTag} pero es {gameObject.tag}. Corrigiendo...");
+                gameObject.tag = expectedTag;
+            }
+            
+            // Verificación adicional para todas las propiedades importantes
+            Debug.Log($"[RPC_SyncTeamConfig] VERIFICACIÓN FINAL para {gameObject.name}: " + 
+                     $"teamId={teamId}, tag={gameObject.tag}, layer={gameObject.layer}, " +
+                     $"photonView.ViewID={photonView.ViewID}, Owner={photonView.Owner?.NickName}");
+            
+            // Verificar si hay discrepancia entre TeamId y el tag asignado
+            if ((teamId == 0 && gameObject.tag != LayerManager.TAG_RED_TEAM) || 
+                (teamId == 1 && gameObject.tag != LayerManager.TAG_BLUE_TEAM))
+            {
+                Debug.LogError($"[HeroBase] DISCREPANCIA CRÍTICA: teamId={teamId} no coincide con tag={gameObject.tag}");
+                // Forzar el tag correcto
+                gameObject.tag = teamId == 0 ? LayerManager.TAG_RED_TEAM : LayerManager.TAG_BLUE_TEAM;
+            }
+            
+            Debug.Log($"[RPC] Sincronizada configuración de equipo: {gameObject.name}, teamId={teamId}, tag={gameObject.tag}");
         }
         
         #endregion
@@ -437,6 +625,7 @@ namespace Photon.Pun.Demo.Asteroids
                 stream.SendNext(currentHealth);
                 stream.SendNext(currentMana);
                 stream.SendNext(_isDead);
+                stream.SendNext(isAttacking);
             }
             else
             {
@@ -444,6 +633,7 @@ namespace Photon.Pun.Demo.Asteroids
                 currentHealth = (float)stream.ReceiveNext();
                 currentMana = (float)stream.ReceiveNext();
                 _isDead = (bool)stream.ReceiveNext();
+                isAttacking = (bool)stream.ReceiveNext();
                 
                 // Actualizar UI
                 if (uiController != null)
@@ -451,7 +641,240 @@ namespace Photon.Pun.Demo.Asteroids
                     uiController.UpdateHealthBar(currentHealth, maxHealth);
                     uiController.UpdateManaBar(currentMana, maxMana);
                 }
+                
+                // Notificar cambio de salud
+                OnHealthChanged?.Invoke(currentHealth, maxHealth);
             }
+        }
+        
+        #endregion
+        
+        // Propiedades de combate
+        public float AttackDamage => attackDamage;
+        public float AttackSpeed => attackSpeed;
+        public float AttackRange => attackRange;
+        public AttackType HeroAttackType => attackType;
+        public float AttackCooldown => attackCooldown;
+        public float CurrentHealth => currentHealth;
+        public float MaxHealth => maxHealth;
+        public bool IsAttacking => isAttacking;
+        
+        #region Combat Methods
+        
+        // Método para realizar un ataque básico
+        public virtual bool TryBasicAttack(HeroBase target)
+        {
+            if (!photonView.IsMine) return false;
+            
+            // Verificar si está en cooldown
+            if (attackCooldown > 0)
+            {
+                if (showCombatDebug) Debug.Log($"{heroName} no puede atacar aún, cooldown: {attackCooldown:F1}s");
+                return false;
+            }
+            
+            // Verificar distancia
+            float distanceToTarget = Vector3.Distance(transform.position, target.transform.position);
+            if (distanceToTarget > attackRange)
+            {
+                if (showCombatDebug) Debug.Log($"{heroName} fuera de rango para atacar a {target.heroName}, distancia: {distanceToTarget:F1}m");
+                return false;
+            }
+            
+            // Efectuar el ataque según el tipo
+            if (attackType == AttackType.Melee)
+            {
+                // Ejecutar ataque melee directamente
+                ExecuteMeleeAttack(target);
+            }
+            else if (attackType == AttackType.Ranged)
+            {
+                // Crear proyectil para ataque a distancia
+                ExecuteRangedAttack(target);
+            }
+            
+            // Establecer cooldown basado en velocidad de ataque
+            attackCooldown = 1f / attackSpeed;
+            isAttacking = true;
+            
+            // Trigger de animación (se implementará después)
+            TriggerAttackAnimation();
+            
+            return true;
+        }
+        
+        // Ataque cuerpo a cuerpo
+        protected virtual void ExecuteMeleeAttack(HeroBase target)
+        {
+            if (showCombatDebug) Debug.Log($"{heroName} realiza ataque cuerpo a cuerpo a {target.heroName}");
+            
+            // Mandar RPC para sincronizar el daño en todos los clientes
+            photonView.RPC("RPC_ApplyDamage", RpcTarget.All, target.photonView.ViewID, attackDamage);
+        }
+        
+        // Ataque a distancia
+        protected virtual void ExecuteRangedAttack(HeroBase target)
+        {
+            if (showCombatDebug) Debug.Log($"{heroName} dispara proyectil a {target.heroName}");
+            
+            if (basicAttackProjectilePrefab != null)
+            {
+                // Posición de origen del proyectil (podría ajustarse a un punto específico del personaje)
+                Vector3 spawnPosition = transform.position + transform.forward * 0.5f + Vector3.up * 1.0f;
+                
+                // Dirección hacia el objetivo
+                Vector3 direction = (target.transform.position - spawnPosition).normalized;
+                
+                // Instanciar proyectil vía Photon para que sea visible en la red
+                object[] instantiationData = new object[] { 
+                    attackDamage, 
+                    photonView.ViewID, // ID del atacante
+                    target.photonView.ViewID // ID del objetivo
+                };
+                
+                // Instanciar el proyectil
+                PhotonNetwork.Instantiate(
+                    basicAttackProjectilePrefab.name, 
+                    spawnPosition, 
+                    Quaternion.LookRotation(direction), 
+                    0, 
+                    instantiationData
+                );
+            }
+            else
+            {
+                Debug.LogError($"No hay prefab de proyectil asignado para el ataque básico de {heroName}");
+            }
+        }
+        
+        // Método para recibir daño
+        public virtual bool TakeDamage(float damageAmount, HeroBase attacker)
+        {
+            if (!photonView.IsMine) return false;
+            
+            // Aplicar daño y sincronizar
+            photonView.RPC("RPC_ApplyDamage", RpcTarget.All, photonView.ViewID, damageAmount);
+            
+            return true;
+        }
+        
+        // Efecto visual de recibir daño
+        protected virtual void ShowDamageEffect()
+        {
+            // Implementar efectos visuales (partículas, animación, etc.)
+        }
+        
+        // Trigger de animación de ataque
+        protected virtual void TriggerAttackAnimation()
+        {
+            // Implementar animación de ataque
+        }
+        
+        // Método llamado cuando el héroe muere en combate
+        protected virtual void DieInCombat()
+        {
+            if (showCombatDebug) Debug.Log($"{heroName} ha muerto");
+            
+            // Invocar evento de muerte
+            OnHeroDied?.Invoke(this);
+            
+            // Desactivar controles
+            if (GetComponent<HeroMovementController>() != null)
+            {
+                GetComponent<HeroMovementController>().enabled = false;
+            }
+            
+            if (GetComponent<HeroAbilityController>() != null)
+            {
+                GetComponent<HeroAbilityController>().enabled = false;
+            }
+            
+            // Si somos propietarios, informar al GameManager
+            if (photonView.IsMine)
+            {
+                // Implementar lógica de respawn, puntuación, etc.
+            }
+        }
+        
+        // Método para curar al héroe
+        public virtual void Heal(float amount)
+        {
+            if (!photonView.IsMine) return;
+            
+            photonView.RPC("RPC_Heal", RpcTarget.All, photonView.ViewID, amount);
+        }
+        
+        #endregion
+        
+        #region RPCs for Combat
+        
+        [PunRPC]
+        protected virtual void RPC_ApplyDamage(int targetViewID, float damageAmount)
+        {
+            // Buscar el objetivo por su ViewID
+            PhotonView targetView = PhotonView.Find(targetViewID);
+            if (targetView == null) return;
+            
+            // Obtener componente HeroBase
+            HeroBase targetHero = targetView.GetComponent<HeroBase>();
+            if (targetHero == null) return;
+            
+            // Aplicar daño localmente en cada cliente
+            targetHero.ApplyDamageLocally(damageAmount);
+        }
+        
+        // Método local para aplicar el daño (llamado desde RPC)
+        public virtual void ApplyDamageLocally(float damageAmount)
+        {
+            // Reducir salud
+            currentHealth -= damageAmount;
+            
+            // Limitar a 0 como mínimo
+            currentHealth = Mathf.Max(0f, currentHealth);
+            
+            // Invocar evento de cambio de salud
+            OnHealthChanged?.Invoke(currentHealth, maxHealth);
+            
+            // Mostrar efecto visual de daño
+            ShowDamageEffect();
+            
+            // Verificar si el héroe ha muerto
+            if (currentHealth <= 0)
+            {
+                DieInCombat();
+            }
+            
+            if (showCombatDebug) Debug.Log($"{heroName} recibe {damageAmount:F1} de daño. Salud restante: {currentHealth:F1}");
+        }
+        
+        [PunRPC]
+        protected virtual void RPC_Heal(int targetViewID, float healAmount)
+        {
+            // Buscar el objetivo por su ViewID
+            PhotonView targetView = PhotonView.Find(targetViewID);
+            if (targetView == null) return;
+            
+            // Obtener componente HeroBase
+            HeroBase targetHero = targetView.GetComponent<HeroBase>();
+            if (targetHero == null) return;
+            
+            // Aplicar curación localmente en cada cliente
+            targetHero.HealLocally(healAmount);
+        }
+        
+        // Método local para aplicar curación (llamado desde RPC)
+        protected virtual void HealLocally(float healAmount)
+        {
+            // Aumentar salud
+            currentHealth += healAmount;
+            
+            // Limitar al máximo
+            currentHealth = Mathf.Min(maxHealth, currentHealth);
+            
+            // Invocar evento de cambio de salud
+            OnHealthChanged?.Invoke(currentHealth, maxHealth);
+            
+            if (showCombatDebug) Debug.Log($"{heroName} recibe {healAmount:F1} de curación. Salud: {currentHealth:F1}");
         }
         
         #endregion

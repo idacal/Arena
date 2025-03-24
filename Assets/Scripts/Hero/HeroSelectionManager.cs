@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using ExitGames.Client.Photon;
 using Photon.Realtime;
 using TMPro;
+using System.Linq;
 
 namespace Photon.Pun.Demo.Asteroids
 {
@@ -233,9 +234,13 @@ namespace Photon.Pun.Demo.Asteroids
         /// </summary>
         private void AssignTeamDeterministic()
         {
+            Debug.Log("Iniciando asignación determinista de equipos...");
+            
             // Ordenar los jugadores por su ID para asignación determinista
             List<Player> sortedPlayers = new List<Player>(PhotonNetwork.PlayerList);
             sortedPlayers.Sort((a, b) => a.ActorNumber.CompareTo(b.ActorNumber));
+            
+            Debug.Log($"Jugadores ordenados: {string.Join(", ", sortedPlayers.Select(p => $"{p.NickName}({p.ActorNumber})").ToArray())}");
             
             // Asignar jugadores de manera alternativa a los equipos
             for (int i = 0; i < sortedPlayers.Count; i++)
@@ -255,6 +260,7 @@ namespace Photon.Pun.Demo.Asteroids
                 // Actualizar propiedades del jugador si es el jugador local
                 if (p.IsLocal)
                 {
+                    Debug.Log($"Estableciendo CustomProperties PLAYER_TEAM={team} para jugador {p.NickName}");
                     Hashtable props = new Hashtable { { PLAYER_TEAM, team } };
                     p.SetCustomProperties(props);
                 }
@@ -269,8 +275,12 @@ namespace Photon.Pun.Demo.Asteroids
                 if (p.CustomProperties.TryGetValue(PLAYER_TEAM, out teamObj) && teamObj != null)
                 {
                     teamName = ((int)teamObj == TEAM_RED) ? "Rojo" : "Azul";
+                    Debug.Log($"  - Jugador {p.NickName} (ID: {p.ActorNumber}): Equipo {teamName}, valor={teamObj}");
                 }
-                Debug.Log($"  - Jugador {p.NickName} (ID: {p.ActorNumber}): Equipo {teamName}");
+                else
+                {
+                    Debug.LogWarning($"  - Jugador {p.NickName} (ID: {p.ActorNumber}): ¡No tiene equipo asignado!");
+                }
             }
         }
 

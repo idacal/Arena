@@ -66,6 +66,17 @@ MonoBehaviour:
   - RPC_ForceKinematic
   - RPC_SetMovingState
   - RPC_SyncPosition
+  - RPC_ApplyDamage
+  - RPC_CreateHitEffect
+  - RPC_Heal
+  - RPC_OnAttackPerformed
+  - RPC_OnRespawn
+  - RPC_RegisterPlayers
+  - RPC_SetShooterInfo
+  - RPC_SyncHealth
+  - RPC_SyncKillStats
+  - RPC_UpdateTarget
+  - RPC_SyncTeamConfig
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

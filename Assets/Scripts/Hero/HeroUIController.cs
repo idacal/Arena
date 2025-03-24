@@ -38,6 +38,33 @@ namespace Photon.Pun.Demo.Asteroids
         private Transform cameraTransform;
         private HeroBase heroOwner;
         
+        /// <summary>
+        /// Inicializa el controlador de UI con el héroe propietario
+        /// </summary>
+        /// <param name="hero">Referencia al héroe propietario de esta UI</param>
+        public void Initialize(HeroBase hero)
+        {
+            heroOwner = hero;
+            Debug.Log($"[HeroUIController] Inicializado para el héroe: {hero.heroName}");
+            
+            // Inicializar barras de salud y maná con valores iniciales
+            if (hero != null)
+            {
+                UpdateHealthBar(hero.CurrentHealth, hero.MaxHealth);
+                UpdateManaBar(hero.currentMana, hero.maxMana);
+                
+                if (playerNameText != null && hero.photonView != null && hero.photonView.Owner != null)
+                {
+                    SetPlayerName(hero.photonView.Owner.NickName);
+                }
+                
+                if (heroNameText != null)
+                {
+                    SetHeroName(hero.heroName);
+                }
+            }
+        }
+        
         void Awake()
         {
             // Buscar referencias si no están asignadas

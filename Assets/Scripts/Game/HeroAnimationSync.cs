@@ -17,7 +17,6 @@ namespace Photon.Pun.Demo.Asteroids
             "Respawn"     // Para respawn
         };
         
-        private float lastMoveSpeed = 0f;
         private bool lastAttackState = false;
         
         void Awake()
