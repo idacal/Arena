@@ -4,6 +4,7 @@ using ExitGames.Client.Photon;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine.UI;
+using System.Collections;
 
 namespace Photon.Pun.Demo.Asteroids
 {
@@ -75,6 +76,9 @@ namespace Photon.Pun.Demo.Asteroids
         // Eventos de combate
         public delegate void HealthChangedDelegate(float currentHealth, float maxHealth);
         public event HealthChangedDelegate OnHealthChanged;
+        
+        public delegate void ManaChangedDelegate(float currentMana, float maxMana);
+        public event ManaChangedDelegate OnManaChanged;
         
         public delegate void HeroDiedDelegate(HeroBase hero);
         public event HeroDiedDelegate OnHeroDied;
@@ -260,7 +264,11 @@ namespace Photon.Pun.Demo.Asteroids
         
         protected virtual void Update()
         {
-            if (!photonView.IsMine || _isDead)
+            if (!photonView.IsMine)
+                return;
+            
+            // No regenerar salud si está muerto
+            if (_isDead)
                 return;
             
             // La lógica de control se implementará en clases derivadas
@@ -439,10 +447,23 @@ namespace Photon.Pun.Demo.Asteroids
         /// </summary>
         protected virtual void Die()
         {
-            if (_isDead)
-                return;
-                
+            // Desactivar regeneración y controles
             _isDead = true;
+            DisableControls();
+            
+            // Reproducir animación de muerte
+            if (animator != null)
+            {
+                // Usar parámetros genéricos que cada héroe configurará en su Animator
+                animator.SetBool("IsDead", true);
+                animator.SetTrigger("Die");
+            }
+            
+            // Reproducir efecto de muerte si existe
+            if (deathEffectPrefab != null)
+            {
+                Instantiate(deathEffectPrefab, transform.position, Quaternion.identity);
+            }
             
             // Reproducir sonido de muerte
             if (deathSound != null && audioSource != null)
@@ -450,44 +471,122 @@ namespace Photon.Pun.Demo.Asteroids
                 audioSource.PlayOneShot(deathSound);
             }
             
-            // Mostrar efecto de muerte
-            if (deathEffectPrefab != null)
+            // Notificar a todos los clientes
+            photonView.RPC("RPC_OnDeath", RpcTarget.All);
+            
+            // Solo el dueño del objeto inicia el respawn
+            if (photonView.IsMine)
             {
-                if (PhotonNetwork.IsConnected)
+                StartCoroutine(RespawnAfterDelay());
+            }
+            
+            // Notificar a los listeners
+            OnHeroDeath?.Invoke(this);
+            OnHeroDied?.Invoke(this);
+        }
+        
+        private IEnumerator RespawnAfterDelay()
+        {
+            // Esperar el tiempo de respawn
+            yield return new WaitForSeconds(respawnTime);
+            
+            // Buscar el GameplayManager
+            GameplayManager gameplayManager = FindObjectOfType<GameplayManager>();
+            if (gameplayManager != null)
+            {
+                // Obtener el punto de spawn según el equipo
+                Transform spawnPoint = (teamId == 0) ? gameplayManager.redTeamSpawn : gameplayManager.blueTeamSpawn;
+                
+                if (spawnPoint != null)
                 {
-                    PhotonNetwork.Instantiate(deathEffectPrefab.name, transform.position, transform.rotation);
+                    // Añadir variación para evitar superposiciones
+                    Vector3 spawnPosition = spawnPoint.position + new Vector3(
+                        Random.Range(-2f, 2f),
+                        0f,
+                        Random.Range(-2f, 2f)
+                    );
+                    
+                    // Preparar el modelo para el respawn
+                    if (animator != null)
+                    {
+                        animator.SetBool("IsDead", false);
+                        animator.ResetTrigger("Die");
+                    }
+                    
+                    // Teletransportar al punto de spawn
+                    transform.position = spawnPosition;
+                    transform.rotation = spawnPoint.rotation;
+                    
+                    // Restaurar salud y mana
+                    currentHealth = maxHealth;
+                    currentMana = maxMana;
+                    _isDead = false;
+                    
+                    // Notificar a todos los clientes
+                    photonView.RPC("RPC_OnRespawn", RpcTarget.All, spawnPosition, spawnPoint.rotation);
+                    
+                    Debug.Log($"[HeroBase] Héroe respawneado en posición {spawnPosition} para el equipo {(teamId == 0 ? "Rojo" : "Azul")}");
                 }
                 else
                 {
-                    Instantiate(deathEffectPrefab, transform.position, transform.rotation);
+                    Debug.LogError($"[HeroBase] No se encontró el punto de spawn para el equipo {teamId}");
+                }
+            }
+            else
+            {
+                Debug.LogError("[HeroBase] No se encontró el GameplayManager en la escena");
+            }
+        }
+        
+        private void DisableControls()
+        {
+            // Desactivar componentes de control
+            var movementController = GetComponent<HeroMovementController>();
+            if (movementController != null)
+            {
+                movementController.enabled = false;
+            }
+            
+            var attackController = GetComponent<BasicAttackController>();
+            if (attackController != null)
+            {
+                attackController.enabled = false;
+            }
+            
+            // Desactivar colliders si es necesario
+            var colliders = GetComponents<Collider>();
+            foreach (var col in colliders)
+            {
+                col.enabled = false;
+            }
+        }
+        
+        private void EnableControls()
+        {
+            // Reactivar componentes de control
+            var movementController = GetComponent<HeroMovementController>();
+            if (movementController != null)
+            {
+                movementController.enabled = true;
+                // Resetear el destino del movimiento al punto actual
+                if (photonView.IsMine)
+                {
+                    movementController.ResetMovement();
                 }
             }
             
-            // Desactivar controles
-            if (heroCollider != null)
-                heroCollider.enabled = false;
-                
-            if (heroRigidbody != null)
-                heroRigidbody.isKinematic = true;
-                
-            // Desactivar movimiento y habilidades si es el jugador local
-            if (photonView.IsMine)
+            var attackController = GetComponent<BasicAttackController>();
+            if (attackController != null)
             {
-                HeroMovementController movement = GetComponent<HeroMovementController>();
-                if (movement) movement.enabled = false;
-                
-                if (abilityController != null)
-                    abilityController.enabled = false;
-                
-                // Hacer transparente el modelo
-                MakeTransparent(true);
-                
-                // Iniciar respawn
-                Invoke("Respawn", respawnTime);
+                attackController.enabled = true;
             }
             
-            // Invocar evento de muerte
-            OnHeroDeath?.Invoke(this);
+            // Reactivar colliders
+            var colliders = GetComponents<Collider>();
+            foreach (var col in colliders)
+            {
+                col.enabled = true;
+            }
         }
         
         /// <summary>
@@ -523,59 +622,6 @@ namespace Photon.Pun.Demo.Asteroids
                     }
                 }
             }
-        }
-        
-        /// <summary>
-        /// Maneja el respawn del héroe
-        /// </summary>
-        protected virtual void Respawn()
-        {
-            if (!_isDead)
-                return;
-                
-            _isDead = false;
-            currentHealth = maxHealth;
-            currentMana = maxMana;
-            
-            // Reactivar componentes
-            if (heroCollider != null)
-                heroCollider.enabled = true;
-                
-            if (heroRigidbody != null)
-                heroRigidbody.isKinematic = false;
-                
-            // Reactivar movimiento y habilidades
-            HeroMovementController movement = GetComponent<HeroMovementController>();
-            if (movement) movement.enabled = true;
-            
-            if (abilityController != null)
-                abilityController.enabled = true;
-            
-            // Restaurar visibilidad
-            MakeTransparent(false);
-            
-            // Reubicar en el punto de respawn del equipo
-            GameObject[] spawnPoints = GameObject.FindGameObjectsWithTag("SpawnPoint");
-            foreach (GameObject spawnPoint in spawnPoints)
-            {
-                SpawnPoint sp = spawnPoint.GetComponent<SpawnPoint>();
-                if (sp != null && sp.teamID == teamId)
-                {
-                    transform.position = spawnPoint.transform.position;
-                    transform.rotation = spawnPoint.transform.rotation;
-                    break;
-                }
-            }
-            
-            // Actualizar UI
-            if (uiController != null)
-            {
-                uiController.UpdateHealthBar(currentHealth, maxHealth);
-                uiController.UpdateManaBar(currentMana, maxMana);
-            }
-            
-            // Invocar evento de respawn
-            OnHeroRespawn?.Invoke(this);
         }
         
         /// <summary>
@@ -653,14 +699,9 @@ namespace Photon.Pun.Demo.Asteroids
                 uiController.ShowDamageText(actualDamage, isMagicDamage);
             }
             
-            // Verificar muerte
-            if (currentHealth <= 0 && !_isDead)
-            {
-                Die();
-            }
-
-            // Sincronizar con todos los clientes
-            photonView.RPC("RPC_SyncHealth", RpcTarget.All, currentHealth, _isDead);
+            // Verificar muerte y sincronizar con todos los clientes
+            bool shouldDie = currentHealth <= 0 && !_isDead;
+            photonView.RPC("RPC_SyncHealth", RpcTarget.All, currentHealth, shouldDie);
         }
         
         [PunRPC]
@@ -668,25 +709,20 @@ namespace Photon.Pun.Demo.Asteroids
         {
             // Actualizar salud
             currentHealth = newHealth;
-            _isDead = isDead;
             
             // Actualizar UI
             if (uiController != null)
             {
                 uiController.UpdateHealthBar(currentHealth, maxHealth);
-                
-                // Notificar el cambio de salud
                 OnHealthChanged?.Invoke(currentHealth, maxHealth);
             }
             
-            // Si está muerto y no estaba muerto antes, llamar a Die()
+            // Si debe morir y no está muerto, iniciar el proceso de muerte
             if (isDead && !_isDead)
             {
+                _isDead = true;
                 Die();
             }
-            
-            // Debug log para verificar la sincronización
-            Debug.Log($"[HeroBase] {heroName} sincronizó salud: {currentHealth}/{maxHealth}");
         }
         
         [PunRPC]
@@ -810,6 +846,52 @@ namespace Photon.Pun.Demo.Asteroids
             }
             
             Debug.Log($"[RPC] Sincronizada configuración de equipo: {gameObject.name}, teamId={teamId}, tag={gameObject.tag}");
+        }
+        
+        [PunRPC]
+        private void RPC_OnRespawn(Vector3 position, Quaternion rotation)
+        {
+            // Actualizar posición y rotación
+            transform.position = position;
+            transform.rotation = rotation;
+            
+            // Restaurar estado
+            _isDead = false;
+            
+            // Resetear animador a estado normal
+            if (animator != null)
+            {
+                animator.SetBool("IsDead", false);
+                animator.SetTrigger("Respawn");
+            }
+            
+            // Detener cualquier movimiento previo
+            var navAgent = GetComponent<UnityEngine.AI.NavMeshAgent>();
+            if (navAgent != null && photonView.IsMine)
+            {
+                navAgent.ResetPath();
+                navAgent.velocity = Vector3.zero;
+                navAgent.isStopped = true;
+                // Asegurarnos de que el agente esté en la posición correcta
+                navAgent.Warp(position);
+            }
+            
+            // Habilitar controles (esto también reseteará el movimiento)
+            EnableControls();
+            
+            // Actualizar UI
+            if (uiController != null)
+            {
+                uiController.UpdateHealthBar(currentHealth, maxHealth);
+                uiController.UpdateManaBar(currentMana, maxMana);
+            }
+            
+            // Notificar a los listeners
+            OnHealthChanged?.Invoke(currentHealth, maxHealth);
+            OnManaChanged?.Invoke(currentMana, maxMana);
+            OnHeroRespawn?.Invoke(this);
+            
+            Debug.Log($"[HeroBase] Héroe respawneado en posición {position}");
         }
         
         #endregion

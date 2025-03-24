@@ -19,6 +19,14 @@ public class ClickIndicator : MonoBehaviour
     private bool isAnimating = false;
     private Renderer visualRenderer; // Referencia general a cualquier tipo de renderer
     
+    [SerializeField]
+    private float fadeTime = 0.5f;
+    [SerializeField]
+    private float displayTime = 1.0f;
+    
+    private float currentDisplayTime;
+    private bool isFading = false;
+    
     private void Awake()
     {
         // MODIFICADO: Buscar cualquier tipo de renderer
@@ -45,6 +53,9 @@ public class ClickIndicator : MonoBehaviour
             // Usar SpriteRenderer como renderer visual
             visualRenderer = spriteRenderer;
         }
+        
+        // Asegurarse de que el objeto está inicialmente oculto
+        gameObject.SetActive(false);
     }
     
     // NUEVO: Método para crear un elemento visual básico si no hay renderer
@@ -118,6 +129,36 @@ public class ClickIndicator : MonoBehaviour
                 gameObject.SetActive(false);
             }
         }
+        
+        if (!gameObject.activeSelf) return;
+        
+        if (!isFading)
+        {
+            currentDisplayTime -= Time.deltaTime;
+            if (currentDisplayTime <= 0)
+            {
+                isFading = true;
+            }
+        }
+        else
+        {
+            // Realizar fade out
+            if (visualRenderer != null && visualRenderer.material != null)
+            {
+                Color currentColor = visualRenderer.material.color;
+                currentColor.a -= Time.deltaTime / fadeTime;
+                
+                if (currentColor.a <= 0)
+                {
+                    gameObject.SetActive(false);
+                    isFading = false;
+                }
+                else
+                {
+                    visualRenderer.material.color = currentColor;
+                }
+            }
+        }
     }
     
     // Método público para mostrar el indicador en una posición
@@ -144,7 +185,18 @@ public class ClickIndicator : MonoBehaviour
         tempColor.a = indicatorColor.a;
         visualRenderer.material.color = tempColor;
         
-        // Activar el objeto
+        // Resetear el tiempo de display
+        currentDisplayTime = displayTime;
+        
+        // Mostrar el objeto
         gameObject.SetActive(true);
+        isFading = false;
+    }
+    
+    public void HideIndicator()
+    {
+        // Ocultar el objeto inmediatamente
+        gameObject.SetActive(false);
+        isFading = false;
     }
 }

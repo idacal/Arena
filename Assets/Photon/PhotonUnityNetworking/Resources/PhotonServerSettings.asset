@@ -79,6 +79,8 @@ MonoBehaviour:
   - RPC_SyncTeamConfig
   - RPC_SyncDamage
   - RPC_SyncDeathStats
+  - RPC_OnProjectileHit
+  - RPC_DestroyProjectile
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

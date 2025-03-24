@@ -31,15 +31,23 @@ public class BasicAttackProjectile : MonoBehaviourPun, IPunObservable
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
+        
+        // Configurar el Rigidbody
+        if (rb != null)
+        {
+            rb.useGravity = useGravity;
+            rb.isKinematic = false;
+            rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+            rb.interpolation = RigidbodyInterpolation.Interpolate;
+            rb.constraints = RigidbodyConstraints.FreezeRotation; // Evitar rotaciones no deseadas
+            Debug.Log($"[BasicAttackProjectile] Rigidbody configurado - useGravity: {useGravity}, isKinematic: {rb.isKinematic}");
+        }
     }
     
     // Configuramos el proyectil basado en los datos de instantiación
     private void Start()
     {
-        // Inicializar físicas
-        rb.useGravity = useGravity;
-        rb.isKinematic = false;
-        rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+        // Ya no necesitamos configurar el Rigidbody aquí, se hace en Awake
         
         // Obtener datos de instantiación (pasados cuando se crea el proyectil)
         object[] instantiationData = photonView.InstantiationData;
@@ -49,6 +57,8 @@ public class BasicAttackProjectile : MonoBehaviourPun, IPunObservable
             attackerViewID = (int)instantiationData[1];
             targetViewID = (int)instantiationData[2];
             
+            Debug.Log($"[BasicAttackProjectile] Inicializado con - Daño: {damage}, AttackerID: {attackerViewID}, TargetID: {targetViewID}");
+            
             // Buscar objetivo para establecer dirección
             PhotonView targetView = PhotonView.Find(targetViewID);
             if (targetView != null)
@@ -56,15 +66,26 @@ public class BasicAttackProjectile : MonoBehaviourPun, IPunObservable
                 // Establecer dirección hacia el objetivo
                 direction = (targetView.transform.position - transform.position).normalized;
                 transform.forward = direction;
+                
+                // Establecer velocidad inicial
+                if (rb != null)
+                {
+                    rb.velocity = direction * speed;
+                    Debug.Log($"[BasicAttackProjectile] Velocidad inicial establecida: {rb.velocity}, Dirección: {direction}");
+                }
             }
-            
-            // Establecer velocidad inicial
-            rb.velocity = direction * speed;
+            else
+            {
+                Debug.LogWarning("[BasicAttackProjectile] No se encontró el objetivo para el proyectil");
+            }
         }
         else
         {
-            Debug.LogError("BasicAttackProjectile: No se recibieron datos de instantiación correctos");
-            PhotonNetwork.Destroy(gameObject);
+            Debug.LogError("[BasicAttackProjectile] No se recibieron datos de instantiación correctos");
+            if (photonView.IsMine)
+            {
+                PhotonNetwork.Destroy(gameObject);
+            }
             return;
         }
         
@@ -102,12 +123,28 @@ public class BasicAttackProjectile : MonoBehaviourPun, IPunObservable
     
     private void OnCollisionEnter(Collision collision)
     {
+        Debug.Log($"[BasicAttackProjectile] Colisión detectada con: {collision.gameObject.name}");
+        
         // Solo el dueño del proyectil procesa la colisión
-        if (!photonView.IsMine || hasHit) return;
+        if (!photonView.IsMine)
+        {
+            Debug.Log("[BasicAttackProjectile] Colisión ignorada - No es el dueño del proyectil");
+            return;
+        }
+        
+        if (hasHit)
+        {
+            Debug.Log("[BasicAttackProjectile] Colisión ignorada - Ya ha impactado antes");
+            return;
+        }
         
         // Evitar golpear al lanzador
         PhotonView attackerView = PhotonView.Find(attackerViewID);
-        if (attackerView != null && collision.gameObject == attackerView.gameObject) return;
+        if (attackerView != null && collision.gameObject == attackerView.gameObject)
+        {
+            Debug.Log("[BasicAttackProjectile] Colisión ignorada - Golpeó al lanzador");
+            return;
+        }
         
         // Obtener el punto de impacto
         Vector3 hitPoint = collision.contacts[0].point;
@@ -118,6 +155,7 @@ public class BasicAttackProjectile : MonoBehaviourPun, IPunObservable
         // Si golpeamos a un héroe, aplicar daño
         if (hitHero != null)
         {
+            Debug.Log($"[BasicAttackProjectile] Golpeó a un héroe: {hitHero.name}");
             // Solo aplicar daño si el objetivo es diferente al lanzador
             if (attackerView != null && hitHero.photonView.ViewID != attackerViewID)
             {
@@ -126,10 +164,8 @@ public class BasicAttackProjectile : MonoBehaviourPun, IPunObservable
             }
         }
         
-        // Crear efecto visual de impacto y destruir el proyectil independientemente de si golpeó a un héroe o no
-        CreateHitEffect(hitPoint);
-        hasHit = true;
-        DestroyProjectile();
+        // Notificar a todos los clientes sobre el impacto
+        photonView.RPC("RPC_OnProjectileHit", RpcTarget.All, hitPoint);
     }
     
     private void OnTriggerEnter(Collider other)
@@ -157,27 +193,24 @@ public class BasicAttackProjectile : MonoBehaviourPun, IPunObservable
             }
         }
         
-        // Crear efecto visual de impacto y destruir el proyectil independientemente de si golpeó a un héroe o no
-        CreateHitEffect(hitPoint);
+        // Notificar a todos los clientes sobre el impacto
+        photonView.RPC("RPC_OnProjectileHit", RpcTarget.All, hitPoint);
+    }
+    
+    [PunRPC]
+    private void RPC_OnProjectileHit(Vector3 hitPoint)
+    {
+        Debug.Log($"[BasicAttackProjectile] RPC_OnProjectileHit recibido en {(photonView.IsMine ? "dueño" : "cliente")}");
+        
+        // Marcar como golpeado y desactivar inmediatamente
         hasHit = true;
-        DestroyProjectile();
-    }
-    
-    // Crea el efecto visual de impacto
-    private void CreateHitEffect(Vector3 hitPoint)
-    {
-        // RPC para que todos los clientes vean el efecto
-        photonView.RPC("RPC_CreateHitEffect", RpcTarget.All, hitPoint);
-    }
-    
-    // Destruye el proyectil
-    private void DestroyProjectile()
-    {
-        // Detener movimiento
+        
+        // Detener el movimiento y la física
         if (rb != null)
         {
             rb.velocity = Vector3.zero;
             rb.isKinematic = true;
+            rb.useGravity = false;
         }
         
         // Desactivar colliders
@@ -187,73 +220,52 @@ public class BasicAttackProjectile : MonoBehaviourPun, IPunObservable
             col.enabled = false;
         }
         
+        // Desactivar renderer para que el proyectil sea invisible inmediatamente
+        Renderer[] renderers = GetComponentsInChildren<Renderer>();
+        foreach (Renderer renderer in renderers)
+        {
+            renderer.enabled = false;
+        }
+        
         // Desactivar trail
         if (trailEffect != null)
         {
             trailEffect.emitting = false;
         }
         
-        // Destruir objeto en red inmediatamente si no hay trail
-        if (trailEffect == null || !trailEffect.enabled)
+        // Crear efecto visual
+        if (hitEffectPrefab != null)
         {
-            if (photonView.IsMine)
-            {
-                PhotonNetwork.Destroy(gameObject);
-            }
+            GameObject effect = Instantiate(hitEffectPrefab, hitPoint, Quaternion.identity);
+            Destroy(effect, 2f);
         }
-        else
+        
+        // Si soy el dueño, destruir el objeto después de un pequeño delay
+        if (photonView.IsMine)
         {
-            // Si hay trail, esperar a que termine
-            StartCoroutine(DestroyAfterTrail());
+            // Destruir el objeto en red después de un pequeño delay
+            photonView.RPC("RPC_DestroyProjectile", RpcTarget.All);
         }
     }
     
-    // Espera a que el trail se complete antes de destruir
-    private IEnumerator DestroyAfterTrail()
+    [PunRPC]
+    private void RPC_DestroyProjectile()
     {
-        // Esperar tiempo para que el trail termine
-        yield return new WaitForSeconds(0.5f);
+        Debug.Log($"[BasicAttackProjectile] RPC_DestroyProjectile recibido en {(photonView.IsMine ? "dueño" : "cliente")}");
         
-        // Destruir en red
+        // Si soy el dueño, destruir el objeto en la red
         if (photonView.IsMine)
         {
             PhotonNetwork.Destroy(gameObject);
         }
+        else
+        {
+            // Si no soy el dueño, destruir localmente
+            Destroy(gameObject);
+        }
     }
     
     #region Photon RPCs
-    
-    [PunRPC]
-    private void RPC_CreateHitEffect(Vector3 hitPoint)
-    {
-        // Crear efecto visual en el punto de impacto
-        if (hitEffectPrefab != null)
-        {
-            Instantiate(hitEffectPrefab, hitPoint, Quaternion.identity);
-        }
-        else
-        {
-            // Efecto básico si no hay prefab
-            GameObject basicEffect = new GameObject("BasicHitEffect");
-            basicEffect.transform.position = hitPoint;
-            
-            // Crear partículas básicas
-            ParticleSystem particles = basicEffect.AddComponent<ParticleSystem>();
-            var main = particles.main;
-            main.startSize = 0.3f;
-            main.startLifetime = 0.5f;
-            main.startSpeed = 2f;
-            
-            // Añadir luz temporal
-            Light light = basicEffect.AddComponent<Light>();
-            light.color = Color.yellow;
-            light.intensity = 2f;
-            light.range = 3f;
-            
-            // Destruir efecto después de un tiempo
-            Destroy(basicEffect, 1f);
-        }
-    }
     
     [PunRPC]
     private void RPC_ApplyDamage(int targetViewID, float damageAmount)
@@ -285,6 +297,7 @@ public class BasicAttackProjectile : MonoBehaviourPun, IPunObservable
             stream.SendNext(transform.rotation);
             stream.SendNext(rb.velocity);
             stream.SendNext(hasHit);
+            stream.SendNext(gameObject.activeSelf);
         }
         else
         {
@@ -299,14 +312,12 @@ public class BasicAttackProjectile : MonoBehaviourPun, IPunObservable
             }
             
             hasHit = (bool)stream.ReceiveNext();
+            bool isActive = (bool)stream.ReceiveNext();
             
-            // Si el proyectil ya impactó, desactivar sistemas visuales
-            if (hasHit)
+            // Aplicar estado activo/inactivo
+            if (gameObject.activeSelf != isActive)
             {
-                if (trailEffect != null)
-                {
-                    trailEffect.emitting = false;
-                }
+                gameObject.SetActive(isActive);
             }
         }
     }

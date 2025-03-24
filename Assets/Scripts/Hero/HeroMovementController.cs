@@ -1241,5 +1241,43 @@ namespace Photon.Pun.Demo.Asteroids
             }
             return false;
         }
+
+        public void ResetMovement()
+        {
+            if (!photonView.IsMine) return;
+
+            // Detener el movimiento actual
+            if (navAgent != null)
+            {
+                navAgent.ResetPath();
+                navAgent.velocity = Vector3.zero;
+                navAgent.isStopped = true;
+            }
+            
+            // Resetear variables de movimiento
+            isMoving = false;
+            targetPosition = transform.position;
+            latestTargetPosition = transform.position;
+            
+            // Actualizar animación
+            if (animator != null)
+            {
+                animator.SetFloat(moveSpeedParameter, 0f);
+            }
+            
+            // Notificar a otros clientes
+            photonView.RPC("RPC_SetMovingState", RpcTarget.Others, false);
+            
+            // Ocultar indicador de clic si existe
+            if (playerClickIndicator != null)
+            {
+                playerClickIndicator.HideIndicator();
+            }
+            
+            if (debugMode)
+            {
+                Debug.Log($"[HeroMovementController] Movimiento reseteado para {gameObject.name}");
+            }
+        }
     }
 }
