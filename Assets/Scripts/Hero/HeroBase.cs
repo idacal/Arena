@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using ExitGames.Client.Photon;
 using Photon.Pun;
 using Photon.Realtime;
+using UnityEngine.UI;
 
 namespace Photon.Pun.Demo.Asteroids
 {
@@ -29,6 +30,8 @@ namespace Photon.Pun.Demo.Asteroids
         public float moveSpeed = 5.0f;
         public float armor = 20f;
         public float magicResistance = 20f;
+        public float healthRegenRate = 1f;
+        public float respawnTime = 5f;
         
         [Header("Ability System")]
         public HeroAbilityController abilityController;
@@ -49,10 +52,20 @@ namespace Photon.Pun.Demo.Asteroids
         [Header("Combat Debug")]
         [SerializeField] protected bool showCombatDebug = false;
         
+        [Header("Combat Effects")]
+        public GameObject damageTextPrefab;
+        public Transform floatingTextAnchor;
+        public GameObject deathEffectPrefab;
+        public AudioClip damageSound;
+        public AudioClip deathSound;
+        
         // Variables de control internas
         protected float attackCooldown = 0f;
         protected HeroBase currentTarget;
         protected bool isAttacking = false;
+        protected float lastDamageTime = 0f;
+        protected float damageImmunityTime = 0.1f;
+        protected AudioSource audioSource;
         
         // Eventos
         public delegate void HeroEvent(HeroBase hero);
@@ -90,6 +103,25 @@ namespace Photon.Pun.Demo.Asteroids
             // Obtener componentes
             heroRigidbody = GetComponent<Rigidbody>();
             heroCollider = GetComponent<Collider>();
+            
+            // Configurar audio
+            audioSource = GetComponent<AudioSource>();
+            if (audioSource == null)
+            {
+                audioSource = gameObject.AddComponent<AudioSource>();
+                audioSource.spatialBlend = 1.0f;
+                audioSource.minDistance = 5.0f;
+                audioSource.maxDistance = 20.0f;
+            }
+            
+            // Configurar punto de anclaje para texto flotante
+            if (floatingTextAnchor == null)
+            {
+                GameObject anchor = new GameObject("FloatingTextAnchor");
+                anchor.transform.SetParent(transform);
+                anchor.transform.localPosition = new Vector3(0, 2f, 0);
+                floatingTextAnchor = anchor.transform;
+            }
             
             // Inicializar controlador de habilidades si existe
             if (abilityController == null)
@@ -237,6 +269,16 @@ namespace Photon.Pun.Demo.Asteroids
             // Regeneración de maná
             RegenerateMana();
             
+            // Regeneración de salud
+            if (currentHealth < maxHealth)
+            {
+                currentHealth = Mathf.Min(currentHealth + healthRegenRate * Time.deltaTime, maxHealth);
+                if (uiController != null)
+                {
+                    uiController.UpdateHealthBar(currentHealth, maxHealth);
+                }
+            }
+            
             // Actualizar cooldown de ataque
             if (attackCooldown > 0)
             {
@@ -342,8 +384,33 @@ namespace Photon.Pun.Demo.Asteroids
             if (_isDead)
                 return;
                 
-            // Sincronizar con todos los clientes
-            photonView.RPC("RPC_TakeDamage", RpcTarget.All, amount, attacker.photonView.ViewID, isMagicDamage);
+            // Evitar daño demasiado frecuente
+            if (Time.time - lastDamageTime < damageImmunityTime) return;
+            lastDamageTime = Time.time;
+            
+            // Solo enviar al Master Client para procesar el daño
+            if (attacker != null)
+            {
+                photonView.RPC("RPC_TakeDamage", RpcTarget.MasterClient, amount, attacker.photonView.ViewID, isMagicDamage);
+                
+                // Debug log para verificar que se está llamando
+                Debug.Log($"[HeroBase] {heroName} recibió {amount} de daño de {attacker.heroName}");
+            }
+        }
+        
+        /// <summary>
+        /// Sobrecarga para aplicar daño usando el ViewID del atacante
+        /// </summary>
+        public virtual void TakeDamage(float amount, int attackerViewID, bool isMagicDamage = false)
+        {
+            if (_isDead)
+                return;
+                
+            // Solo enviar al Master Client para procesar el daño
+            photonView.RPC("RPC_TakeDamage", RpcTarget.MasterClient, amount, attackerViewID, isMagicDamage);
+            
+            // Debug log para verificar que se está llamando
+            Debug.Log($"[HeroBase] {heroName} recibió {amount} de daño del ViewID {attackerViewID}");
         }
         
         /// <summary>
@@ -377,6 +444,25 @@ namespace Photon.Pun.Demo.Asteroids
                 
             _isDead = true;
             
+            // Reproducir sonido de muerte
+            if (deathSound != null && audioSource != null)
+            {
+                audioSource.PlayOneShot(deathSound);
+            }
+            
+            // Mostrar efecto de muerte
+            if (deathEffectPrefab != null)
+            {
+                if (PhotonNetwork.IsConnected)
+                {
+                    PhotonNetwork.Instantiate(deathEffectPrefab.name, transform.position, transform.rotation);
+                }
+                else
+                {
+                    Instantiate(deathEffectPrefab, transform.position, transform.rotation);
+                }
+            }
+            
             // Desactivar controles
             if (heroCollider != null)
                 heroCollider.enabled = false;
@@ -384,17 +470,58 @@ namespace Photon.Pun.Demo.Asteroids
             if (heroRigidbody != null)
                 heroRigidbody.isKinematic = true;
                 
-            // Reproducir animación de muerte si hay animador
-            if (animator != null)
-                animator.SetTrigger("Die");
-                
-            // Invocar evento de muerte
-            OnHeroDeath?.Invoke(this);
-            
-            // Iniciar respawn si es el jugador local
+            // Desactivar movimiento y habilidades si es el jugador local
             if (photonView.IsMine)
             {
-                Invoke("Respawn", 5.0f); // 5 segundos para respawn
+                HeroMovementController movement = GetComponent<HeroMovementController>();
+                if (movement) movement.enabled = false;
+                
+                if (abilityController != null)
+                    abilityController.enabled = false;
+                
+                // Hacer transparente el modelo
+                MakeTransparent(true);
+                
+                // Iniciar respawn
+                Invoke("Respawn", respawnTime);
+            }
+            
+            // Invocar evento de muerte
+            OnHeroDeath?.Invoke(this);
+        }
+        
+        /// <summary>
+        /// Hace el modelo transparente o restaura su opacidad
+        /// </summary>
+        protected virtual void MakeTransparent(bool transparent)
+        {
+            Renderer[] renderers = GetComponentsInChildren<Renderer>();
+            foreach (Renderer renderer in renderers)
+            {
+                Material[] materials = renderer.materials;
+                foreach (Material material in materials)
+                {
+                    if (transparent)
+                    {
+                        Color color = material.color;
+                        color.a = 0.5f;
+                        material.color = color;
+                        material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                        material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                        material.EnableKeyword("_ALPHABLEND_ON");
+                        material.renderQueue = 3000;
+                    }
+                    else
+                    {
+                        Color color = material.color;
+                        color.a = 1f;
+                        material.color = color;
+                        material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
+                        material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.Zero);
+                        material.DisableKeyword("_ALPHABLEND_ON");
+                        material.renderQueue = -1;
+                    }
+                }
             }
         }
         
@@ -403,7 +530,9 @@ namespace Photon.Pun.Demo.Asteroids
         /// </summary>
         protected virtual void Respawn()
         {
-            // Implementación básica, se puede mejorar para posicionar en spawn points, etc.
+            if (!_isDead)
+                return;
+                
             _isDead = false;
             currentHealth = maxHealth;
             currentMana = maxMana;
@@ -415,12 +544,28 @@ namespace Photon.Pun.Demo.Asteroids
             if (heroRigidbody != null)
                 heroRigidbody.isKinematic = false;
                 
-            // Reproducir animación si hay animador
-            if (animator != null)
-                animator.SetTrigger("Respawn");
-                
-            // Invocar evento de respawn
-            OnHeroRespawn?.Invoke(this);
+            // Reactivar movimiento y habilidades
+            HeroMovementController movement = GetComponent<HeroMovementController>();
+            if (movement) movement.enabled = true;
+            
+            if (abilityController != null)
+                abilityController.enabled = true;
+            
+            // Restaurar visibilidad
+            MakeTransparent(false);
+            
+            // Reubicar en el punto de respawn del equipo
+            GameObject[] spawnPoints = GameObject.FindGameObjectsWithTag("SpawnPoint");
+            foreach (GameObject spawnPoint in spawnPoints)
+            {
+                SpawnPoint sp = spawnPoint.GetComponent<SpawnPoint>();
+                if (sp != null && sp.teamID == teamId)
+                {
+                    transform.position = spawnPoint.transform.position;
+                    transform.rotation = spawnPoint.transform.rotation;
+                    break;
+                }
+            }
             
             // Actualizar UI
             if (uiController != null)
@@ -428,6 +573,9 @@ namespace Photon.Pun.Demo.Asteroids
                 uiController.UpdateHealthBar(currentHealth, maxHealth);
                 uiController.UpdateManaBar(currentMana, maxMana);
             }
+            
+            // Invocar evento de respawn
+            OnHeroRespawn?.Invoke(this);
         }
         
         /// <summary>
@@ -484,6 +632,20 @@ namespace Photon.Pun.Demo.Asteroids
             // Limitar a 0 como mínimo
             currentHealth = Mathf.Max(0f, currentHealth);
             
+            // Mostrar efecto de daño
+            if (damageTextPrefab != null && floatingTextAnchor != null)
+            {
+                GameObject damageText = Instantiate(damageTextPrefab, floatingTextAnchor.position, Quaternion.identity, floatingTextAnchor);
+                damageText.GetComponent<TextMesh>().text = Mathf.RoundToInt(actualDamage).ToString();
+                Destroy(damageText, 1.5f);
+            }
+            
+            // Reproducir sonido de daño
+            if (damageSound != null && audioSource != null)
+            {
+                audioSource.PlayOneShot(damageSound);
+            }
+            
             // Actualizar UI
             if (uiController != null)
             {
@@ -512,13 +674,19 @@ namespace Photon.Pun.Demo.Asteroids
             if (uiController != null)
             {
                 uiController.UpdateHealthBar(currentHealth, maxHealth);
+                
+                // Notificar el cambio de salud
+                OnHealthChanged?.Invoke(currentHealth, maxHealth);
             }
             
-            // Si está muerto, llamar a Die()
-            if (_isDead && !isDead)
+            // Si está muerto y no estaba muerto antes, llamar a Die()
+            if (isDead && !_isDead)
             {
                 Die();
             }
+            
+            // Debug log para verificar la sincronización
+            Debug.Log($"[HeroBase] {heroName} sincronizó salud: {currentHealth}/{maxHealth}");
         }
         
         [PunRPC]

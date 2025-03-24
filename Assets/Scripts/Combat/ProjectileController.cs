@@ -138,24 +138,23 @@ public class ProjectileController : MonoBehaviourPun
         Debug.Log($"Proyectil golpeó a: {other.gameObject.name}, tag: {other.gameObject.tag}");
         
         // Verificar si es un hero
-        HeroHealth targetHealth = other.GetComponent<HeroHealth>();
+        HeroBase targetHero = other.GetComponent<HeroBase>();
         GameObject hitObject = other.gameObject;
         
-        if (targetHealth != null)
+        if (targetHero != null)
         {
-            Debug.Log("Golpeó a un héroe con salud");
+            Debug.Log("Golpeó a un héroe");
             
-            // Debe tener componente HeroBase para verificar el equipo
-            HeroBase targetHero = hitObject.GetComponent<HeroBase>();
+            // Verificar si el disparador es un héroe
             HeroBase shooterHero = shooter?.GetComponent<HeroBase>();
             
-            if (targetHero != null && shooterHero != null)
+            if (shooterHero != null)
             {
                 // Solo dañar a enemigos (usando el sistema de tags)
                 if (LayerManager.IsEnemy(shooter.gameObject, hitObject))
                 {
                     Debug.Log($"Aplicando daño de {damage} a {hitObject.name}");
-                    targetHealth.TakeDamage(damage, shooterActorNumber);
+                    targetHero.TakeDamage(damage, shooterActorNumber);
                 }
                 else
                 {

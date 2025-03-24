@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Photon.Pun;
 using System;
+using Photon.Pun.Demo.Asteroids;
 
 public class CombatManager : MonoBehaviourPunCallbacks
 {
@@ -57,16 +58,16 @@ public class CombatManager : MonoBehaviourPunCallbacks
         // Esperar a que los héroes estén disponibles
         yield return new WaitForSeconds(1f);
         
-        HeroHealth[] heroHealthComponents = FindObjectsOfType<HeroHealth>();
+        HeroBase[] heroes = FindObjectsOfType<HeroBase>();
         
-        foreach (HeroHealth health in heroHealthComponents)
+        foreach (HeroBase hero in heroes)
         {
             // Suscribirse a eventos de daño y muerte
-            health.OnHeroDeath += HandleHeroDeath;
-            health.OnDamageTaken += HandleDamageTaken;
+            hero.OnHeroDeath += HandleHeroDeath;
+            hero.OnHealthChanged += HandleHealthChanged;
             
             // Inicializar estadísticas si este héroe es nuevo
-            int actorNumber = health.photonView.Owner.ActorNumber;
+            int actorNumber = hero.photonView.Owner.ActorNumber;
             if (!playerKills.ContainsKey(actorNumber))
             {
                 playerKills[actorNumber] = 0;
@@ -78,13 +79,9 @@ public class CombatManager : MonoBehaviourPunCallbacks
         }
     }
     
-    private void HandleHeroDeath(int killerActorNumber)
+    private void HandleHeroDeath(HeroBase deadHero)
     {
         if (!PhotonNetwork.IsMasterClient) return;
-        
-        // Obtener información del héroe muerto
-        HeroHealth deadHero = GetCallingComponent<HeroHealth>();
-        if (deadHero == null) return;
         
         int deadPlayerActorNumber = deadHero.photonView.Owner.ActorNumber;
         
@@ -98,46 +95,22 @@ public class CombatManager : MonoBehaviourPunCallbacks
             playerDeaths[deadPlayerActorNumber] = 1;
         }
         
-        if (killerActorNumber > 0) // Si hay un asesino válido
-        {
-            if (playerKills.ContainsKey(killerActorNumber))
-            {
-                playerKills[killerActorNumber]++;
-            }
-            else
-            {
-                playerKills[killerActorNumber] = 1;
-            }
-            
-            // Notificar muerte
-            OnPlayerKill?.Invoke(killerActorNumber, deadPlayerActorNumber);
-            
-            // Sincronizar estadísticas
-            photonView.RPC("RPC_SyncKillStats", RpcTarget.All, killerActorNumber, deadPlayerActorNumber);
-        }
-        
         // Notificar muerte en general
         OnPlayerDeath?.Invoke(deadPlayerActorNumber);
+        
+        // Sincronizar estadísticas
+        photonView.RPC("RPC_SyncDeathStats", RpcTarget.All, deadPlayerActorNumber);
     }
     
-    private void HandleDamageTaken(float amount, int attackerActorNumber)
+    private void HandleHealthChanged(float currentHealth, float maxHealth)
     {
-        // No se requiere acción centralizada para daño
+        // No se requiere acción centralizada para cambios de salud
     }
     
     [PunRPC]
-    private void RPC_SyncKillStats(int killerActorNumber, int victimActorNumber)
+    private void RPC_SyncDeathStats(int victimActorNumber)
     {
         // Actualizar estadísticas locales
-        if (playerKills.ContainsKey(killerActorNumber))
-        {
-            playerKills[killerActorNumber]++;
-        }
-        else
-        {
-            playerKills[killerActorNumber] = 1;
-        }
-        
         if (playerDeaths.ContainsKey(victimActorNumber))
         {
             playerDeaths[victimActorNumber]++;
@@ -148,30 +121,7 @@ public class CombatManager : MonoBehaviourPunCallbacks
         }
         
         // Notificar a los listeners
-        OnPlayerKill?.Invoke(killerActorNumber, victimActorNumber);
         OnPlayerDeath?.Invoke(victimActorNumber);
-    }
-    
-    // Utilidad para obtener el componente que llamó a un evento
-    private T GetCallingComponent<T>() where T : Component
-    {
-        // Obtener el objeto que llamó
-        var stackTrace = new System.Diagnostics.StackTrace();
-        var callingMethod = stackTrace.GetFrame(2).GetMethod();
-        var callingType = callingMethod.DeclaringType;
-        
-        // Encontrar todos los componentes de ese tipo
-        T[] components = FindObjectsOfType<T>();
-        
-        foreach (T component in components)
-        {
-            if (component.GetType() == callingType || component.GetType().IsSubclassOf(callingType))
-            {
-                return component;
-            }
-        }
-        
-        return null;
     }
     
     // Métodos públicos

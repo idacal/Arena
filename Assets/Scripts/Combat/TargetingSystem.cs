@@ -253,16 +253,15 @@ public class TargetingSystem : MonoBehaviourPun
         
         // Verificar que tiene los componentes necesarios
         HeroBase targetHero = target.GetComponent<HeroBase>();
-        HeroHealth targetHealth = target.GetComponent<HeroHealth>();
-        
-        if (targetHero == null || targetHealth == null)
+
+        if (targetHero == null)
         {
-            Debug.Log($"[TargetingSystem] Objetivo sin componentes necesarios: HeroBase={targetHero != null}, HeroHealth={targetHealth != null}");
+            Debug.Log($"[TargetingSystem] Objetivo sin componente HeroBase");
             return false;
         }
-        
+
         // Verificar si está muerto
-        if (targetHealth.IsDead())
+        if (targetHero.IsDead)
         {
             Debug.Log("[TargetingSystem] Objetivo está muerto");
             return false;
@@ -328,9 +327,8 @@ public class TargetingSystem : MonoBehaviourPun
                 
             // Verificar que es un héroe
             HeroBase otherHero = col.GetComponent<HeroBase>();
-            HeroHealth otherHealth = col.GetComponent<HeroHealth>();
             
-            if (otherHero == null || otherHealth == null)
+            if (otherHero == null)
                 continue;
             
             // Verificar si es enemigo basado en tags
@@ -341,7 +339,7 @@ public class TargetingSystem : MonoBehaviourPun
             }
                 
             // Verificar que no está muerto
-            if (otherHealth.IsDead())
+            if (otherHero.IsDead)
                 continue;
                 
             // Calcular distancia
@@ -377,8 +375,8 @@ public class TargetingSystem : MonoBehaviourPun
             return;
             
         // Verificar que el objetivo sigue vivo
-        HeroHealth targetHealth = currentTarget.GetComponent<HeroHealth>();
-        if (targetHealth == null || targetHealth.IsDead())
+        HeroBase targetHero = currentTarget.GetComponent<HeroBase>();
+        if (targetHero == null || targetHero.IsDead)
         {
             ClearTarget();
             return;

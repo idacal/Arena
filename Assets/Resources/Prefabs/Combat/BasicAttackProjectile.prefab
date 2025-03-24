@@ -15,8 +15,8 @@ GameObject:
   - component: {fileID: 6741892917690559733}
   - component: {fileID: 6741892917690559734}
   - component: {fileID: 6741892917690559735}
-  - component: {fileID: 6741892917690559736}
   - component: {fileID: 6741892917690559737}
+  - component: {fileID: 3712939749772122016}
   m_Layer: 11
   m_Name: BasicAttackProjectile
   m_TagString: Projectile
@@ -176,26 +176,6 @@ MonoBehaviour:
   m_SynchronizeRotation: 1
   m_SynchronizeScale: 0
   m_UseLocal: 0
---- !u!114 &6741892917690559736
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6741892917690559728}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 813545dbc06855c419e4419b080da308, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  speed: 15
-  lifetime: 5
-  useGravity: 0
-  collisionMask:
-    serializedVersion: 2
-    m_Bits: 1600
-  hitEffectPrefab: {fileID: 0}
-  trailEffect: {fileID: 0}
 --- !u!96 &6741892917690559737
 TrailRenderer:
   serializedVersion: 3
@@ -309,3 +289,23 @@ TrailRenderer:
   m_Autodestruct: 0
   m_Emitting: 1
   m_ApplyActiveColorSpace: 0
+--- !u!114 &3712939749772122016
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6741892917690559728}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 813545dbc06855c419e4419b080da308, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  speed: 15
+  lifetime: 5
+  useGravity: 0
+  collisionMask:
+    serializedVersion: 2
+    m_Bits: 1600
+  hitEffectPrefab: {fileID: 5172377214818421028, guid: da64c591307a56f46b492c32e62522c9, type: 3}
+  trailEffect: {fileID: 0}

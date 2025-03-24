@@ -109,6 +109,9 @@ public class BasicAttackProjectile : MonoBehaviourPun, IPunObservable
         PhotonView attackerView = PhotonView.Find(attackerViewID);
         if (attackerView != null && collision.gameObject == attackerView.gameObject) return;
         
+        // Obtener el punto de impacto
+        Vector3 hitPoint = collision.contacts[0].point;
+        
         // Verificar si golpeamos a un héroe
         HeroBase hitHero = collision.gameObject.GetComponent<HeroBase>();
         
@@ -118,41 +121,30 @@ public class BasicAttackProjectile : MonoBehaviourPun, IPunObservable
             // Solo aplicar daño si el objetivo es diferente al lanzador
             if (attackerView != null && hitHero.photonView.ViewID != attackerViewID)
             {
-                // Obtener el punto de impacto
-                Vector3 hitPoint = collision.contacts[0].point;
-                
-                // Intentar aplicar daño
-                hitHero.TakeDamage(damage, attackerView.GetComponent<HeroBase>());
-                
-                // Crear efecto visual de impacto
-                CreateHitEffect(hitPoint);
-                
-                // Marcar como golpeado para evitar múltiples hits
-                hasHit = true;
-                
-                // Destruir el proyectil
-                DestroyProjectile();
+                // Aplicar daño usando RPC a todos los clientes
+                photonView.RPC("RPC_ApplyDamage", RpcTarget.All, hitHero.photonView.ViewID, damage);
             }
         }
+        
+        // Crear efecto visual de impacto y destruir el proyectil independientemente de si golpeó a un héroe o no
+        CreateHitEffect(hitPoint);
+        hasHit = true;
+        DestroyProjectile();
     }
     
     private void OnTriggerEnter(Collider other)
-    {
-        ProcessHit(other.gameObject, other.ClosestPoint(transform.position));
-    }
-    
-    // Procesar colisión/trigger con algo
-    private void ProcessHit(GameObject hitObject, Vector3 hitPoint)
     {
         // Solo el dueño del proyectil procesa la colisión
         if (!photonView.IsMine || hasHit) return;
         
         // Evitar golpear al lanzador
         PhotonView attackerView = PhotonView.Find(attackerViewID);
-        if (attackerView != null && hitObject == attackerView.gameObject) return;
+        if (attackerView != null && other.gameObject == attackerView.gameObject) return;
+        
+        Vector3 hitPoint = other.ClosestPoint(transform.position);
         
         // Verificar si golpeamos a un héroe
-        HeroBase hitHero = hitObject.GetComponent<HeroBase>();
+        HeroBase hitHero = other.gameObject.GetComponent<HeroBase>();
         
         // Si golpeamos a un héroe, aplicar daño
         if (hitHero != null)
@@ -160,18 +152,14 @@ public class BasicAttackProjectile : MonoBehaviourPun, IPunObservable
             // Solo aplicar daño si el objetivo es diferente al lanzador
             if (attackerView != null && hitHero.photonView.ViewID != attackerViewID)
             {
-                // Intentar aplicar daño
-                hitHero.TakeDamage(damage, attackerView.GetComponent<HeroBase>());
+                // Aplicar daño usando RPC a todos los clientes
+                photonView.RPC("RPC_ApplyDamage", RpcTarget.All, hitHero.photonView.ViewID, damage);
             }
         }
         
-        // Marcar como golpeado para evitar múltiples hits
-        hasHit = true;
-        
-        // Crear efecto visual de impacto
+        // Crear efecto visual de impacto y destruir el proyectil independientemente de si golpeó a un héroe o no
         CreateHitEffect(hitPoint);
-        
-        // Destruir el proyectil
+        hasHit = true;
         DestroyProjectile();
     }
     
@@ -205,8 +193,19 @@ public class BasicAttackProjectile : MonoBehaviourPun, IPunObservable
             trailEffect.emitting = false;
         }
         
-        // Destruir objeto en red
-        StartCoroutine(DestroyAfterTrail());
+        // Destruir objeto en red inmediatamente si no hay trail
+        if (trailEffect == null || !trailEffect.enabled)
+        {
+            if (photonView.IsMine)
+            {
+                PhotonNetwork.Destroy(gameObject);
+            }
+        }
+        else
+        {
+            // Si hay trail, esperar a que termine
+            StartCoroutine(DestroyAfterTrail());
+        }
     }
     
     // Espera a que el trail se complete antes de destruir
@@ -254,6 +253,24 @@ public class BasicAttackProjectile : MonoBehaviourPun, IPunObservable
             // Destruir efecto después de un tiempo
             Destroy(basicEffect, 1f);
         }
+    }
+    
+    [PunRPC]
+    private void RPC_ApplyDamage(int targetViewID, float damageAmount)
+    {
+        // Buscar el objetivo por su ViewID
+        PhotonView targetView = PhotonView.Find(targetViewID);
+        if (targetView == null) return;
+        
+        // Obtener componente HeroBase
+        HeroBase targetHero = targetView.GetComponent<HeroBase>();
+        if (targetHero == null) return;
+        
+        // Aplicar daño usando el ViewID del atacante
+        targetHero.TakeDamage(damageAmount, attackerViewID);
+        
+        // Debug log
+        Debug.Log($"[BasicAttackProjectile] Aplicando {damageAmount} de daño al ViewID {targetViewID} desde el atacante {attackerViewID}");
     }
     
     #endregion

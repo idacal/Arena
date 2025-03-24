@@ -20,7 +20,6 @@ GameObject:
   - component: {fileID: 2048393517738770073}
   - component: {fileID: -1435623182261474014}
   - component: {fileID: -1933700190472191039}
-  - component: {fileID: -2180217082181422604}
   - component: {fileID: 6568425859230199104}
   m_Layer: 6
   m_Name: Gaius, the Guardian of Gaia
@@ -70,7 +69,6 @@ MonoBehaviour:
   - {fileID: 5826635703823206055}
   - {fileID: 5283968406720169640}
   - {fileID: 2048393517738770073}
-  - {fileID: -2180217082181422604}
   sceneViewId: 0
   InstantiationId: 0
   isRuntimeInstantiated: 0
@@ -182,6 +180,8 @@ MonoBehaviour:
   moveSpeed: 5
   armor: 20
   magicResistance: 20
+  healthRegenRate: 1
+  respawnTime: 5
   abilityController: {fileID: 5283968406720169640}
   uiController: {fileID: 172655498075432403, guid: d2285228827d22b44b59630a257fb319, type: 3}
   animator: {fileID: 4915977891289671736}
@@ -191,6 +191,11 @@ MonoBehaviour:
   attackType: 0
   basicAttackProjectilePrefab: {fileID: 0}
   showCombatDebug: 0
+  damageTextPrefab: {fileID: 0}
+  floatingTextAnchor: {fileID: 0}
+  deathEffectPrefab: {fileID: 0}
+  damageSound: {fileID: 0}
+  deathSound: {fileID: 0}
 --- !u!114 &5826635703823206055
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -286,26 +291,6 @@ MonoBehaviour:
   normalCursor: {fileID: 2800000, guid: f3f1c7253d7db1d47872a98919dfbf90, type: 3}
   enemyCursor: {fileID: 2800000, guid: 1d78ea13ed0615c4996735add71cbd43, type: 3}
   cursorHotspot: {x: 16, y: 16}
---- !u!114 &-2180217082181422604
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4811671923267530068}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 77b33698440928c4a9c2266ba5364666, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  healthRegenRate: 1
-  respawnTime: 5
-  healthSlider: {fileID: 0}
-  damageTextPrefab: {fileID: 0}
-  floatingTextAnchor: {fileID: 0}
-  deathEffectPrefab: {fileID: 0}
-  damageSound: {fileID: 0}
-  deathSound: {fileID: 0}
 --- !u!136 &6568425859230199104
 CapsuleCollider:
   m_ObjectHideFlags: 0

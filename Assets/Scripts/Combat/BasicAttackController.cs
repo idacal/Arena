@@ -328,9 +328,8 @@ public class BasicAttackController : MonoBehaviourPun
         }
         
         // Aplicar daño directamente
-        HeroHealth targetHealth = target.GetComponent<HeroHealth>();
         HeroBase targetHeroBase = target.GetComponent<HeroBase>();
-        if (targetHealth != null && targetHeroBase != null)
+        if (targetHeroBase != null)
         {
             // Solo dañar a enemigos (equipos diferentes)
             if (targetHeroBase.teamId != heroBase.teamId)
