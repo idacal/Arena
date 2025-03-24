@@ -9,7 +9,7 @@ public class TargetingSystem : MonoBehaviourPun
     [Header("Configuración")]
     public float targetingRange = 15f;
     public LayerMask targetableLayers;
-    public bool autoTargetEnemiesInRange = true;
+    public bool autoTargetEnemiesInRange = false;  // Desactivado por defecto
     public float autoTargetInterval = 0.5f;
     
     [Header("Visualización")]
@@ -18,12 +18,18 @@ public class TargetingSystem : MonoBehaviourPun
     public Color allyIndicatorColor = Color.green;
     public Color enemyIndicatorColor = Color.red;
     
+    [Header("Cursor")]
+    public Texture2D normalCursor;
+    public Texture2D enemyCursor;
+    public Vector2 cursorHotspot = new Vector2(16, 16);  // Centro del cursor
+    
     // Referencias internas
     private Transform cameraTransform;
     private HeroBase heroBase;
     private Transform currentTarget;
     private GameObject targetIndicator;
     private float autoTargetTimer = 0f;
+    private PhotonMOBACamera mobaCamera;
     
     // Propiedad para acceder al objetivo actual desde otros scripts
     public Transform CurrentTarget => currentTarget;
@@ -31,18 +37,77 @@ public class TargetingSystem : MonoBehaviourPun
     private void Awake()
     {
         heroBase = GetComponent<HeroBase>();
-        Debug.Log($"[TargetingSystem] Inicializado para {gameObject.name}, heroBase: {(heroBase != null ? "OK" : "NULL")}");
+        mobaCamera = FindObjectOfType<PhotonMOBACamera>();
+        Debug.Log($"[TargetingSystem] Inicializado para {gameObject.name}, heroBase: {(heroBase != null ? "OK" : "NULL")}, mobaCamera: {(mobaCamera != null ? "OK" : "NULL")}");
         
         // Crear indicador de objetivo
         if (targetIndicatorPrefab != null)
         {
             targetIndicator = Instantiate(targetIndicatorPrefab, transform.position, Quaternion.identity);
             targetIndicator.SetActive(false);
-            Debug.Log($"[TargetingSystem] Indicador de objetivo creado: {targetIndicator.name}");
+            
+            // Verificar que tiene el componente TargetIndicatorController
+            TargetIndicatorController indicatorController = targetIndicator.GetComponent<TargetIndicatorController>();
+            if (indicatorController == null)
+            {
+                Debug.LogError("[TargetingSystem] El prefab del indicador no tiene el componente TargetIndicatorController");
+                return;
+            }
+            
+            // Verificar que tiene el SpriteRenderer
+            SpriteRenderer spriteRenderer = targetIndicator.GetComponent<SpriteRenderer>();
+            if (spriteRenderer == null)
+            {
+                Debug.LogError("[TargetingSystem] El prefab del indicador no tiene el componente SpriteRenderer");
+                return;
+            }
+            
+            Debug.Log($"[TargetingSystem] Indicador de objetivo creado y configurado correctamente: {targetIndicator.name}");
         }
         else
         {
-            Debug.LogError("[TargetingSystem] No se ha asignado un prefab para el indicador de objetivo.");
+            Debug.LogError("[TargetingSystem] No se ha asignado un prefab para el indicador de objetivo en el Inspector!");
+        }
+        
+        // Configurar cursor normal por defecto
+        if (normalCursor != null)
+        {
+            Debug.Log($"[TargetingSystem] Configurando cursor normal: {normalCursor.name}, tamaño: {normalCursor.width}x{normalCursor.height}");
+            try
+            {
+                Cursor.SetCursor(normalCursor, cursorHotspot, CursorMode.Auto);
+                Debug.Log("[TargetingSystem] Cursor normal configurado correctamente");
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[TargetingSystem] Error al configurar cursor normal: {e.Message}");
+            }
+        }
+        else
+        {
+            Debug.LogError("[TargetingSystem] No se ha asignado la textura normalCursor en el Inspector!");
+        }
+        
+        if (enemyCursor == null)
+        {
+            Debug.LogError("[TargetingSystem] No se ha asignado la textura enemyCursor en el Inspector!");
+        }
+    }
+    
+    private void Start()
+    {
+        // Intentar encontrar la cámara si no se encontró en Awake
+        if (mobaCamera == null)
+        {
+            mobaCamera = FindObjectOfType<PhotonMOBACamera>();
+            if (mobaCamera != null)
+            {
+                Debug.Log("[TargetingSystem] Cámara encontrada en Start");
+            }
+            else
+            {
+                Debug.LogError("[TargetingSystem] No se pudo encontrar la cámara en Start");
+            }
         }
     }
     
@@ -58,7 +123,7 @@ public class TargetingSystem : MonoBehaviourPun
     {
         if (!photonView.IsMine) return;
         
-        // Auto-targeting
+        // Auto-targeting (solo si está activado)
         if (autoTargetEnemiesInRange && currentTarget == null)
         {
             autoTargetTimer -= Time.deltaTime;
@@ -74,6 +139,89 @@ public class TargetingSystem : MonoBehaviourPun
         
         // Verificar si el objetivo sigue siendo válido
         ValidateCurrentTarget();
+        
+        // Actualizar cursor basado en lo que está bajo el mouse
+        UpdateCursor();
+    }
+    
+    private void UpdateCursor()
+    {
+        if (mobaCamera == null)
+        {
+            // Intentar encontrar la cámara una vez más
+            mobaCamera = FindObjectOfType<PhotonMOBACamera>();
+            if (mobaCamera == null)
+            {
+                Debug.LogWarning("[TargetingSystem] mobaCamera es null en UpdateCursor");
+                return;
+            }
+        }
+        
+        if (normalCursor == null || enemyCursor == null)
+        {
+            Debug.LogWarning("[TargetingSystem] Texturas de cursor no asignadas en el Inspector");
+            return;
+        }
+        
+        Camera camera = mobaCamera.GetComponent<Camera>();
+        if (camera == null)
+        {
+            Debug.LogWarning("[TargetingSystem] No se encontró el componente Camera en mobaCamera");
+            return;
+        }
+        
+        Ray ray = camera.ScreenPointToRay(Input.mousePosition);
+        RaycastHit hit;
+        
+        if (Physics.Raycast(ray, out hit, Mathf.Infinity, targetableLayers))
+        {
+            GameObject hitObject = hit.collider.gameObject;
+            Debug.Log($"[TargetingSystem] Mouse sobre objeto: {hitObject.name}, tag: {hitObject.tag}");
+            
+            // Verificar si el objeto es un enemigo
+            if (LayerManager.IsEnemy(gameObject, hitObject))
+            {
+                Debug.Log("[TargetingSystem] Cambiando a cursor de enemigo");
+                try
+                {
+                    Cursor.SetCursor(enemyCursor, cursorHotspot, CursorMode.Auto);
+                    Cursor.visible = true;
+                    Debug.Log("[TargetingSystem] Cursor de enemigo configurado correctamente");
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError($"[TargetingSystem] Error al configurar cursor de enemigo: {e.Message}");
+                }
+            }
+            else
+            {
+                Debug.Log("[TargetingSystem] Cambiando a cursor normal");
+                try
+                {
+                    Cursor.SetCursor(normalCursor, cursorHotspot, CursorMode.Auto);
+                    Cursor.visible = true;
+                    Debug.Log("[TargetingSystem] Cursor normal configurado correctamente");
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError($"[TargetingSystem] Error al configurar cursor normal: {e.Message}");
+                }
+            }
+        }
+        else
+        {
+            Debug.Log("[TargetingSystem] Mouse no sobre ningún objeto, usando cursor normal");
+            try
+            {
+                Cursor.SetCursor(normalCursor, cursorHotspot, CursorMode.Auto);
+                Cursor.visible = true;
+                Debug.Log("[TargetingSystem] Cursor normal configurado correctamente");
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[TargetingSystem] Error al configurar cursor normal: {e.Message}");
+            }
+        }
     }
     
     /// <summary>
@@ -251,7 +399,17 @@ public class TargetingSystem : MonoBehaviourPun
     private void UpdateTargetIndicator()
     {
         if (targetIndicator == null || currentTarget == null)
+        {
+            if (targetIndicator == null)
+            {
+                Debug.LogWarning("[TargetingSystem] targetIndicator es null en UpdateTargetIndicator");
+            }
+            if (currentTarget == null)
+            {
+                Debug.LogWarning("[TargetingSystem] currentTarget es null en UpdateTargetIndicator");
+            }
             return;
+        }
             
         // Actualizar posición (ligeramente elevado del suelo)
         Vector3 targetPos = currentTarget.position;
@@ -272,7 +430,11 @@ public class TargetingSystem : MonoBehaviourPun
             Color indicatorColor = isAlly ? allyIndicatorColor : enemyIndicatorColor;
             indicatorController.SetColor(indicatorColor);
             
-            Debug.Log($"Indicador de objetivo actualizado: {currentTarget.name}, es aliado: {isAlly}, color: {indicatorColor}");
+            Debug.Log($"[TargetingSystem] Indicador de objetivo actualizado: {currentTarget.name}, es aliado: {isAlly}, color: {indicatorColor}");
+        }
+        else
+        {
+            Debug.LogError("[TargetingSystem] No se encontró el componente TargetIndicatorController en el indicador");
         }
     }
     

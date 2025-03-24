@@ -276,13 +276,16 @@ MonoBehaviour:
   targetingRange: 15
   targetableLayers:
     serializedVersion: 2
-    m_Bits: 1024
-  autoTargetEnemiesInRange: 1
+    m_Bits: 64
+  autoTargetEnemiesInRange: 0
   autoTargetInterval: 0.5
   targetIndicatorPrefab: {fileID: 6843215022521881347, guid: 217d657ac27b16f4d95f8f97d298ae44, type: 3}
   indicatorHeight: 2
   allyIndicatorColor: {r: 0, g: 1, b: 0, a: 1}
   enemyIndicatorColor: {r: 1, g: 0, b: 0, a: 1}
+  normalCursor: {fileID: 2800000, guid: f3f1c7253d7db1d47872a98919dfbf90, type: 3}
+  enemyCursor: {fileID: 2800000, guid: 1d78ea13ed0615c4996735add71cbd43, type: 3}
+  cursorHotspot: {x: 16, y: 16}
 --- !u!114 &-2180217082181422604
 MonoBehaviour:
   m_ObjectHideFlags: 0
