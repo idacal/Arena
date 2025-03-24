@@ -33,6 +33,7 @@ namespace Photon.Pun.Demo.Asteroids
         [Header("Controls")]
         public KeyCode centerOnPlayerKey = KeyCode.Space;
         public KeyCode cameraDragKey = KeyCode.Mouse2; // Middle mouse button (wheel)
+        public KeyCode toggleFollowKey = KeyCode.V; // Nueva tecla para alternar seguimiento
         
         // Variables internas
         private Vector3 cameraTargetPosition;
@@ -41,6 +42,7 @@ namespace Photon.Pun.Demo.Asteroids
         private Vector3 dragStartPosition;
         private Vector3 dragCurrentPosition;
         private bool snapToPlayer = false;
+        private bool isFollowing = true; // Nueva variable para controlar el seguimiento
         
         // ID único de esta cámara (para depuración)
         private string cameraId;
@@ -89,6 +91,13 @@ namespace Photon.Pun.Demo.Asteroids
             if (target == null)
                 return;
                 
+            // Alternar seguimiento con la tecla V
+            if (Input.GetKeyDown(toggleFollowKey))
+            {
+                isFollowing = !isFollowing;
+                Debug.Log($"[PhotonMOBACamera] Seguimiento de cámara {(isFollowing ? "activado" : "desactivado")}");
+            }
+                
             // Zoom con rueda del ratón
             HandleZoom();
             
@@ -99,8 +108,8 @@ namespace Photon.Pun.Demo.Asteroids
                 snapToPlayer = true;
             }
             
-            // Centrado en jugador
-            if (snapToPlayer)
+            // Centrado en jugador solo si está activo el seguimiento
+            if (snapToPlayer && isFollowing)
             {
                 cameraTargetPosition = Vector3.Lerp(cameraTargetPosition, target.position, snapToTargetSpeed * Time.deltaTime);
                 
@@ -111,14 +120,14 @@ namespace Photon.Pun.Demo.Asteroids
                 }
             }
             
-            // Scroll en bordes de pantalla
-            if (useEdgeScrolling && !snapToPlayer)
+            // Scroll en bordes de pantalla solo si no está siguiendo
+            if (useEdgeScrolling && !snapToPlayer && !isFollowing)
             {
                 HandleEdgeScrolling();
             }
             
-            // Arrastrar con botón medio
-            if (!snapToPlayer)
+            // Arrastrar con botón medio solo si no está siguiendo
+            if (!snapToPlayer && !isFollowing)
             {
                 HandleMouseDrag();
             }

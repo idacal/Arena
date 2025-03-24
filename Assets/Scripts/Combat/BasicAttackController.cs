@@ -25,6 +25,9 @@ public class BasicAttackController : MonoBehaviourPun
     private float attackCooldown = 0f;
     private bool canAttack = true;
     private Transform currentTarget;
+    private Transform currentAttackTarget;
+    
+    private const string PROJECTILE_PATH = "Prefabs/Combat/BasicAttackProjectile";
     
     private void Awake()
     {
@@ -47,6 +50,21 @@ public class BasicAttackController : MonoBehaviourPun
             spawnPoint.transform.SetParent(transform);
             spawnPoint.transform.localPosition = new Vector3(0, 1.5f, 0.5f);
             projectileSpawnPoint = spawnPoint.transform;
+        }
+
+        // Verificar que el prefab está en Resources
+        if (PhotonNetwork.IsConnected)
+        {
+            var resourceCheck = Resources.Load<GameObject>(PROJECTILE_PATH);
+            if (resourceCheck == null)
+            {
+                Debug.LogError($"[BasicAttackController] ADVERTENCIA: El prefab no se encuentra en Resources/{PROJECTILE_PATH}. Los ataques a distancia no funcionarán en red.");
+            }
+            else if (projectilePrefab == null)
+            {
+                // Si no hay referencia directa pero existe en Resources, usarla
+                projectilePrefab = resourceCheck;
+            }
         }
     }
     
@@ -149,19 +167,38 @@ public class BasicAttackController : MonoBehaviourPun
         float distance = Vector3.Distance(transform.position, target.position);
         Debug.Log($"Distancia al objetivo: {distance}, Rango de ataque: {attackRange}");
         
-        if (distance > attackRange) {
-            Debug.Log("No puede atacar: fuera de rango");
+        // Si está fuera de rango, mover al personaje
+        if (distance > attackRange)
+        {
+            Debug.Log("Objetivo fuera de rango, moviendo al personaje");
+            HeroMovementController movementController = GetComponent<HeroMovementController>();
+            if (movementController != null)
+            {
+                // Calcular punto de destino (justo dentro del rango de ataque)
+                Vector3 directionToTarget = (target.position - transform.position).normalized;
+                Vector3 attackPosition = target.position - directionToTarget * (attackRange * 0.9f); // 90% del rango para dar un poco de margen
+                movementController.SetDestination(attackPosition);
+            }
             return false;
         }
         
-        // Orientar al personaje hacia el objetivo
-        Vector3 direction = (target.position - transform.position).normalized;
-        direction.y = 0;
-        transform.forward = direction;
+        // Si está en rango, detener el movimiento y atacar
+        HeroMovementController movement = GetComponent<HeroMovementController>();
+        if (movement != null)
+        {
+            movement.StopMovement();
+        }
         
-        // Ejecutar ataque según el tipo definido en HeroBase
-        HeroBase.AttackType attackType = heroBase.HeroAttackType;
-        if (attackType == HeroBase.AttackType.Ranged)
+        // Orientar hacia el objetivo
+        Vector3 targetDirection = (target.position - transform.position).normalized;
+        targetDirection.y = 0; // Mantener la rotación solo en el eje Y
+        if (targetDirection != Vector3.zero)
+        {
+            transform.rotation = Quaternion.LookRotation(targetDirection);
+        }
+        
+        // Realizar el ataque según el tipo
+        if (heroBase.HeroAttackType == HeroBase.AttackType.Ranged)
         {
             RangedAttack(target);
         }
@@ -170,28 +207,28 @@ public class BasicAttackController : MonoBehaviourPun
             MeleeAttack(target);
         }
         
-        // Establecer cooldown basado en velocidad de ataque de HeroBase
-        attackCooldown = 1f / heroBase.AttackSpeed;
+        // Actualizar cooldown
         canAttack = false;
+        attackCooldown = 1f / heroBase.AttackSpeed;
         
         return true;
     }
     
     private void RangedAttack(Transform target)
     {
-        Debug.Log($"Realizando ataque a distancia contra {target.name}");
+        Debug.Log($"[BasicAttackController] Iniciando ataque a distancia contra {target.name}");
         
         // Verificar si tenemos spawnPoint
         if (projectileSpawnPoint == null)
         {
-            Debug.LogError("Error: No hay punto de origen para el proyectil");
+            Debug.LogError("[BasicAttackController] Error: No hay punto de origen para el proyectil");
             return;
         }
         
-        // Verificar si tenemos prefab de proyectil
-        if (projectilePrefab == null)
+        // Verificar si tenemos prefab de proyectil (ya sea directo o en Resources)
+        if (projectilePrefab == null && Resources.Load<GameObject>(PROJECTILE_PATH) == null)
         {
-            Debug.LogError("Error: No hay prefab de proyectil asignado");
+            Debug.LogError("[BasicAttackController] Error: No se encuentra el prefab del proyectil");
             return;
         }
         
@@ -207,56 +244,56 @@ public class BasicAttackController : MonoBehaviourPun
             audioSource.PlayOneShot(attackSound);
         }
         
-        // Efecto de disparo
-        if (muzzleFlashPrefab != null && projectileSpawnPoint != null)
-        {
-            if (PhotonNetwork.IsConnected)
-            {
-                PhotonNetwork.Instantiate(muzzleFlashPrefab.name, projectileSpawnPoint.position, projectileSpawnPoint.rotation);
-            }
-            else
-            {
-                Instantiate(muzzleFlashPrefab, projectileSpawnPoint.position, projectileSpawnPoint.rotation);
-            }
-        }
+        // Calcular dirección hacia el objetivo
+        Vector3 targetDirection = (target.position - projectileSpawnPoint.position).normalized;
+        Debug.Log($"[BasicAttackController] Dirección del proyectil: {targetDirection}, Origen: {projectileSpawnPoint.position}, Destino: {target.position}");
         
-        // Crear proyectil
-        if (projectilePrefab != null)
+        try
         {
-            // Calcular dirección hacia el objetivo
-            Vector3 targetDirection = (target.position - projectileSpawnPoint.position).normalized;
-            
             // Instanciar proyectil
+            GameObject projectile = null;
             if (PhotonNetwork.IsConnected)
             {
-                GameObject projectile = PhotonNetwork.Instantiate(projectilePrefab.name, projectileSpawnPoint.position, Quaternion.LookRotation(targetDirection));
-                
-                // Configurar proyectil
+                Debug.Log($"[BasicAttackController] Instanciando proyectil en red desde {PROJECTILE_PATH}");
+                projectile = PhotonNetwork.Instantiate(PROJECTILE_PATH, projectileSpawnPoint.position, Quaternion.LookRotation(targetDirection));
+            }
+            else
+            {
+                Debug.Log("[BasicAttackController] Instanciando proyectil localmente");
+                if (projectilePrefab != null)
+                {
+                    projectile = Instantiate(projectilePrefab, projectileSpawnPoint.position, Quaternion.LookRotation(targetDirection));
+                }
+                else
+                {
+                    // Cargar desde Resources para modo single player
+                    GameObject prefab = Resources.Load<GameObject>(PROJECTILE_PATH);
+                    projectile = Instantiate(prefab, projectileSpawnPoint.position, Quaternion.LookRotation(targetDirection));
+                }
+            }
+            
+            if (projectile != null)
+            {
+                Debug.Log($"[BasicAttackController] Proyectil creado: {projectile.name}");
                 ProjectileController projectileController = projectile.GetComponent<ProjectileController>();
                 if (projectileController != null)
                 {
-                    // Usar el daño de ataque de HeroBase
-                    projectileController.Initialize(heroBase.AttackDamage, transform, photonView.Owner.ActorNumber);
+                    projectileController.Initialize(heroBase.AttackDamage, transform, PhotonNetwork.IsConnected ? photonView.Owner.ActorNumber : 0);
+                    Debug.Log($"[BasicAttackController] Proyectil inicializado con daño: {heroBase.AttackDamage}");
+                }
+                else
+                {
+                    Debug.LogError("[BasicAttackController] El proyectil no tiene ProjectileController!");
                 }
             }
             else
             {
-                GameObject projectile = Instantiate(projectilePrefab, projectileSpawnPoint.position, Quaternion.LookRotation(targetDirection));
-                
-                // Configurar proyectil
-                ProjectileController projectileController = projectile.GetComponent<ProjectileController>();
-                if (projectileController != null)
-                {
-                    // Usar el daño de ataque de HeroBase
-                    projectileController.Initialize(heroBase.AttackDamage, transform, 0);
-                }
+                Debug.LogError("[BasicAttackController] No se pudo crear el proyectil!");
             }
         }
-        
-        // Notificar a través de RPC que se realizó un ataque
-        if (PhotonNetwork.IsConnected)
+        catch (System.Exception e)
         {
-            photonView.RPC("RPC_OnAttackPerformed", RpcTarget.Others, target.GetComponent<PhotonView>().ViewID);
+            Debug.LogError($"[BasicAttackController] Error al instanciar el proyectil: {e.Message}\n{e.StackTrace}");
         }
     }
     

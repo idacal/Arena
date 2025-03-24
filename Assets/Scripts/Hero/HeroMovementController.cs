@@ -654,6 +654,14 @@ namespace Photon.Pun.Demo.Asteroids
         /// </summary>
         private void HandleMovementInput()
         {
+            if (!photonView.IsMine || isStunned || isRooted) return;
+            
+            // No mover si está atacando
+            if (IsAttacking())
+            {
+                return;
+            }
+            
             // Click derecho para mover
             if (Input.GetMouseButtonDown(1))
             {
@@ -680,7 +688,7 @@ namespace Photon.Pun.Demo.Asteroids
                             // Send moving state to all
                             photonView.RPC("RPC_SetMovingState", RpcTarget.Others, true);
                             
-                            // NUEVO: Mostrar indicador de clic
+                            // Mostrar indicador de clic
                             if (playerClickIndicator != null)
                             {
                                 playerClickIndicator.ShowAt(hit.point);
@@ -703,7 +711,7 @@ namespace Photon.Pun.Demo.Asteroids
                                 // Send moving state to all
                                 photonView.RPC("RPC_SetMovingState", RpcTarget.Others, true);
                                 
-                                // NUEVO: Mostrar indicador de clic
+                                // Mostrar indicador de clic
                                 if (playerClickIndicator != null)
                                 {
                                     playerClickIndicator.ShowAt(hit.point);
@@ -884,44 +892,27 @@ namespace Photon.Pun.Demo.Asteroids
         /// </summary>
         public void StopMovement()
         {
-            // Solo aplicar si es el jugador local
-            if (photonView.IsMine)
+            if (!photonView.IsMine) return;
+            
+            // Detener el NavMeshAgent
+            if (navAgent != null && navAgent.enabled)
             {
-                bool wasMoving = isMoving;
-                
-                if (navAgent.enabled && navAgent.isOnNavMesh)
-                {
-                    navAgent.ResetPath();
-                }
-                
-                isMoving = false;
-                
-                // Actualizar animación
-                if (animator != null)
-                {
-                    animator.SetFloat(moveSpeedParameter, 0f);
-                }
-                
-                // Store position when we stop
-                lastValidPosition = transform.position;
-                
-                // MODIFICADO: Mantener isKinematic=false para permitir colisiones pero detener movimiento
-                if (characterRigidbody != null)
-                {
-                    characterRigidbody.velocity = Vector3.zero;
-                    characterRigidbody.isKinematic = false;
-                    
-                    // Sync with other clients
-                    syncMadeRigidbodyKinematic = false;
-                    photonView.RPC("RPC_ForceKinematic", RpcTarget.Others, false);
-                }
-                
-                // Only send RPC if we were moving before
-                if (wasMoving)
-                {
-                    // Send moving state to all
-                    photonView.RPC("RPC_SetMovingState", RpcTarget.Others, false);
-                }
+                navAgent.isStopped = true;
+                navAgent.velocity = Vector3.zero;
+                navAgent.ResetPath();
+                Debug.Log($"[HeroMovementController] Deteniendo movimiento de {gameObject.name}");
+            }
+            
+            // Actualizar estado de movimiento
+            isMoving = false;
+            
+            // Notificar a otros clientes
+            photonView.RPC("RPC_SetMovingState", RpcTarget.Others, false);
+            
+            // Actualizar animación
+            if (animator != null)
+            {
+                animator.SetFloat(moveSpeedParameter, 0f);
             }
         }
         
@@ -1239,6 +1230,16 @@ namespace Photon.Pun.Demo.Asteroids
                 Vector3 rayOrigin = transform.position + Vector3.up * 0.1f;
                 Gizmos.DrawLine(rayOrigin, rayOrigin + Vector3.down * groundCheckDistance);
             }
+        }
+
+        private bool IsAttacking()
+        {
+            BasicAttackController attackController = GetComponent<BasicAttackController>();
+            if (attackController != null)
+            {
+                return !attackController.CanAttack();
+            }
+            return false;
         }
     }
 }

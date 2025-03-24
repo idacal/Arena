@@ -23,29 +23,46 @@ public class ProjectileController : MonoBehaviourPun
     
     private void Awake()
     {
+        Debug.Log("[ProjectileController] Awake iniciado");
         rb = GetComponent<Rigidbody>();
         if (rb)
         {
             rb.useGravity = useGravity;
             rb.interpolation = RigidbodyInterpolation.Interpolate;
             rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+            Debug.Log($"[ProjectileController] Rigidbody configurado: useGravity={useGravity}, interpolation={rb.interpolation}, collisionDetection={rb.collisionDetectionMode}");
+        }
+        else
+        {
+            Debug.LogError("[ProjectileController] No se encontró el componente Rigidbody");
         }
         
         // Destruir después del tiempo de vida
         Destroy(gameObject, lifetime);
+        Debug.Log($"[ProjectileController] Programado para destruirse en {lifetime} segundos");
     }
     
     private void Start()
     {
+        Debug.Log("[ProjectileController] Start iniciado");
         if (PhotonNetwork.IsConnected && !photonView.IsMine)
         {
+            Debug.Log("[ProjectileController] Cliente remoto - Desactivando física");
             // Desactivar la física en clientes remotos
             if (rb) rb.isKinematic = true;
             return;
         }
         
         // Iniciar movimiento
-        if (rb) rb.velocity = transform.forward * speed;
+        if (rb)
+        {
+            rb.velocity = transform.forward * speed;
+            Debug.Log($"[ProjectileController] Velocidad inicial establecida: {rb.velocity.magnitude}");
+        }
+        else
+        {
+            Debug.LogError("[ProjectileController] No se pudo establecer la velocidad inicial - Rigidbody no encontrado");
+        }
     }
     
     /// <summary>
@@ -56,10 +73,20 @@ public class ProjectileController : MonoBehaviourPun
     /// <param name="shooterActorNumber">Número de actor Photon del disparador</param>
     public void Initialize(float damage, Transform shooter, int shooterActorNumber)
     {
-        Debug.Log($"Proyectil inicializado: Daño={damage}, Shooter={shooter.name}, ActorNumber={shooterActorNumber}");
+        Debug.Log($"[ProjectileController] Inicializando proyectil - Daño: {damage}, Disparador: {shooter.name}, ActorNumber: {shooterActorNumber}");
         this.damage = damage;
         this.shooter = shooter;
         this.shooterActorNumber = shooterActorNumber;
+        
+        // Verificar configuración de colisiones
+        if (collisionMask.value == 0)
+        {
+            Debug.LogWarning("[ProjectileController] La máscara de colisión está vacía - El proyectil no podrá colisionar");
+        }
+        else
+        {
+            Debug.Log($"[ProjectileController] Máscara de colisión configurada: {collisionMask.value}");
+        }
         
         if (rb == null)
         {

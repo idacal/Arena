@@ -102,7 +102,38 @@ public class BasicAttackProjectile : MonoBehaviourPun, IPunObservable
     
     private void OnCollisionEnter(Collision collision)
     {
-        ProcessHit(collision.gameObject, collision.contacts[0].point);
+        // Solo el dueño del proyectil procesa la colisión
+        if (!photonView.IsMine || hasHit) return;
+        
+        // Evitar golpear al lanzador
+        PhotonView attackerView = PhotonView.Find(attackerViewID);
+        if (attackerView != null && collision.gameObject == attackerView.gameObject) return;
+        
+        // Verificar si golpeamos a un héroe
+        HeroBase hitHero = collision.gameObject.GetComponent<HeroBase>();
+        
+        // Si golpeamos a un héroe, aplicar daño
+        if (hitHero != null)
+        {
+            // Solo aplicar daño si el objetivo es diferente al lanzador
+            if (attackerView != null && hitHero.photonView.ViewID != attackerViewID)
+            {
+                // Obtener el punto de impacto
+                Vector3 hitPoint = collision.contacts[0].point;
+                
+                // Intentar aplicar daño
+                hitHero.TakeDamage(damage, attackerView.GetComponent<HeroBase>());
+                
+                // Crear efecto visual de impacto
+                CreateHitEffect(hitPoint);
+                
+                // Marcar como golpeado para evitar múltiples hits
+                hasHit = true;
+                
+                // Destruir el proyectil
+                DestroyProjectile();
+            }
+        }
     }
     
     private void OnTriggerEnter(Collider other)

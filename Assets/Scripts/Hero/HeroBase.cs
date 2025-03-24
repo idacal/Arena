@@ -465,6 +465,12 @@ namespace Photon.Pun.Demo.Asteroids
         [PunRPC]
         protected virtual void RPC_TakeDamage(float amount, int attackerViewID, bool isMagicDamage, PhotonMessageInfo info)
         {
+            // Solo el master procesa el daño real para evitar trampas
+            if (!PhotonNetwork.IsMasterClient)
+            {
+                return;
+            }
+
             // Calcular mitigación de daño
             float damageReduction = isMagicDamage ? 
                 100 / (100 + magicResistance) : 
@@ -475,6 +481,9 @@ namespace Photon.Pun.Demo.Asteroids
             // Aplicar daño
             currentHealth -= actualDamage;
             
+            // Limitar a 0 como mínimo
+            currentHealth = Mathf.Max(0f, currentHealth);
+            
             // Actualizar UI
             if (uiController != null)
             {
@@ -484,6 +493,29 @@ namespace Photon.Pun.Demo.Asteroids
             
             // Verificar muerte
             if (currentHealth <= 0 && !_isDead)
+            {
+                Die();
+            }
+
+            // Sincronizar con todos los clientes
+            photonView.RPC("RPC_SyncHealth", RpcTarget.All, currentHealth, _isDead);
+        }
+        
+        [PunRPC]
+        protected virtual void RPC_SyncHealth(float newHealth, bool isDead)
+        {
+            // Actualizar salud
+            currentHealth = newHealth;
+            _isDead = isDead;
+            
+            // Actualizar UI
+            if (uiController != null)
+            {
+                uiController.UpdateHealthBar(currentHealth, maxHealth);
+            }
+            
+            // Si está muerto, llamar a Die()
+            if (_isDead && !isDead)
             {
                 Die();
             }
