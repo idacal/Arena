@@ -16,8 +16,8 @@ MonoBehaviour:
   Description: Spawn a scarecrow to limit the enemy to get into a position
   IconSprite: {fileID: 21300000, guid: a11e274865ce1984dbf926ec0b0e71e2, type: 3}
   Hotkey: E
-  Cooldown: 1
-  ManaCost: 1
+  Cooldown: 15
+  ManaCost: 50
   AbilityType: Activa
   DamageAmount: 0
   Duration: 0

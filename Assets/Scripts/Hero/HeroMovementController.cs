@@ -1251,7 +1251,10 @@ namespace Photon.Pun.Demo.Asteroids
             {
                 navAgent.ResetPath();
                 navAgent.velocity = Vector3.zero;
-                navAgent.isStopped = true;
+                navAgent.isStopped = false; // Cambiado a false para permitir movimientos futuros
+                navAgent.updatePosition = true;
+                navAgent.updateRotation = true;
+                navAgent.updateUpAxis = true;
             }
             
             // Resetear variables de movimiento

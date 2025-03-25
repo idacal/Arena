@@ -16,8 +16,8 @@ MonoBehaviour:
   Description: Bomb zone test
   IconSprite: {fileID: 21300000, guid: 4c77505a6cb56fd49b47e61db0c70495, type: 3}
   Hotkey: W
-  Cooldown: 1
-  ManaCost: 1
+  Cooldown: 10
+  ManaCost: 20
   AbilityType: Activa
   DamageAmount: 0
   Duration: 0

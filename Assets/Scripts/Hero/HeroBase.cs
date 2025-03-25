@@ -865,13 +865,17 @@ namespace Photon.Pun.Demo.Asteroids
                 animator.SetTrigger("Respawn");
             }
             
-            // Detener cualquier movimiento previo
+            // Detener cualquier movimiento previo y preparar para nuevos movimientos
             var navAgent = GetComponent<UnityEngine.AI.NavMeshAgent>();
             if (navAgent != null && photonView.IsMine)
             {
                 navAgent.ResetPath();
                 navAgent.velocity = Vector3.zero;
-                navAgent.isStopped = true;
+                navAgent.enabled = true;
+                navAgent.isStopped = false;
+                navAgent.updatePosition = true;
+                navAgent.updateRotation = true;
+                navAgent.updateUpAxis = true;
                 // Asegurarnos de que el agente esté en la posición correcta
                 navAgent.Warp(position);
             }
@@ -891,7 +895,7 @@ namespace Photon.Pun.Demo.Asteroids
             OnManaChanged?.Invoke(currentMana, maxMana);
             OnHeroRespawn?.Invoke(this);
             
-            Debug.Log($"[HeroBase] Héroe respawneado en posición {position}");
+            Debug.Log($"[HeroBase] Héroe respawneado en posición {position} y listo para moverse");
         }
         
         #endregion
