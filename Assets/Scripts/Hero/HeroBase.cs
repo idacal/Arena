@@ -9,7 +9,7 @@ using System.Collections;
 namespace Photon.Pun.Demo.Asteroids
 {
     [RequireComponent(typeof(PhotonView))]
-    public class HeroBase : MonoBehaviourPunCallbacks, IPunObservable
+    public class HeroBase : MonoBehaviourPunCallbacks, IPunObservable, IFearable
     {
         [Header("Hero Identity")]
         public int heroId = -1;          // ID del héroe, debe coincidir con HeroData
@@ -507,7 +507,7 @@ namespace Photon.Pun.Demo.Asteroids
                     );
                     
                     // Preparar el modelo para el respawn
-                    if (animator != null)
+            if (animator != null)
                     {
                         animator.SetBool("IsDead", false);
                         animator.ResetTrigger("Die");
@@ -1164,5 +1164,25 @@ namespace Photon.Pun.Demo.Asteroids
         }
         
         #endregion
+
+        public void ApplyFear(float duration)
+        {
+            if (!photonView.IsMine) return;
+
+            HeroMovementController moveController = GetComponent<HeroMovementController>();
+            if (moveController != null)
+            {
+                // Aplicar efecto de miedo
+                moveController.ApplyStun(duration * 0.5f); // Stun por la mitad de la duración del miedo
+                
+                // Hacer que el héroe huya en dirección aleatoria
+                Vector3 randomDirection = Random.insideUnitSphere;
+                randomDirection.y = 0;
+                randomDirection.Normalize();
+                
+                Vector3 fleePosition = transform.position + randomDirection * 10f;
+                moveController.SetDestination(fleePosition);
+            }
+        }
     }
 }

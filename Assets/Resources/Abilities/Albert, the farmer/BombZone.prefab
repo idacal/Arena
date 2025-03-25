@@ -110,13 +110,13 @@ MonoBehaviour:
   aoeVisualEffect: {fileID: 0}
   scaleVisualWithRadius: 1
   particleEffect: {fileID: 0}
-  bombPrefab: {fileID: 0}
   bombCount: 8
   bombDamage: 50
   bombLifetime: 5
   bombDetonationRadius: 1
   areaColor: {r: 0.4056604, g: 0.06565326, b: 0, a: 0.3}
   usePulseEffect: 1
+  bombZonePrefab: {fileID: 9137413139542763339, guid: 438f3c2a5af2cf545b5f44b63d0c6286, type: 3}
 --- !u!114 &-4181022150569503989
 MonoBehaviour:
   m_ObjectHideFlags: 0

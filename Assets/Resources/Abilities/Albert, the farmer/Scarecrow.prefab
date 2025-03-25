@@ -88,11 +88,10 @@ MonoBehaviour:
   aoeVisualEffect: {fileID: 0}
   scaleVisualWithRadius: 1
   particleEffect: {fileID: 0}
-  scarecrowPrefab: {fileID: 0}
   fearDuration: 2
   scarecrowHealth: 100
+  scarecrowPrefab: {fileID: 28731641800631256, guid: 5e28f2fe2ed3d4244943253f87d5d71b, type: 3}
   areaColor: {r: 0.5471698, g: 0.13163047, b: 0.26010287, a: 0.3}
-  forceCreateVisual: 1
 --- !u!114 &7570399139993718538
 MonoBehaviour:
   m_ObjectHideFlags: 0
