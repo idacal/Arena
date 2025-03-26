@@ -89,12 +89,26 @@ MonoBehaviour:
   buffVisualPrefab: {fileID: 0}
   attachToBone: 0
   boneName: Chest
-  furyDuration: 6
-  attackSpeedBonus: 100
-  movementSpeedBonus: 30
-  particleColor: {r: 1, g: 0.5, b: 0, a: 0.7}
-  particleSize: 0.2
-  particleCount: 15
+  attackSpeedType: 1
+  attackSpeedValue: 100
+  attackSpeedIsPercentage: 1
+  attackSpeedDuration: 6
+  attackSpeedApplyToAllies: 0
+  attackSpeedApplyToSelf: 1
+  attackSpeedRadius: 0
+  attackSpeedTargetLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  moveSpeedType: 2
+  moveSpeedValue: 30
+  moveSpeedIsPercentage: 1
+  moveSpeedDuration: 6
+  moveSpeedApplyToAllies: 0
+  moveSpeedApplyToSelf: 1
+  moveSpeedRadius: 0
+  moveSpeedTargetLayers:
+    serializedVersion: 2
+    m_Bits: 0
 --- !u!114 &3238252319721251229
 MonoBehaviour:
   m_ObjectHideFlags: 0

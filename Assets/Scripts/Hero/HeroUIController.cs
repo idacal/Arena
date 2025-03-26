@@ -384,14 +384,14 @@ namespace Photon.Pun.Demo.Asteroids
             // Actualizar regeneración de salud (solo el texto, no la visibilidad)
             if (healthRegenText != null)
             {
-                healthRegenText.text = $"Health Regen: {hero.healthRegenRate:F1}/s";
+                healthRegenText.text = $"{hero.healthRegenRate:F1}";
             }
 
             // Actualizar regeneración de maná (solo el texto, no la visibilidad)
             if (manaRegenText != null)
             {
                 float manaRegenRate = hero.maxMana * 0.01f; // 1% por segundo
-                manaRegenText.text = $"Mana Regen: {manaRegenRate:F1}/s";
+                manaRegenText.text = $"{manaRegenRate:F1}";
             }
         }
         
