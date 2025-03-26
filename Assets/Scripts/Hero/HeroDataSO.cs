@@ -29,6 +29,9 @@ namespace Photon.Pun.Demo.Asteroids
         public float MovementSpeed = 350;
         public float Armor = 20;
         public float MagicResistance = 20;
+        public float HealthRegenRate = 1.0f;
+        public float ManaRegenRate = 0.01f;  // 1% por segundo por defecto
+        public float RespawnTime = 5.0f;
 
         [Header("Habilidades")]
         public List<AbilitySO> Abilities = new List<AbilitySO>();
@@ -53,7 +56,10 @@ namespace Photon.Pun.Demo.Asteroids
                 AttackSpeed = this.AttackSpeed,
                 MovementSpeed = this.MovementSpeed,
                 Armor = this.Armor,
-                MagicResistance = this.MagicResistance
+                MagicResistance = this.MagicResistance,
+                HealthRegenRate = this.HealthRegenRate,
+                ManaRegenRate = this.ManaRegenRate,
+                RespawnTime = this.RespawnTime
             };
 
             // Convertir habilidades

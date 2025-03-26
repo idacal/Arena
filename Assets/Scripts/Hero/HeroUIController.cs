@@ -18,6 +18,16 @@ namespace Photon.Pun.Demo.Asteroids
         public TMP_Text heroNameText;
         public TMP_Text levelText;
         
+        [Header("Hero Stats")]
+        public TMP_Text attackDamageText;
+        public TMP_Text attackSpeedText;
+        public TMP_Text moveSpeedText;
+        public TMP_Text attackRangeText;
+        public TMP_Text armorText;
+        public TMP_Text magicResistanceText;
+        public TMP_Text healthRegenText;
+        public TMP_Text manaRegenText;
+        
         [Header("Ability UI")]
         public GameObject abilityPanel;
         
@@ -52,6 +62,7 @@ namespace Photon.Pun.Demo.Asteroids
             {
                 UpdateHealthBar(hero.CurrentHealth, hero.MaxHealth);
                 UpdateManaBar(hero.currentMana, hero.maxMana);
+                UpdateHeroStats(hero);
                 
                 if (playerNameText != null && hero.photonView != null && hero.photonView.Owner != null)
                 {
@@ -206,19 +217,35 @@ namespace Photon.Pun.Demo.Asteroids
             if (playerNameText == null) missingRefs += "playerNameText, ";
             if (heroNameText == null) missingRefs += "heroNameText, ";
             
+            // Verificar referencias de estadísticas
+            if (attackDamageText == null) missingRefs += "attackDamageText, ";
+            if (attackSpeedText == null) missingRefs += "attackSpeedText, ";
+            if (moveSpeedText == null) missingRefs += "moveSpeedText, ";
+            if (attackRangeText == null) missingRefs += "attackRangeText, ";
+            if (armorText == null) missingRefs += "armorText, ";
+            if (magicResistanceText == null) missingRefs += "magicResistanceText, ";
+            if (healthRegenText == null) missingRefs += "healthRegenText, ";
+            if (manaRegenText == null) missingRefs += "manaRegenText, ";
+            
             if (missingRefs != "")
             {
                 Debug.LogWarning("[HeroUIController] Faltan referencias: " + missingRefs);
             }
         }
         
-        void LateUpdate()
+        void Update()
         {
             // Si es un canvas en modo World Space, asegurar que sigue a la cámara
             if (mainCanvas != null && mainCanvas.renderMode == RenderMode.WorldSpace && cameraTransform != null)
             {
                 transform.LookAt(transform.position + cameraTransform.rotation * Vector3.forward, 
                                  cameraTransform.rotation * Vector3.up);
+            }
+
+            // Actualizar estadísticas si tenemos un héroe propietario
+            if (heroOwner != null)
+            {
+                UpdateHeroStats(heroOwner);
             }
         }
         
@@ -294,6 +321,63 @@ namespace Photon.Pun.Demo.Asteroids
             if (levelText != null)
             {
                 levelText.text = level.ToString();
+            }
+        }
+        
+        /// <summary>
+        /// Actualiza todas las estadísticas del héroe en la UI
+        /// </summary>
+        public void UpdateHeroStats(HeroBase hero)
+        {
+            if (hero == null) return;
+
+            // Actualizar daño de ataque
+            if (attackDamageText != null)
+            {
+                attackDamageText.text = $"Daño: {hero.AttackDamage:F0}";
+            }
+
+            // Actualizar velocidad de ataque
+            if (attackSpeedText != null)
+            {
+                attackSpeedText.text = $"Vel. Ataque: {hero.AttackSpeed:F2}/s";
+            }
+
+            // Actualizar velocidad de movimiento
+            if (moveSpeedText != null)
+            {
+                moveSpeedText.text = $"Vel. Movimiento: {hero.moveSpeed:F0}";
+            }
+
+            // Actualizar rango de ataque
+            if (attackRangeText != null)
+            {
+                attackRangeText.text = $"Rango: {hero.AttackRange:F1}m";
+            }
+
+            // Actualizar armadura
+            if (armorText != null)
+            {
+                armorText.text = $"Armadura: {hero.armor:F0}";
+            }
+
+            // Actualizar resistencia mágica
+            if (magicResistanceText != null)
+            {
+                magicResistanceText.text = $"Res. Mágica: {hero.magicResistance:F0}";
+            }
+
+            // Actualizar regeneración de salud
+            if (healthRegenText != null)
+            {
+                healthRegenText.text = $"Regen. Salud: {hero.healthRegenRate:F1}/s";
+            }
+
+            // Actualizar regeneración de maná
+            if (manaRegenText != null)
+            {
+                float manaRegenRate = hero.maxMana * 0.01f; // 1% por segundo
+                manaRegenText.text = $"Regen. Maná: {manaRegenRate:F1}/s";
             }
         }
         

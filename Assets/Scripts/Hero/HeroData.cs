@@ -26,6 +26,9 @@ namespace Photon.Pun.Demo.Asteroids
         public float MovementSpeed;
         public float Armor;
         public float MagicResistance;
+        public float HealthRegenRate;
+        public float ManaRegenRate;  // Tasa de regeneración de maná por segundo
+        public float RespawnTime;
         
         // Lista de habilidades (implementación dinámica)
         public List<HeroAbility> Abilities = new List<HeroAbility>();

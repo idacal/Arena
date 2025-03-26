@@ -22,17 +22,18 @@ namespace Photon.Pun.Demo.Asteroids
         public Renderer[] teamColorRenderers; // Renderers que cambiarán con el color del equipo
         
         [Header("Stats")]
-        public float maxHealth = 1000f;
+        public float maxHealth;           // Se inicializará desde HeroDataSO
         public float currentHealth;
-        public float maxMana = 500f;
+        public float maxMana;            // Se inicializará desde HeroDataSO
         public float currentMana;
-        public float attackDamage = 60f;
-        public float attackSpeed = 1.0f;
-        public float moveSpeed = 5.0f;
-        public float armor = 20f;
-        public float magicResistance = 20f;
-        public float healthRegenRate = 1f;
-        public float respawnTime = 5f;
+        public float attackDamage;       // Se inicializará desde HeroDataSO
+        public float attackSpeed;        // Se inicializará desde HeroDataSO
+        public float moveSpeed;          // Se inicializará desde HeroDataSO
+        public float armor;              // Se inicializará desde HeroDataSO
+        public float magicResistance;    // Se inicializará desde HeroDataSO
+        public float healthRegenRate;    // Se inicializará desde HeroDataSO
+        public float manaRegenRate;      // Se inicializará desde HeroDataSO
+        public float respawnTime;        // Se inicializará desde HeroDataSO
         
         [Header("Ability System")]
         public HeroAbilityController abilityController;
@@ -333,37 +334,50 @@ namespace Photon.Pun.Demo.Asteroids
         /// </summary>
         protected virtual void LoadHeroData()
         {
-            // Obtener el ID del héroe seleccionado por el jugador
-            Player player = photonView.Owner;
-            int selectedHeroId = HeroManager.Instance.GetPlayerSelectedHeroId(player);
-            
-            if (selectedHeroId != -1)
+            if (photonView.IsMine)
             {
-                heroId = selectedHeroId;
-                
-                // Obtener el equipo del jugador
-                teamId = HeroManager.Instance.GetPlayerTeam(player);
-                
-                // Cargar datos del héroe
-                HeroData heroData = HeroManager.Instance.GetHeroData(heroId);
-                if (heroData != null)
+                // Obtener el ID del héroe seleccionado
+                Player player = photonView.Owner;
+                int selectedHeroId = HeroManager.Instance.GetPlayerSelectedHeroId(player);
+                if (selectedHeroId != -1)
                 {
-                    heroName = heroData.Name;
-                    maxHealth = heroData.Health;
-                    currentHealth = maxHealth;
-                    maxMana = heroData.Mana;
-                    currentMana = maxMana;
-                    attackDamage = heroData.AttackDamage;
-                    attackSpeed = heroData.AttackSpeed;
-                    moveSpeed = heroData.MovementSpeed * 0.01f; // Convertir a unidades de Unity
-                    armor = heroData.Armor;
-                    magicResistance = heroData.MagicResistance;
+                    heroId = selectedHeroId;
                     
-                    // Configurar habilidades
-                    if (abilityController != null)
+                    // Obtener el equipo del jugador
+                    teamId = HeroManager.Instance.GetPlayerTeam(player);
+                    
+                    // Cargar datos del héroe
+                    HeroData heroData = HeroManager.Instance.GetHeroData(heroId);
+                    if (heroData != null)
                     {
-                        abilityController.SetupAbilities(heroData.Abilities);
+                        heroName = heroData.Name;
+                        maxHealth = heroData.Health;
+                        currentHealth = maxHealth;
+                        maxMana = heroData.Mana;
+                        currentMana = maxMana;
+                        attackDamage = heroData.AttackDamage;
+                        attackSpeed = heroData.AttackSpeed;
+                        moveSpeed = heroData.MovementSpeed * 0.01f; // Convertir a unidades de Unity
+                        armor = heroData.Armor;
+                        magicResistance = heroData.MagicResistance;
+                        healthRegenRate = heroData.HealthRegenRate;
+                        manaRegenRate = heroData.ManaRegenRate;
+                        respawnTime = heroData.RespawnTime;
+                        
+                        // Configurar habilidades
+                        if (abilityController != null)
+                        {
+                            abilityController.SetupAbilities(heroData.Abilities);
+                        }
                     }
+                    else
+                    {
+                        Debug.LogError($"[HeroBase] No se encontraron datos para el héroe con ID {heroId}");
+                    }
+                }
+                else
+                {
+                    Debug.LogError("[HeroBase] No se ha seleccionado ningún héroe");
                 }
             }
         }
@@ -373,14 +387,19 @@ namespace Photon.Pun.Demo.Asteroids
         /// </summary>
         protected virtual void RegenerateMana()
         {
-            // Regeneración básica de maná
-            float manaRegenRate = maxMana * 0.01f; // 1% por segundo
-            currentMana = Mathf.Min(currentMana + manaRegenRate * Time.deltaTime, maxMana);
-            
-            // Actualizar UI si es necesario
-            if (uiController != null)
+            if (currentMana < maxMana)
             {
-                uiController.UpdateManaBar(currentMana, maxMana);
+                float manaToRegen = maxMana * manaRegenRate * Time.deltaTime;
+                currentMana = Mathf.Min(currentMana + manaToRegen, maxMana);
+                
+                // Notificar cambio de maná
+                OnManaChanged?.Invoke(currentMana, maxMana);
+                
+                // Actualizar UI si existe
+                if (uiController != null)
+                {
+                    uiController.UpdateManaBar(currentMana, maxMana);
+                }
             }
         }
         

@@ -26,6 +26,8 @@ MonoBehaviour:
   MovementSpeed: 350
   Armor: 15
   MagicResistance: 20
+  HealthRegenRate: 0.5
+  RespawnTime: 5.0
   Abilities:
   - {fileID: 11400000, guid: 9af132660b5db33419265c5567003468, type: 2}
   - {fileID: 11400000, guid: 1eba2e076d25fc44db6add39e059ba2f, type: 2}

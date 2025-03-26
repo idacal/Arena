@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Name: Harvest Madness
   Description: Harvest Madness test
-  IconSprite: {fileID: 21300000, guid: 04e6eba5c27a6d849825076ccabb03e5, type: 3}
+  IconSprite: {fileID: 21300000, guid: 9ad322f57cb79e744a30eb34e1f6e1c9, type: 3}
   Hotkey: R
   Cooldown: 60
   ManaCost: 100
