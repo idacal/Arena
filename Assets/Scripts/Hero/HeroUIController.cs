@@ -12,6 +12,8 @@ namespace Photon.Pun.Demo.Asteroids
         public Slider manaBar;
         public TMP_Text healthText;
         public TMP_Text manaText;
+        public GameObject healthRegenPanel;  // Panel que contiene el texto de regeneración de vida
+        public GameObject manaRegenPanel;    // Panel que contiene el texto de regeneración de maná
         
         [Header("Player Information")]
         public TMP_Text playerNameText;
@@ -139,6 +141,16 @@ namespace Photon.Pun.Demo.Asteroids
             // Verificar referencias importantes
             CheckReferences();
             
+            // Ocultar paneles de regeneración al inicio
+            if (healthRegenPanel != null)
+            {
+                healthRegenPanel.SetActive(false);
+            }
+            if (manaRegenPanel != null)
+            {
+                manaRegenPanel.SetActive(false);
+            }
+            
             // Set hero name and player name
             if (heroOwner != null)
             {
@@ -216,6 +228,8 @@ namespace Photon.Pun.Demo.Asteroids
             if (manaText == null) missingRefs += "manaText, ";
             if (playerNameText == null) missingRefs += "playerNameText, ";
             if (heroNameText == null) missingRefs += "heroNameText, ";
+            if (healthRegenPanel == null) missingRefs += "healthRegenPanel, ";
+            if (manaRegenPanel == null) missingRefs += "manaRegenPanel, ";
             
             // Verificar referencias de estadísticas
             if (attackDamageText == null) missingRefs += "attackDamageText, ";
@@ -334,50 +348,50 @@ namespace Photon.Pun.Demo.Asteroids
             // Actualizar daño de ataque
             if (attackDamageText != null)
             {
-                attackDamageText.text = $"Daño: {hero.AttackDamage:F0}";
+                attackDamageText.text = $"Attack Damage: {hero.AttackDamage:F0}";
             }
 
             // Actualizar velocidad de ataque
             if (attackSpeedText != null)
             {
-                attackSpeedText.text = $"Vel. Ataque: {hero.AttackSpeed:F2}/s";
+                attackSpeedText.text = $"Attack Speed: {hero.AttackSpeed:F2}/s";
             }
 
             // Actualizar velocidad de movimiento
             if (moveSpeedText != null)
             {
-                moveSpeedText.text = $"Vel. Movimiento: {hero.moveSpeed:F0}";
+                moveSpeedText.text = $"Move Speed: {hero.moveSpeed:F0}";
             }
 
             // Actualizar rango de ataque
             if (attackRangeText != null)
             {
-                attackRangeText.text = $"Rango: {hero.AttackRange:F1}m";
+                attackRangeText.text = $"Attack Range: {hero.AttackRange:F1}m";
             }
 
             // Actualizar armadura
             if (armorText != null)
             {
-                armorText.text = $"Armadura: {hero.armor:F0}";
+                armorText.text = $"Armor: {hero.armor:F0}";
             }
 
             // Actualizar resistencia mágica
             if (magicResistanceText != null)
             {
-                magicResistanceText.text = $"Res. Mágica: {hero.magicResistance:F0}";
+                magicResistanceText.text = $"Magic Resistance: {hero.magicResistance:F0}";
             }
 
-            // Actualizar regeneración de salud
+            // Actualizar regeneración de salud (solo el texto, no la visibilidad)
             if (healthRegenText != null)
             {
-                healthRegenText.text = $"Regen. Salud: {hero.healthRegenRate:F1}/s";
+                healthRegenText.text = $"Health Regen: {hero.healthRegenRate:F1}/s";
             }
 
-            // Actualizar regeneración de maná
+            // Actualizar regeneración de maná (solo el texto, no la visibilidad)
             if (manaRegenText != null)
             {
                 float manaRegenRate = hero.maxMana * 0.01f; // 1% por segundo
-                manaRegenText.text = $"Regen. Maná: {manaRegenRate:F1}/s";
+                manaRegenText.text = $"Mana Regen: {manaRegenRate:F1}/s";
             }
         }
         
@@ -477,6 +491,50 @@ namespace Photon.Pun.Demo.Asteroids
             
             // Destruir el objeto al terminar
             Destroy(textObj);
+        }
+
+        /// <summary>
+        /// Muestra el panel de regeneración de vida
+        /// </summary>
+        public void ShowHealthRegenPanel()
+        {
+            if (healthRegenPanel != null)
+            {
+                healthRegenPanel.SetActive(true);
+            }
+        }
+
+        /// <summary>
+        /// Oculta el panel de regeneración de vida
+        /// </summary>
+        public void HideHealthRegenPanel()
+        {
+            if (healthRegenPanel != null)
+            {
+                healthRegenPanel.SetActive(false);
+            }
+        }
+
+        /// <summary>
+        /// Muestra el panel de regeneración de maná
+        /// </summary>
+        public void ShowManaRegenPanel()
+        {
+            if (manaRegenPanel != null)
+            {
+                manaRegenPanel.SetActive(true);
+            }
+        }
+
+        /// <summary>
+        /// Oculta el panel de regeneración de maná
+        /// </summary>
+        public void HideManaRegenPanel()
+        {
+            if (manaRegenPanel != null)
+            {
+                manaRegenPanel.SetActive(false);
+            }
         }
     }
     
