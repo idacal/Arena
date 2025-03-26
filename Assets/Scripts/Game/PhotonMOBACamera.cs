@@ -31,9 +31,9 @@ namespace Photon.Pun.Demo.Asteroids
         public float mapMaxZ = 500f;
         
         [Header("Controls")]
-        public KeyCode centerOnPlayerKey = KeyCode.Space;
+        public KeyCode centerOnPlayerKey = KeyCode.C;
         public KeyCode cameraDragKey = KeyCode.Mouse2; // Middle mouse button (wheel)
-        public KeyCode toggleFollowKey = KeyCode.V; // Nueva tecla para alternar seguimiento
+        public KeyCode toggleFollowKey = KeyCode.V; // Tecla V para alternar seguimiento
         
         // Variables internas
         private Vector3 cameraTargetPosition;
@@ -42,7 +42,7 @@ namespace Photon.Pun.Demo.Asteroids
         private Vector3 dragStartPosition;
         private Vector3 dragCurrentPosition;
         private bool snapToPlayer = false;
-        private bool isFollowing = false;
+        private bool isFollowing = false; // Por defecto, no sigue al jugador
         
         // ID único de esta cámara (para depuración)
         private string cameraId;
@@ -87,7 +87,7 @@ namespace Photon.Pun.Demo.Asteroids
             // Mostrar mensaje de ayuda
             Debug.Log("[PhotonMOBACamera] Controles de cámara:\n" +
                      "- V: Alternar seguimiento del jugador\n" +
-                     "- ESPACIO: Centrar en jugador\n" +
+                     "- C: Centrar en jugador\n" +
                      "- RUEDA DEL RATÓN: Arrastrar cámara\n" +
                      "- BORDES DE PANTALLA: Mover cámara\n" +
                      "- SCROLL: Zoom");
@@ -109,33 +109,28 @@ namespace Photon.Pun.Demo.Asteroids
             // Zoom con rueda del ratón
             HandleZoom();
             
-            // Tecla para centrar en jugador
+            // Tecla para centrar en jugador (C)
             if (Input.GetKeyDown(centerOnPlayerKey))
             {
                 Debug.Log($"[PhotonMOBACamera] Centrando cámara en jugador {target.name}");
+                cameraTargetPosition = target.position;
                 snapToPlayer = true;
             }
             
-            // Centrado en jugador solo si está activo el seguimiento
-            if (snapToPlayer && isFollowing)
+            // Seguimiento del jugador solo si está activo
+            if (isFollowing)
             {
                 cameraTargetPosition = Vector3.Lerp(cameraTargetPosition, target.position, snapToTargetSpeed * Time.deltaTime);
-                
-                // Desactivar snap cuando estamos lo suficientemente cerca
-                if (Vector3.Distance(cameraTargetPosition, target.position) < 0.1f)
-                {
-                    snapToPlayer = false;
-                }
             }
             
             // Scroll en bordes de pantalla solo si no está siguiendo
-            if (useEdgeScrolling && !snapToPlayer && !isFollowing)
+            if (useEdgeScrolling && !isFollowing)
             {
                 HandleEdgeScrolling();
             }
             
             // Arrastrar con botón medio solo si no está siguiendo
-            if (!snapToPlayer && !isFollowing)
+            if (!isFollowing)
             {
                 HandleMouseDrag();
             }

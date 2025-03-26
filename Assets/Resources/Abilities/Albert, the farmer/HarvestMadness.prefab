@@ -91,6 +91,7 @@ MonoBehaviour:
   boneName: Chest
   furyDuration: 6
   attackSpeedBonus: 100
+  movementSpeedBonus: 30
   particleColor: {r: 1, g: 0.5, b: 0, a: 0.7}
   particleSize: 0.2
   particleCount: 15

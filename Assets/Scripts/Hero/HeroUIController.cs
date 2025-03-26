@@ -360,7 +360,7 @@ namespace Photon.Pun.Demo.Asteroids
             // Actualizar velocidad de movimiento
             if (moveSpeedText != null)
             {
-                moveSpeedText.text = $"Move Speed: {hero.moveSpeed:F0}";
+                moveSpeedText.text = $"Movement Speed: {hero.moveSpeed:F0}";
             }
 
             // Actualizar rango de ataque

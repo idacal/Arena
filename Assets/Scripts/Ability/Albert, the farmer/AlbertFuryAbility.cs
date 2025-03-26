@@ -8,6 +8,7 @@ namespace Photon.Pun.Demo.Asteroids
         [Header("Fury Settings")]
         public float furyDuration = 6f;         // Duración del estado de furia
         public float attackSpeedBonus = 100f;   // Bonus de velocidad de ataque
+        public float movementSpeedBonus = 30f;  // Bonus de velocidad de movimiento
         
         [Header("Visual Settings")]
         public Color particleColor = new Color(1f, 0.5f, 0f, 0.7f); // Color naranja para las partículas
@@ -15,6 +16,8 @@ namespace Photon.Pun.Demo.Asteroids
         public int particleCount = 15;          // Cantidad reducida de partículas
         
         private GameObject furyEffect;
+        private BuffInstance attackSpeedBuff;
+        private BuffInstance moveSpeedBuff;
         
         protected override void OnAbilityInitialized()
         {
@@ -27,13 +30,57 @@ namespace Photon.Pun.Demo.Asteroids
             applyToSelf = true;
             radius = 0f;  // Solo aplica al lanzador
             
-            // Llamar a la inicialización base que aplicará el buff
+            // Llamar a la inicialización base que aplicará el buff de velocidad de ataque
             base.OnAbilityInitialized();
+            
+            // Aplicar bonus de velocidad de movimiento usando el sistema de buffs
+            if (caster != null)
+            {
+                // Guardar el valor original de velocidad de movimiento
+                float originalMoveSpeed = caster.moveSpeed;
+                
+                // Calcular el nuevo valor
+                float newMoveSpeed = originalMoveSpeed * (1 + movementSpeedBonus / 100f);
+                
+                // Actualizar la velocidad de movimiento
+                caster.moveSpeed = newMoveSpeed;
+                
+                // Actualizar el NavMeshAgent si existe
+                HeroMovementController moveController = caster.GetComponent<HeroMovementController>();
+                if (moveController != null && moveController.navAgent != null)
+                {
+                    moveController.navAgent.speed = newMoveSpeed;
+                }
+                
+                // Registrar el buff de velocidad de movimiento
+                moveSpeedBuff = new BuffInstance(caster, null, originalMoveSpeed, furyDuration);
+            }
             
             // Usar el PhotonView para sincronizar la creación del efecto en todos los clientes
             if (photonView.IsMine)
             {
                 photonView.RPC("RPC_CreateFuryEffect", RpcTarget.AllBuffered);
+            }
+        }
+        
+        protected override void AbilityUpdate()
+        {
+            base.AbilityUpdate();
+            
+            // Verificar si el buff de velocidad de movimiento ha terminado
+            if (moveSpeedBuff != null && Time.time >= moveSpeedBuff.endTime)
+            {
+                // Restaurar la velocidad de movimiento original
+                caster.moveSpeed = moveSpeedBuff.originalValue;
+                
+                // Actualizar el NavMeshAgent si existe
+                HeroMovementController moveController = caster.GetComponent<HeroMovementController>();
+                if (moveController != null && moveController.navAgent != null)
+                {
+                    moveController.navAgent.speed = moveSpeedBuff.originalValue;
+                }
+                
+                moveSpeedBuff = null;
             }
         }
         
@@ -110,6 +157,19 @@ namespace Photon.Pun.Demo.Asteroids
             if (photonView.IsMine)
             {
                 photonView.RPC("RPC_DestroyFuryEffect", RpcTarget.AllBuffered);
+            }
+            
+            // Restaurar la velocidad de movimiento si el buff aún está activo
+            if (moveSpeedBuff != null)
+            {
+                caster.moveSpeed = moveSpeedBuff.originalValue;
+                
+                // Actualizar el NavMeshAgent si existe
+                HeroMovementController moveController = caster.GetComponent<HeroMovementController>();
+                if (moveController != null && moveController.navAgent != null)
+                {
+                    moveController.navAgent.speed = moveSpeedBuff.originalValue;
+                }
             }
             
             // Luego llamar a la destrucción base que quitará el buff

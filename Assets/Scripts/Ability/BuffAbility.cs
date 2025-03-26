@@ -27,7 +27,7 @@ namespace Photon.Pun.Demo.Asteroids
         private List<BuffInstance> appliedBuffs = new List<BuffInstance>();
         
         // Clase para almacenar información de cada buff aplicado
-        private class BuffInstance
+        protected class BuffInstance
         {
             public HeroBase target;              // Héroe objetivo
             public GameObject visualEffect;      // Efecto visual instanciado
