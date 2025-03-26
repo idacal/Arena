@@ -217,12 +217,16 @@ namespace Photon.Pun.Demo.Asteroids
         {
             if (!AreAllPlayersReady()) return;
 
-            // Cargar la escena de juego
-            PhotonNetwork.CurrentRoom.IsOpen = false;
-            PhotonNetwork.CurrentRoom.IsVisible = false;
-            
-            // Reemplazar "GameplayScene" con el nombre real de tu escena de juego
-            PhotonNetwork.LoadLevel("GameplayScene");
+            // Buscar el GameStartManager y llamar a su método StartCountdown
+            GameStartManager gameStartManager = FindObjectOfType<GameStartManager>();
+            if (gameStartManager != null)
+            {
+                gameStartManager.StartCountdown();
+            }
+            else
+            {
+                Debug.LogError("No se encontró el GameStartManager!");
+            }
         }
 
         #endregion

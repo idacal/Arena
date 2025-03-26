@@ -5,6 +5,10 @@ namespace Photon.Pun.Demo.Asteroids
 {
     public class ButtonSoundHandler : MonoBehaviour
     {
+        [Header("Sound Settings")]
+        public AudioClip customClickSound; // Sonido personalizado para este botón
+        public float customVolume = 0.5f; // Volumen personalizado para este botón
+        
         private Button button;
         private bool isInitialized = false;
         
@@ -42,7 +46,16 @@ namespace Photon.Pun.Demo.Asteroids
         {
             if (ButtonSoundManager.Instance != null)
             {
-                ButtonSoundManager.Instance.PlayClickSound();
+                if (customClickSound != null)
+                {
+                    // Usar el sonido personalizado del botón
+                    ButtonSoundManager.Instance.PlayCustomSound(customClickSound, customVolume);
+                }
+                else
+                {
+                    // Usar el sonido por defecto del ButtonSoundManager
+                    ButtonSoundManager.Instance.PlayClickSound();
+                }
             }
         }
     }

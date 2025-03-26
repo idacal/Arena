@@ -369,6 +369,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2857908127971588695}
   - component: {fileID: -1146695875564583594}
+  - component: {fileID: 62815334346402477}
   m_Layer: 0
   m_Name: HeroIcon
   m_TagString: Untagged
@@ -415,3 +416,17 @@ MonoBehaviour:
   SelectionFrame: {fileID: 1196535783371735916}
   TeamIndicator: {fileID: 7109746986450517066}
   HeroNameText: {fileID: 8643428289825956605}
+--- !u!114 &62815334346402477
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7624695888300873471}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 774b1f94737b6d84584c003ce7e1f332, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  customClickSound: {fileID: 0}
+  customVolume: 0.5

@@ -7,7 +7,7 @@ namespace Photon.Pun.Demo.Asteroids
         private static ButtonSoundManager instance;
         public static ButtonSoundManager Instance => instance;
 
-        [Header("Sound Settings")]
+        [Header("Default Sound Settings")]
         public AudioClip clickSound;
         public float volume = 0.5f;
         
@@ -38,6 +38,17 @@ namespace Photon.Pun.Demo.Asteroids
             if (clickSound != null && audioSource != null)
             {
                 audioSource.PlayOneShot(clickSound);
+            }
+        }
+        
+        public void PlayCustomSound(AudioClip sound, float customVolume)
+        {
+            if (sound != null && audioSource != null)
+            {
+                float originalVolume = audioSource.volume;
+                audioSource.volume = customVolume;
+                audioSource.PlayOneShot(sound);
+                audioSource.volume = originalVolume;
             }
         }
     }
