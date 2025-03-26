@@ -978,8 +978,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
-  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
+    rgba: 4278255609
+  m_fontColor: {r: 0.9772253, g: 1, b: 0, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -1392,6 +1392,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8951813200114734389}
   - component: {fileID: 8963241512711164129}
+  - component: {fileID: 3502814043128089042}
   m_Layer: 5
   m_Name: Mana Slider
   m_TagString: Untagged
@@ -1471,6 +1472,19 @@ MonoBehaviour:
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &3502814043128089042
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4881888509604246173}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d8b2c947ed1b8ba45bca1001cc5efc60, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  barType: 1
 --- !u!1 &5340420325931102305
 GameObject:
   m_ObjectHideFlags: 0
@@ -1697,8 +1711,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 24
-  m_fontSizeBase: 24
+  m_fontSize: 20
+  m_fontSizeBase: 20
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -1831,8 +1845,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Padding:
-    m_Left: 300
-    m_Right: 300
+    m_Left: 180
+    m_Right: 180
     m_Top: 0
     m_Bottom: 0
   m_ChildAlignment: 1
@@ -1861,7 +1875,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &2954212679359276140
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2513,6 +2527,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4006495728398885691}
   - component: {fileID: 2819681023520439803}
+  - component: {fileID: 3545727907493904065}
   m_Layer: 5
   m_Name: Health Slider
   m_TagString: Untagged
@@ -2592,6 +2607,19 @@ MonoBehaviour:
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &3545727907493904065
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8150792314198823253}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d8b2c947ed1b8ba45bca1001cc5efc60, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  barType: 0
 --- !u!1 &8232315159517483029
 GameObject:
   m_ObjectHideFlags: 0
@@ -2877,7 +2905,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &6248216913591092495
 RectTransform:
   m_ObjectHideFlags: 0
@@ -3093,19 +3121,19 @@ MonoBehaviour:
   manaBar: {fileID: 8963241512711164129}
   healthText: {fileID: 5905744152719261094}
   manaText: {fileID: 1770622826184618629}
-  healthRegenPanel: {fileID: 0}
-  manaRegenPanel: {fileID: 0}
+  healthRegenPanel: {fileID: 6230754390610484252}
+  manaRegenPanel: {fileID: 8486941750015738003}
   playerNameText: {fileID: 6170115886322183973}
   heroNameText: {fileID: 6273096498608270206}
   levelText: {fileID: 597525243442209128}
-  attackDamageText: {fileID: 0}
-  attackSpeedText: {fileID: 0}
-  moveSpeedText: {fileID: 0}
-  attackRangeText: {fileID: 0}
-  armorText: {fileID: 0}
-  magicResistanceText: {fileID: 0}
-  healthRegenText: {fileID: 0}
-  manaRegenText: {fileID: 0}
+  attackDamageText: {fileID: 9040289551383443020}
+  attackSpeedText: {fileID: 4268145410233037311}
+  moveSpeedText: {fileID: 3517376186503046333}
+  attackRangeText: {fileID: 1331023862578261350}
+  armorText: {fileID: 2404382485325683626}
+  magicResistanceText: {fileID: 2965840536711039645}
+  healthRegenText: {fileID: 6930162315603736401}
+  manaRegenText: {fileID: 7453785055785086386}
   abilityPanel: {fileID: 4720628468427656933}
   floatingTextPrefab: {fileID: 0}
   damageColor: {r: 1, g: 0, b: 0, a: 1}

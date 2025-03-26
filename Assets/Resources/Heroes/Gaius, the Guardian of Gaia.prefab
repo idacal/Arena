@@ -181,6 +181,7 @@ MonoBehaviour:
   armor: 20
   magicResistance: 20
   healthRegenRate: 1
+  manaRegenRate: 0
   respawnTime: 5
   abilityController: {fileID: 5283968406720169640}
   uiController: {fileID: 172655498075432403, guid: d2285228827d22b44b59630a257fb319, type: 3}

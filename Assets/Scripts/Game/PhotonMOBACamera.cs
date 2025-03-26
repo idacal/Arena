@@ -15,7 +15,7 @@ namespace Photon.Pun.Demo.Asteroids
         public float cameraPitch = 60f;
         
         [Header("Movement")]
-        public float edgeScrollSpeed = 15.0f;
+        public float edgeScrollSpeed = 25.0f;
         public float edgeScrollThreshold = 20.0f;
         public bool useEdgeScrolling = true;
         public float mouseWheelZoomSpeed = 5.0f;
@@ -25,10 +25,10 @@ namespace Photon.Pun.Demo.Asteroids
         
         [Header("Map Boundaries")]
         public bool useBoundaries = true;
-        public float mapMinX = -50f;
-        public float mapMaxX = 50f;
-        public float mapMinZ = -50f;
-        public float mapMaxZ = 50f;
+        public float mapMinX = -500f;
+        public float mapMaxX = 500f;
+        public float mapMinZ = -500f;
+        public float mapMaxZ = 500f;
         
         [Header("Controls")]
         public KeyCode centerOnPlayerKey = KeyCode.Space;
@@ -42,7 +42,7 @@ namespace Photon.Pun.Demo.Asteroids
         private Vector3 dragStartPosition;
         private Vector3 dragCurrentPosition;
         private bool snapToPlayer = false;
-        private bool isFollowing = true; // Nueva variable para controlar el seguimiento
+        private bool isFollowing = false;
         
         // ID único de esta cámara (para depuración)
         private string cameraId;
@@ -83,6 +83,14 @@ namespace Photon.Pun.Demo.Asteroids
             }
             
             UpdateCameraPosition(false); // Posicionamiento inmediato
+            
+            // Mostrar mensaje de ayuda
+            Debug.Log("[PhotonMOBACamera] Controles de cámara:\n" +
+                     "- V: Alternar seguimiento del jugador\n" +
+                     "- ESPACIO: Centrar en jugador\n" +
+                     "- RUEDA DEL RATÓN: Arrastrar cámara\n" +
+                     "- BORDES DE PANTALLA: Mover cámara\n" +
+                     "- SCROLL: Zoom");
         }
         
         void LateUpdate()
@@ -214,11 +222,11 @@ namespace Photon.Pun.Demo.Asteroids
                 if (difference.magnitude > 2) // Pequeño umbral para evitar movimientos accidentales
                 {
                     // Convertir movimiento del ratón a dirección mundial
-                    Vector3 dragDirection = new Vector3(difference.x, 0, difference.y) * 0.01f;
+                    Vector3 dragDirection = new Vector3(difference.x, 0, difference.y) * 0.02f;
                     dragDirection = Quaternion.Euler(0, transform.eulerAngles.y, 0) * dragDirection;
                     
                     // Aplicar movimiento
-                    cameraTargetPosition += dragDirection * edgeScrollSpeed;
+                    cameraTargetPosition += dragDirection * edgeScrollSpeed * 2f;
                     
                     // Actualizar punto de inicio para el próximo frame
                     dragStartPosition = dragCurrentPosition;
