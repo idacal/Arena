@@ -10,7 +10,6 @@ GameObject:
   m_Component:
   - component: {fileID: 8466919273097037785}
   - component: {fileID: 3645555955968778244}
-  - component: {fileID: 5004816386029195204}
   - component: {fileID: 694790159809722056}
   - component: {fileID: -4181022150569503989}
   m_Layer: 0
@@ -59,27 +58,6 @@ MonoBehaviour:
   sceneViewId: 0
   InstantiationId: 0
   isRuntimeInstantiated: 0
---- !u!135 &5004816386029195204
-SphereCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5020732554235750011}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 1
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Radius: 5
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!114 &694790159809722056
 MonoBehaviour:
   m_ObjectHideFlags: 0

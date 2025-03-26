@@ -21,8 +21,8 @@ MonoBehaviour:
   Health: 150
   Mana: 200
   HeroType: Farmer
-  AttackDamage: 80
-  AttackSpeed: 2
+  AttackDamage: 10
+  AttackSpeed: 0.5
   MovementSpeed: 350
   Armor: 15
   MagicResistance: 20

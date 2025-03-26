@@ -218,6 +218,33 @@ public class BasicAttackController : MonoBehaviourPun
     {
         Debug.Log($"[BasicAttackController] Iniciando ataque a distancia contra {target.name}");
         
+        // Guardar el objetivo actual
+        currentAttackTarget = target;
+        
+        // Activar animación si está disponible
+        if (animator != null)
+        {
+            animator.SetTrigger("Attack");
+        }
+        
+        // Iniciar corrutina para disparar después de un delay
+        StartCoroutine(ShootWithDelay(0.2f)); // Ajusta este valor según la animación
+    }
+    
+    private IEnumerator ShootWithDelay(float delay)
+    {
+        // Esperar el tiempo especificado
+        yield return new WaitForSeconds(delay);
+        
+        // Llamar al método de disparo
+        OnShoot();
+    }
+    
+    // Este método ahora es privado ya que no será llamado por un Animation Event
+    private void OnShoot()
+    {
+        if (currentAttackTarget == null) return;
+        
         // Verificar si tenemos spawnPoint
         if (projectileSpawnPoint == null)
         {
@@ -232,12 +259,6 @@ public class BasicAttackController : MonoBehaviourPun
             return;
         }
         
-        // Activar animación si está disponible
-        if (animator != null)
-        {
-            animator.SetTrigger("Attack");
-        }
-        
         // Reproducir sonido
         if (attackSound != null && audioSource != null)
         {
@@ -245,8 +266,8 @@ public class BasicAttackController : MonoBehaviourPun
         }
         
         // Calcular dirección hacia el objetivo
-        Vector3 targetDirection = (target.position - projectileSpawnPoint.position).normalized;
-        Debug.Log($"[BasicAttackController] Dirección del proyectil: {targetDirection}, Origen: {projectileSpawnPoint.position}, Destino: {target.position}");
+        Vector3 targetDirection = (currentAttackTarget.position - projectileSpawnPoint.position).normalized;
+        Debug.Log($"[BasicAttackController] Dirección del proyectil: {targetDirection}, Origen: {projectileSpawnPoint.position}, Destino: {currentAttackTarget.position}");
         
         try
         {
@@ -295,6 +316,9 @@ public class BasicAttackController : MonoBehaviourPun
         {
             Debug.LogError($"[BasicAttackController] Error al instanciar el proyectil: {e.Message}\n{e.StackTrace}");
         }
+        
+        // Limpiar la referencia al objetivo
+        currentAttackTarget = null;
     }
     
     private void MeleeAttack(Transform target)

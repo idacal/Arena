@@ -12,10 +12,20 @@ namespace Photon.Pun.Demo.Asteroids
         [Header("Shotgun Settings")]
         public float knockbackForce = 5f;        // Fuerza del empuje
         public float knockbackDuration = 0.5f;   // Duración del efecto de aturdimiento
+        public float selfKnockbackForce = 8f;    // Aumentado de 3 a 8 para más impulso inicial
+        public float selfKnockbackDuration = 0.8f; // Aumentado a 0.8 para que dure más el efecto
+        public float selfKnockbackDrag = 2f;     // Reducido de 5 a 2 para menos fricción
+        public AnimationCurve selfKnockbackCurve = new AnimationCurve(
+            new Keyframe(0, 1),                  // Fuerza máxima al inicio
+            new Keyframe(0.3f, 0.7f),           // Mantiene más fuerza por más tiempo
+            new Keyframe(0.6f, 0.3f),           // Desacelera más gradualmente
+            new Keyframe(1, 0)                   // Termina suavemente
+        );
         public Color projectileColor = Color.red; // Color del proyectil de la escopeta
         
-        [Header("Shotgun Visual Effects")]
-        public GameObject muzzleFlashPrefab;     // Efecto de fogonazo
+        [Header("Prefabs and Effects")]
+        public GameObject projectilePrefab;      // Prefab del proyectil
+        public GameObject muzzleFlashPrefab;     // Prefab del fogonazo
         public AudioClip shotgunSound;           // Sonido de disparo
         
         [Header("Debug Settings")]
@@ -30,116 +40,65 @@ namespace Photon.Pun.Demo.Asteroids
         /// </summary>
         protected override void OnAbilityInitialized()
         {
-            // Activar logs para depuración
-            showDebugLogs = true;
-            
-            if (showDebugLogs)
-            {
-                Debug.Log($"[AlbertShotgunAbility] Inicializando en posición {transform.position}");
-            }
-            
-            // IMPORTANTE: Asegurarnos de que la posición inicial está frente a Albert
-            if (caster != null)
-            {
-                // Posicionar el proyectil frente a Albert
-                transform.position = caster.transform.position + 
-                                    caster.transform.forward * 1.5f + 
-                                    Vector3.up * 1.0f; // Altura ajustada
-                
-                // Establecer la dirección inicial como la dirección hacia donde mira Albert
-                initialDirection = caster.transform.forward.normalized;
-                currentDirection = initialDirection;
-                
-                // Orientar el proyectil en la dirección correcta
-                transform.rotation = Quaternion.LookRotation(initialDirection);
-                
-                if (showDebugLogs)
-                {
-                    Debug.Log($"[AlbertShotgunAbility] Posición reposicionada a {transform.position}, frente a Albert");
-                    Debug.Log($"[AlbertShotgunAbility] Dirección establecida a {initialDirection}");
-                }
-            }
-            
-            // Configurar la velocidad - Queremos un proyectil LENTO
-            speed = 50f; // Muy lento
-            
-            // Llamar a la inicialización base para configurar el proyectil
             base.OnAbilityInitialized();
             
-            // No queremos que use gravedad
-            useGravity = false;
+            // Verificar que tenemos todos los prefabs necesarios
+            if (projectilePrefab == null)
+            {
+                Debug.LogError("[AlbertShotgunAbility] ¡Falta asignar el prefab del proyectil!");
+                return;
+            }
             
-            // Queremos que se destruya al impactar
+            // Posicionar el proyectil frente a Albert
+            if (caster != null)
+            {
+                transform.position = caster.transform.position + 
+                                    caster.transform.forward * 1.5f + 
+                                    Vector3.up * 1.0f;
+                
+                initialDirection = caster.transform.forward.normalized;
+                currentDirection = initialDirection;
+                transform.rotation = Quaternion.LookRotation(initialDirection);
+            }
+            
+            // Configurar velocidad
+            speed = 50f;
+            
+            // No usar gravedad y destruir al impactar
+            useGravity = false;
             penetratesTargets = false;
             
             // Crear efectos visuales de disparo
-            CreateMuzzleFlash();
-            PlayShotgunSound();
+            if (muzzleFlashPrefab != null)
+            {
+                GameObject muzzleFlash = Instantiate(
+                    muzzleFlashPrefab,
+                    transform.position,
+                    transform.rotation
+                );
+                Destroy(muzzleFlash, 1f);
+            }
             
-            // Crear modelo visual para el proyectil si no existe
-            CreateProjectileVisual();
-            
-            // IMPORTANTE: Asegurar que tenemos un rigidbody y está configurado correctamente
+            // Configurar el Rigidbody
             Rigidbody rb = GetComponent<Rigidbody>();
             if (rb != null)
             {
-                // Configurar el rigidbody para el movimiento correcto
                 rb.isKinematic = false;
                 rb.useGravity = false;
-                rb.drag = 0f; // Añadir resistencia para movimiento más lento
-                rb.constraints = RigidbodyConstraints.FreezeRotation; // Evitar rotación no deseada
-                
-                // APLICAR VELOCIDAD INICIAL - SIN FUERZA ADICIONAL PARA QUE SEA MÁS LENTO
+                rb.drag = 0f;
+                rb.constraints = RigidbodyConstraints.FreezeRotation;
                 rb.velocity = initialDirection * speed;
-                
-                // Sin AddForce adicional para no acelerar demasiado
-                
-                if (showDebugLogs)
-                {
-                    Debug.Log($"[AlbertShotgunAbility] Rigidbody configurado con velocidad: {rb.velocity} y drag: {rb.drag}");
-                }
-            }
-            else
-            {
-                Debug.LogError("[AlbertShotgunAbility] ¡No se encontró Rigidbody en el proyectil!");
             }
             
-            // Asegurar que está marcado como en movimiento
+            // Marcar como en movimiento
             isMoving = true;
             
-            // Invocar un check de backup para asegurar el movimiento (pero sin acelerarlo)
-            Invoke("EnsureSlowMovement", 0.1f);
-        }
-        
-        /// <summary>
-        /// Método de respaldo para asegurar que el proyectil se está moviendo (pero lentamente)
-        /// </summary>
-        private void EnsureSlowMovement()
-        {
-            if (!isMoving || hasHit)
-                return;
-                
-            Rigidbody rb = GetComponent<Rigidbody>();
-            if (rb != null)
+            // Aplicar retroceso a Albert
+            if (photonView.IsMine && caster != null)
             {
-                // Si la velocidad es demasiado alta, la reducimos
-                if (rb.velocity.magnitude > speed + 1f)
-                {
-                    rb.velocity = rb.velocity.normalized * speed;
-                    if (showDebugLogs)
-                    {
-                        Debug.Log($"[AlbertShotgunAbility] Velocidad frenada a {rb.velocity.magnitude}");
-                    }
-                }
-                // Si la velocidad es demasiado baja, la ajustamos al valor deseado
-                else if (rb.velocity.magnitude < 0.5f)
-                {
-                    rb.velocity = initialDirection * speed;
-                    if (showDebugLogs)
-                    {
-                        Debug.Log($"[AlbertShotgunAbility] Velocidad aumentada a {rb.velocity.magnitude}");
-                    }
-                }
+                Vector3 knockbackDirection = -caster.transform.forward;
+                knockbackDirection.y = 0;
+                photonView.RPC("RPC_ApplySelfKnockback", RpcTarget.All, caster.photonView.ViewID, knockbackDirection);
             }
         }
         
@@ -166,19 +125,24 @@ namespace Photon.Pun.Demo.Asteroids
             if (hasHit) return;
             hasHit = true;
             
-            // Llamar al método base para aplicar daño
             base.ProcessImpact(target);
             
-            // Aplicar knockback (empuje) al objetivo
-            ApplyKnockback(target);
+            // Aplicar knockback
+            if (photonView.IsMine)
+            {
+                // Calcular dirección de knockback
+                Vector3 knockbackDirection = (target.transform.position - transform.position).normalized;
+                knockbackDirection.y = 0; // Mantener el empuje en el plano horizontal
+                
+                // Usar RPC para sincronizar el knockback en todos los clientes
+                photonView.RPC("RPC_ApplyKnockback", RpcTarget.All, target.photonView.ViewID, knockbackDirection);
+            }
             
-            // Crear efecto visual de impacto
-            CreateImpactEffect(target.transform.position);
-            
-            // Reproducir sonido de impacto si existe
-            PlayImpactSound();
-            
-            // Destruir la habilidad (ya controlada por base.ProcessImpact si destroyOnImpact es true)
+            // Crear efecto de impacto usando el prefab
+            if (impactEffectPrefab != null)
+            {
+                Instantiate(impactEffectPrefab, target.transform.position, Quaternion.identity);
+            }
         }
         
         /// <summary>
@@ -558,28 +522,26 @@ namespace Photon.Pun.Demo.Asteroids
         {
             // Encontrar el objetivo por su ViewID
             PhotonView targetView = PhotonView.Find(targetViewID);
-            if (targetView != null)
+            if (targetView == null) return;
+            
+            HeroBase target = targetView.GetComponent<HeroBase>();
+            if (target == null) return;
+            
+            // Aplicar knockback con Rigidbody
+            Rigidbody targetRb = target.GetComponent<Rigidbody>();
+            if (targetRb != null && !targetRb.isKinematic)
             {
-                HeroBase target = targetView.GetComponent<HeroBase>();
-                if (target != null)
-                {
-                    // Aplicar movimiento directo para asegurar el knockback
-                    target.transform.position += knockbackDirection * knockbackForce * 0.2f;
-                    
-                    // Aplicar aturdimiento temporalmente
-                    HeroMovementController moveController = target.GetComponent<HeroMovementController>();
-                    if (moveController != null)
-                    {
-                        moveController.ApplyStun(knockbackDuration);
-                    }
-                    
-                    // Si tiene Rigidbody, también aplicar fuerza
-                    Rigidbody targetRb = target.GetComponent<Rigidbody>();
-                    if (targetRb != null && !targetRb.isKinematic)
-                    {
-                        targetRb.AddForce(knockbackDirection * knockbackForce, ForceMode.Impulse);
-                    }
-                }
+                targetRb.AddForce(knockbackDirection * knockbackForce * 1.5f, ForceMode.Impulse);
+            }
+            
+            // Mover al personaje directamente con más fuerza
+            target.transform.position += knockbackDirection * knockbackForce * 0.5f;
+            
+            // Pausar el NavMeshAgent brevemente para el efecto de aturdimiento
+            HeroMovementController moveController = target.GetComponent<HeroMovementController>();
+            if (moveController != null)
+            {
+                moveController.ApplyStun(knockbackDuration);
             }
         }
         
@@ -701,6 +663,84 @@ namespace Photon.Pun.Demo.Asteroids
             
             // También verificar el movimiento lento en los clientes remotos
             Invoke("EnsureSlowMovement", 0.1f);
+        }
+        
+        [PunRPC]
+        private void RPC_ApplySelfKnockback(int casterViewID, Vector3 knockbackDirection)
+        {
+            // Encontrar a Albert por su ViewID
+            PhotonView casterView = PhotonView.Find(casterViewID);
+            if (casterView != null)
+            {
+                HeroBase albert = casterView.GetComponent<HeroBase>();
+                if (albert != null)
+                {
+                    StartCoroutine(ApplySmoothKnockback(albert, knockbackDirection));
+                }
+            }
+        }
+        
+        private IEnumerator ApplySmoothKnockback(HeroBase albert, Vector3 knockbackDirection)
+        {
+            float elapsedTime = 0f;
+            Rigidbody albertRb = albert.GetComponent<Rigidbody>();
+            HeroMovementController moveController = albert.GetComponent<HeroMovementController>();
+            
+            // Guardar valores originales
+            float originalDrag = albertRb != null ? albertRb.drag : 0f;
+            
+            if (albertRb != null && !albertRb.isKinematic)
+            {
+                // Aplicar impulso inicial más fuerte
+                albertRb.AddForce(knockbackDirection * selfKnockbackForce * 1.5f, ForceMode.Impulse);
+                
+                // Menos fricción para un deslizamiento más largo
+                albertRb.drag = selfKnockbackDrag;
+            }
+            
+            // Aplicar un mini-stun al inicio
+            if (moveController != null)
+            {
+                moveController.ApplyStun(0.1f);
+            }
+            
+            // Aplicar la fuerza gradualmente
+            while (elapsedTime < selfKnockbackDuration)
+            {
+                float normalizedTime = elapsedTime / selfKnockbackDuration;
+                float currentForce = selfKnockbackCurve.Evaluate(normalizedTime);
+                
+                if (albertRb != null && !albertRb.isKinematic)
+                {
+                    // Fuerza continua reducida para mantener el movimiento
+                    albertRb.AddForce(knockbackDirection * selfKnockbackForce * currentForce * Time.deltaTime * 0.5f, ForceMode.Force);
+                }
+                else
+                {
+                    // Si no hay Rigidbody, mover directamente la posición
+                    albert.transform.position += knockbackDirection * selfKnockbackForce * currentForce * Time.deltaTime * 0.1f;
+                }
+                
+                elapsedTime += Time.deltaTime;
+                yield return null;
+            }
+            
+            // Restaurar valores originales gradualmente
+            if (albertRb != null)
+            {
+                float dragRestoreTime = 0f;
+                float dragRestoreDuration = 0.2f;
+                float currentDrag = albertRb.drag;
+                
+                while (dragRestoreTime < dragRestoreDuration)
+                {
+                    albertRb.drag = Mathf.Lerp(currentDrag, originalDrag, dragRestoreTime / dragRestoreDuration);
+                    dragRestoreTime += Time.deltaTime;
+                    yield return null;
+                }
+                
+                albertRb.drag = originalDrag;
+            }
         }
         
         #endregion

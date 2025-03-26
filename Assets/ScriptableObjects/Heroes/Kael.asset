@@ -21,7 +21,7 @@ MonoBehaviour:
   Health: 200
   Mana: 200
   HeroType: Assassin
-  AttackDamage: 60
+  AttackDamage: 40
   AttackSpeed: 2
   MovementSpeed: 350
   Armor: 15

@@ -20,8 +20,9 @@ namespace Photon.Pun.Demo.Asteroids
         private float currentHealth;
         private Dictionary<int, float> lastFearTimes = new Dictionary<int, float>();
         
-        public void OnPhotonInstantiate(PhotonMessageInfo info)
+        protected override void OnAbilityInitialized()
         {
+            base.OnAbilityInitialized();
             if (photonView.IsMine)
             {
                 CreateScarecrowVisual();
@@ -32,9 +33,8 @@ namespace Photon.Pun.Demo.Asteroids
         {
             if (scarecrowPrefab != null)
             {
-                // Instanciar el prefab del espantapájaros
-                scarecrowInstance = Instantiate(scarecrowPrefab, transform.position, Quaternion.identity);
-                scarecrowInstance.transform.SetParent(transform);
+                // Instanciar el prefab visual usando PhotonNetwork para mantener la sincronización
+                scarecrowInstance = PhotonNetwork.Instantiate(scarecrowPrefab.name, transform.position, Quaternion.identity);
                 
                 // Configurar el ScarecrowPrefabSetup
                 var setup = scarecrowInstance.GetComponent<ScarecrowPrefabSetup>();
@@ -44,13 +44,13 @@ namespace Photon.Pun.Demo.Asteroids
                     setup.areaColor = areaColor;
                     setup.SetupAreaEffect();
                     setup.SetupScarecrowVisual();
-                    
-                    // Inicializar la salud
-                    var healthComponent = scarecrowInstance.GetComponent<ScarecrowHealth>();
-                    if (healthComponent != null)
-                    {
-                        healthComponent.Initialize(scarecrowHealth);
-                    }
+                }
+                
+                // Inicializar la salud
+                var healthComponent = scarecrowInstance.GetComponent<ScarecrowHealth>();
+                if (healthComponent != null)
+                {
+                    healthComponent.Initialize(scarecrowHealth);
                 }
                 
                 currentHealth = scarecrowHealth;
@@ -58,6 +58,26 @@ namespace Photon.Pun.Demo.Asteroids
             else
             {
                 Debug.LogError("ScarecrowPrefab no está asignado en " + gameObject.name);
+            }
+        }
+        
+        public void OnAbilityEnd()
+        {
+            if (photonView.IsMine && scarecrowInstance != null)
+            {
+                // Destruir el scarecrow usando PhotonNetwork
+                PhotonNetwork.Destroy(scarecrowInstance);
+                scarecrowInstance = null;
+            }
+        }
+        
+        protected void OnDestroy()
+        {
+            if (photonView.IsMine && scarecrowInstance != null)
+            {
+                // Asegurarnos de limpiar el scarecrow al destruir la habilidad
+                PhotonNetwork.Destroy(scarecrowInstance);
+                scarecrowInstance = null;
             }
         }
         
@@ -83,13 +103,13 @@ namespace Photon.Pun.Demo.Asteroids
                 int targetId = other.GetComponent<PhotonView>()?.ViewID ?? -1;
                 if (targetId != -1)
                 {
-            float lastHitTime = 0f;
-            lastFearTimes.TryGetValue(targetId, out lastHitTime);
-            
-            if (Time.time >= lastHitTime + fearDuration)
-            {
-                lastFearTimes[targetId] = Time.time;
-                    photonView.RPC("RPC_ApplyFearEffect", RpcTarget.All, targetId);
+                    float lastHitTime = 0f;
+                    lastFearTimes.TryGetValue(targetId, out lastHitTime);
+                    
+                    if (Time.time >= lastHitTime + fearDuration)
+                    {
+                        lastFearTimes[targetId] = Time.time;
+                        photonView.RPC("RPC_ApplyFearEffect", RpcTarget.All, targetId);
                     }
                 }
             }
@@ -139,81 +159,6 @@ namespace Photon.Pun.Demo.Asteroids
             fearEffect.AddComponent<FearEffectBehavior>();
             
             Destroy(fearEffect, 1.0f);
-        }
-        
-        public void OnAbilityEnd()
-        {
-            if (scarecrowInstance != null)
-            {
-                // Asegurarnos de que se destruya todo el prefab y sus hijos
-                if (photonView.IsMine)
-                {
-                    PhotonNetwork.Destroy(scarecrowInstance);
-                }
-                else
-                {
-                    Destroy(scarecrowInstance);
-                }
-                scarecrowInstance = null;
-            }
-        }
-        
-        protected void OnDestroy()
-        {
-            if (scarecrowInstance != null)
-            {
-                // Asegurarnos de que se destruya todo el prefab y sus hijos
-                if (photonView.IsMine)
-                {
-                    PhotonNetwork.Destroy(scarecrowInstance);
-                }
-                else
-                {
-                    Destroy(scarecrowInstance);
-                }
-                scarecrowInstance = null;
-            }
-        }
-    }
-    
-    // Componente para gestionar la salud del espantapájaros
-    public class ScarecrowHealth : MonoBehaviour
-    {
-        private float health;
-        private float maxHealth;
-        
-        public void Initialize(float maxHealth)
-        {
-            this.health = maxHealth;
-            this.maxHealth = maxHealth;
-        }
-        
-        public void TakeDamage(float damage)
-        {
-            health -= damage;
-            
-            if (health <= 0)
-            {
-                // Buscar la habilidad padre y destruirla
-                ScarecrowAbility parentAbility = GetComponentInParent<ScarecrowAbility>();
-                if (parentAbility != null)
-                {
-                    // Si la habilidad tiene un PhotonView y es el dueño, usar PhotonNetwork.Destroy
-                    if (parentAbility.photonView != null && parentAbility.photonView.IsMine)
-                    {
-                        PhotonNetwork.Destroy(parentAbility.gameObject);
-                    }
-                    else
-                    {
-                        // Si no somos el dueño, solo desactivar localmente
-                        parentAbility.gameObject.SetActive(false);
-                    }
-                }
-                else
-                {
-                    Destroy(gameObject);
-                }
-            }
         }
     }
     

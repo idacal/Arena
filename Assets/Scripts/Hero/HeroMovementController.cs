@@ -656,12 +656,6 @@ namespace Photon.Pun.Demo.Asteroids
         {
             if (!photonView.IsMine || isStunned || isRooted) return;
             
-            // No mover si está atacando
-            if (IsAttacking())
-            {
-                return;
-            }
-            
             // Click derecho para mover
             if (Input.GetMouseButtonDown(1))
             {
@@ -1230,16 +1224,6 @@ namespace Photon.Pun.Demo.Asteroids
                 Vector3 rayOrigin = transform.position + Vector3.up * 0.1f;
                 Gizmos.DrawLine(rayOrigin, rayOrigin + Vector3.down * groundCheckDistance);
             }
-        }
-
-        private bool IsAttacking()
-        {
-            BasicAttackController attackController = GetComponent<BasicAttackController>();
-            if (attackController != null)
-            {
-                return !attackController.CanAttack();
-            }
-            return false;
         }
 
         public void ResetMovement()

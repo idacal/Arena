@@ -81,6 +81,9 @@ MonoBehaviour:
   - RPC_SyncDeathStats
   - RPC_OnProjectileHit
   - RPC_DestroyProjectile
+  - RPC_CreateBombZoneVisual
+  - RPC_DestroyScarecrow
+  - RPC_ApplySelfKnockback
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

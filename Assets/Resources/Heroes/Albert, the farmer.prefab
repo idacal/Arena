@@ -2788,11 +2788,11 @@ MonoBehaviour:
   teamRedMaterial: {fileID: 2100000, guid: 04e621de2731cac4a9abcd4c2e3a31c6, type: 2}
   teamBlueMaterial: {fileID: 2100000, guid: b9d43d412abe0234bacffba7890ee67c, type: 2}
   teamColorRenderers: []
-  maxHealth: 1000
+  maxHealth: 200
   currentHealth: 0
-  maxMana: 500
+  maxMana: 200
   currentMana: 0
-  attackDamage: 60
+  attackDamage: 10
   attackSpeed: 1
   moveSpeed: 5
   armor: 20

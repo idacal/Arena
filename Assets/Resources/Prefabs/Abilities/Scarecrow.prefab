@@ -9,9 +9,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3401863885204574577}
+  - component: {fileID: 8802916286348184501}
   - component: {fileID: 3681004878597071414}
-  - component: {fileID: 3224421313764719654}
-  - component: {fileID: 8853355704932810468}
   m_Layer: 0
   m_Name: Scarecrow
   m_TagString: Untagged
@@ -36,6 +35,19 @@ Transform:
   - {fileID: 6354016989482259090}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8802916286348184501
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 28731641800631256}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 83518e1513cb7d14ea7eabb1f7467057, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  maxHealth: 100
 --- !u!114 &3681004878597071414
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -48,71 +60,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3985b2f97a890da41a4feb55ebaf7242, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  areaColor: {r: 1, g: 0.6, b: 0, a: 0.5}
+  areaColor: {r: 0.1764706, g: 0, b: 0.6862745, a: 0.4745098}
   areaRadius: 5
   areaMaterial: {fileID: 2100000, guid: a294494d89e64324da941966b5492fab, type: 2}
-  customScarecrowPrefab: {fileID: 0}
+  customScarecrowPrefab: {fileID: 1536723228585604276}
   scarecrowScale: 0.7
   scarecrowColor: {r: 0.8, g: 0.39999998, b: 0, a: 1}
   scarecrowMaterial: {fileID: 2100000, guid: bbc5d7763e0944247a076d7d1a02c9ec, type: 2}
---- !u!114 &3224421313764719654
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 28731641800631256}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a591930df244964438ed96f84cd36f23, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  lifetime: 5
-  destroyOnImpact: 1
-  baseDamage: 100
-  isMagicDamage: 1
-  effectDuration: 0
-  impactEffectPrefab: {fileID: 0}
-  radius: 5
-  useGrowingRadius: 0
-  growthSpeed: 1
-  maxRadius: 10
-  damageInterval: 0.5
-  affectsAllies: 0
-  targetLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  aoeVisualEffect: {fileID: 0}
-  scaleVisualWithRadius: 1
-  particleEffect: {fileID: 0}
-  scarecrowPrefab: {fileID: 0}
-  fearDuration: 2
-  scarecrowHealth: 100
-  areaColor: {r: 1, g: 0.6, b: 0, a: 0.5}
-  forceCreateVisual: 1
---- !u!114 &8853355704932810468
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 28731641800631256}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: aa584fbee541324448dd18d8409c7a41, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  ObservedComponentsFoldoutOpen: 1
-  Group: 0
-  prefixField: -1
-  Synchronization: 3
-  OwnershipTransfer: 0
-  observableSearch: 2
-  ObservedComponents:
-  - {fileID: 3224421313764719654}
-  sceneViewId: 0
-  InstantiationId: 0
-  isRuntimeInstantiated: 0
 --- !u!1 &1245847353996163154
 GameObject:
   m_ObjectHideFlags: 0
@@ -159,7 +113,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 30db7dd6c2a99624d9366023e84001d2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  areaColor: {r: 1, g: 0.6, b: 0, a: 0.5}
+  areaColor: {r: 0.1764706, g: 0, b: 0.6862745, a: 0.4745098}
   radius: 5
   heightOffset: 0.05
   customMaterial: {fileID: 2100000, guid: a294494d89e64324da941966b5492fab, type: 2}
@@ -225,6 +179,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6354016989482259090}
+  - component: {fileID: 1315082295092026269}
   m_Layer: 0
   m_Name: ScarecrowVisual
   m_TagString: Untagged
@@ -250,6 +205,27 @@ Transform:
   - {fileID: 4475759086015425448}
   m_Father: {fileID: 3401863885204574577}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!65 &1315082295092026269
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1536723228585604276}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.93, y: 4.19, z: 0.68}
+  m_Center: {x: 0, y: 1.32, z: 0}
 --- !u!1 &2766325938816917075
 GameObject:
   m_ObjectHideFlags: 0

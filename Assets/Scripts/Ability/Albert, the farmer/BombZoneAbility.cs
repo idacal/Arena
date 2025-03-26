@@ -27,23 +27,36 @@ namespace Photon.Pun.Demo.Asteroids
         {
             base.OnAbilityInitialized();
             
-            // Crear visualización usando el prefab
-            if (photonView.IsMine)
+            // Asegurarnos de que el PhotonView tenga un ID válido
+            if (photonView.ViewID == 0)
             {
-                CreateBombZoneVisual();
+                PhotonNetwork.AllocateViewID(photonView);
             }
+            
+            // Crear visualización usando el prefab
+            photonView.RPC("RPC_CreateBombZoneVisual", RpcTarget.All);
             
             // Programar destrucción después del tiempo de vida
             Invoke("DetonateRemainingBombs", bombLifetime);
         }
         
-        private void CreateBombZoneVisual()
+        [PunRPC]
+        private void RPC_CreateBombZoneVisual()
         {
             if (bombZonePrefab != null)
             {
                 // Instanciar el prefab
                 bombZoneInstance = Instantiate(bombZonePrefab, transform.position, Quaternion.identity);
                 bombZoneInstance.transform.SetParent(transform);
+                
+                // Asegurarnos de que el área no tenga collider físico
+                var areaCollider = bombZoneInstance.GetComponent<Collider>();
+                if (areaCollider != null)
+                {
+                    areaCollider.isTrigger = true;
+                    // Poner en la capa de habilidades para no interferir con el movimiento
+                    bombZoneInstance.layer = LayerMask.NameToLayer("Ability");
+                }
                 
                 // Configurar el BombZonePrefabSetup
                 var setup = bombZoneInstance.GetComponent<BombZonePrefabSetup>();
@@ -55,15 +68,18 @@ namespace Photon.Pun.Demo.Asteroids
                     setup.SetupAreaEffect();
                     setup.SetupBombVisuals();
                     
-                    // Añadir componentes de bomba a los visuales
-                    Transform bombsContainer = bombZoneInstance.transform.Find("BombsContainer");
-                    if (bombsContainer != null)
+                    // Añadir componentes de bomba a los visuales solo en el lado del lanzador
+                    if (photonView.IsMine)
                     {
-                        foreach (Transform bombTransform in bombsContainer)
+                        Transform bombsContainer = bombZoneInstance.transform.Find("BombsContainer");
+                        if (bombsContainer != null)
                         {
-                            BombEffect bombEffect = bombTransform.gameObject.AddComponent<BombEffect>();
-                            bombEffect.Initialize(bombDamage, bombDetonationRadius, caster, bombLifetime);
-                            activeBombs.Add(bombEffect);
+                            foreach (Transform bombTransform in bombsContainer)
+                            {
+                                BombEffect bombEffect = bombTransform.gameObject.AddComponent<BombEffect>();
+                                bombEffect.Initialize(bombDamage, bombDetonationRadius, caster, bombLifetime);
+                                activeBombs.Add(bombEffect);
+                            }
                         }
                     }
                 }
@@ -105,6 +121,20 @@ namespace Photon.Pun.Demo.Asteroids
         private float lifetime;
         public bool hasDetonated { get; private set; } = false;
         
+        private void Awake()
+        {
+            // Asegurarnos de que el collider esté configurado correctamente
+            var col = GetComponent<SphereCollider>();
+            if (col == null)
+            {
+                col = gameObject.AddComponent<SphereCollider>();
+            }
+            col.isTrigger = true;
+            
+            // Asegurarnos de que esté en la capa correcta
+            gameObject.layer = LayerMask.NameToLayer("Ability");
+        }
+        
         public void Initialize(float bombDamage, float bombRadius, HeroBase caster, float bombLifetime)
         {
             damage = bombDamage;
@@ -112,8 +142,15 @@ namespace Photon.Pun.Demo.Asteroids
             owner = caster;
             lifetime = bombLifetime;
             
+            // Actualizar el radio del collider
+            var col = GetComponent<SphereCollider>();
+            if (col != null)
+            {
+                col.radius = radius;
+            }
+            
             // Autodestrucción después del tiempo de vida
-            Invoke("Detonate", lifetime * Random.Range(0.8f, 1.0f)); // Variación para que no exploten todas al mismo tiempo
+            Invoke("Detonate", lifetime * Random.Range(0.8f, 1.0f));
         }
         
         void OnTriggerEnter(Collider other)

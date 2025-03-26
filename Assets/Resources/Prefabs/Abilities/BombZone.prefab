@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 347540255004814531}
   - component: {fileID: 5264828146632700425}
   - component: {fileID: 790045158984838027}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: BombVisual
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -94,7 +94,7 @@ GameObject:
   - component: {fileID: 2737271484978862190}
   - component: {fileID: 7844830096514252444}
   - component: {fileID: 8851138697691222812}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: BombVisual
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -177,7 +177,8 @@ GameObject:
   - component: {fileID: 2170893384306561835}
   - component: {fileID: 7229098865493231775}
   - component: {fileID: 8745247535953528711}
-  m_Layer: 0
+  - component: {fileID: 3081513973471902449}
+  m_Layer: 13
   m_Name: BombVisual
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -249,6 +250,27 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!135 &3081513973471902449
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3433545925452768517}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 0.50000006
+  m_Center: {x: 0, y: 0, z: -0.00000011920929}
 --- !u!1 &4130842712112336864
 GameObject:
   m_ObjectHideFlags: 0
@@ -260,7 +282,7 @@ GameObject:
   - component: {fileID: 7921675901160726935}
   - component: {fileID: 5052539180657456689}
   - component: {fileID: 1314973624361114562}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: BombVisual
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -344,7 +366,7 @@ GameObject:
   - component: {fileID: 1959357987840285886}
   - component: {fileID: 7890360410876257050}
   - component: {fileID: 3745440234691309153}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: AreaEffect
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -378,7 +400,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 30db7dd6c2a99624d9366023e84001d2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  areaColor: {r: 1, g: 1, b: 0, a: 0.5}
+  areaColor: {r: 0.1764706, g: 0, b: 0.6862745, a: 0.4745098}
   radius: 5
   heightOffset: 0.05
   customMaterial: {fileID: 2100000, guid: 1a5411a5f4c64ba41bc679351d5b3ec5, type: 2}
@@ -446,7 +468,7 @@ GameObject:
   - component: {fileID: 932618142114434980}
   - component: {fileID: 4021266022307505695}
   - component: {fileID: 4616619256676998280}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: BombVisual
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -529,7 +551,7 @@ GameObject:
   - component: {fileID: 2466342748136684794}
   - component: {fileID: 4096462408844029981}
   - component: {fileID: 2992450179103736755}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: BombVisual
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -612,7 +634,7 @@ GameObject:
   - component: {fileID: 5529515332565435528}
   - component: {fileID: 8969248953186461874}
   - component: {fileID: 8568142411451753905}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: BombVisual
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -695,7 +717,7 @@ GameObject:
   - component: {fileID: 2319387764439679597}
   - component: {fileID: 4578294481931055986}
   - component: {fileID: 3514629093973968661}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: BombVisual
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -776,7 +798,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2133225234236952824}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: BombsContainer
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -816,9 +838,8 @@ GameObject:
   m_Component:
   - component: {fileID: 2872294897383621471}
   - component: {fileID: 3645048942139944213}
-  - component: {fileID: 2104840554563924119}
   - component: {fileID: 545545917275106429}
-  m_Layer: 0
+  m_Layer: 13
   m_Name: BombZone
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -854,51 +875,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bb8d731e54d238d44a39f39f60046e26, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  areaColor: {r: 1, g: 1, b: 0, a: 0.5}
+  areaColor: {r: 0.1764706, g: 0, b: 0.6862745, a: 0.4745098}
   areaRadius: 5
   areaMaterial: {fileID: 2100000, guid: 1a5411a5f4c64ba41bc679351d5b3ec5, type: 2}
-  singleBombPrefab: {fileID: 0}
+  singleBombPrefab: {fileID: 5055246816532878297}
   bombCount: 8
   bombScale: 0.3
-  bombColor: {r: 1, g: 0.92, b: 0.016, a: 1}
+  bombColor: {r: 1, g: 0, b: 0.050980393, a: 1}
   bombMaterial: {fileID: 2100000, guid: 96a945525fae78b44b854327b19388da, type: 2}
---- !u!114 &2104840554563924119
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9137413139542763339}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5e24c8888cd04d549a0d3953d57645df, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  lifetime: 5
-  destroyOnImpact: 1
-  baseDamage: 100
-  isMagicDamage: 1
-  effectDuration: 0
-  impactEffectPrefab: {fileID: 0}
-  radius: 5
-  useGrowingRadius: 0
-  growthSpeed: 1
-  maxRadius: 10
-  damageInterval: 0.5
-  affectsAllies: 0
-  targetLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  aoeVisualEffect: {fileID: 0}
-  scaleVisualWithRadius: 1
-  particleEffect: {fileID: 0}
-  bombCount: 8
-  bombDamage: 50
-  bombLifetime: 5
-  bombDetonationRadius: 1
-  areaColor: {r: 1, g: 1, b: 0, a: 0.5}
-  usePulseEffect: 1
-  bombZonePrefab: {fileID: 0}
 --- !u!114 &545545917275106429
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -917,8 +901,7 @@ MonoBehaviour:
   Synchronization: 3
   OwnershipTransfer: 0
   observableSearch: 2
-  ObservedComponents:
-  - {fileID: 2104840554563924119}
+  ObservedComponents: []
   sceneViewId: 0
   InstantiationId: 0
   isRuntimeInstantiated: 0

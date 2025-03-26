@@ -120,12 +120,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 368739832cb661246a089bf6f88801cf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  lifetime: 0.11
+  lifetime: 0.1
   destroyOnImpact: 1
   baseDamage: 25
   isMagicDamage: 1
   effectDuration: 0
-  impactEffectPrefab: {fileID: 0}
+  impactEffectPrefab: {fileID: 1682472042141082285, guid: 3d7fce3c45c4ad84f8fe09b2087cc3f7, type: 3}
   speed: 50
   useGravity: 0
   gravityMultiplier: 1
@@ -138,10 +138,47 @@ MonoBehaviour:
   projectileModel: {fileID: 0}
   trailEffect: {fileID: 0}
   flyingParticles: {fileID: 0}
-  knockbackForce: 5
+  knockbackForce: 30
   knockbackDuration: 0.5
+  selfKnockbackForce: 20
+  selfKnockbackDuration: 0.5
+  selfKnockbackDrag: 1
+  selfKnockbackCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: -0.105690725
+      outSlope: -0.105690725
+      tangentMode: 34
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 0.5600204
+      value: 0.94081104
+      inSlope: -0.5412374
+      outSlope: -0.5412374
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.5030418
+      outWeight: 0.30035973
+    - serializedVersion: 3
+      time: 1.0458374
+      value: 0.0070762634
+      inSlope: -1.9219886
+      outSlope: -1.9219886
+      tangentMode: 34
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
   projectileColor: {r: 1, g: 0, b: 0, a: 1}
-  muzzleFlashPrefab: {fileID: 0}
+  projectilePrefab: {fileID: 2638751705936780157, guid: e44498276946a704181004acd2b6f055, type: 3}
+  muzzleFlashPrefab: {fileID: 2750655131838023065, guid: 12cb9461aa2ed6941b6632e23299a364, type: 3}
   shotgunSound: {fileID: 0}
   showDebugLogs: 0
 --- !u!114 &-4131816744423090720
