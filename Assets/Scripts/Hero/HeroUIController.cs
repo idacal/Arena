@@ -15,6 +15,10 @@ namespace Photon.Pun.Demo.Asteroids
         public GameObject healthRegenPanel;  // Panel containing health regeneration text
         public GameObject manaRegenPanel;    // Panel containing mana regeneration text
         
+        [Header("Experience UI")]
+        public Slider experienceBar;
+        public TMP_Text experienceText;  // Ahora mostrará "XP: actual/necesaria"
+        
         [Header("Player Information")]
         public TMP_Text playerNameText;
         public TMP_Text heroNameText;
@@ -74,6 +78,30 @@ namespace Photon.Pun.Demo.Asteroids
                 UpdateHealthBar(hero.CurrentHealth, hero.MaxHealth);
                 UpdateManaBar(hero.currentMana, hero.maxMana);
                 UpdateHeroStats(hero);
+                
+                // Inicializar la barra de experiencia
+                if (hero.heroData != null)
+                {
+                    Debug.Log($"[HeroUIController] Calculando experiencia necesaria:");
+                    Debug.Log($"[HeroUIController] BaseExperience: {hero.heroData.BaseExperience}");
+                    Debug.Log($"[HeroUIController] ExperienceScaling: {hero.heroData.ExperienceScaling}");
+                    Debug.Log($"[HeroUIController] CurrentLevel: {hero.CurrentLevel}");
+                    
+                    // Asegurarnos de que el nivel sea al menos 1
+                    int level = Mathf.Max(1, hero.CurrentLevel);
+                    float experienceNeeded = hero.heroData.BaseExperience * Mathf.Pow(hero.heroData.ExperienceScaling, level - 1);
+                    
+                    Debug.Log($"[HeroUIController] Nivel usado para el cálculo: {level}");
+                    Debug.Log($"[HeroUIController] Experiencia necesaria calculada: {experienceNeeded}");
+                    
+                    // Asegurarnos de que la experiencia necesaria sea al menos 100
+                    experienceNeeded = Mathf.Max(100f, experienceNeeded);
+                    
+                    UpdateExperienceBar(0, hero.CurrentExperience, experienceNeeded);
+                }
+                
+                // Suscribirse al evento de experiencia
+                hero.OnExperienceGained += UpdateExperienceBar;
                 
                 if (playerNameText != null && hero.photonView != null && hero.photonView.Owner != null)
                 {
@@ -547,6 +575,50 @@ namespace Photon.Pun.Demo.Asteroids
             if (manaRegenPanel != null)
             {
                 manaRegenPanel.SetActive(false);
+            }
+        }
+
+        /// <summary>
+        /// Actualiza la barra de experiencia y su texto
+        /// </summary>
+        public void UpdateExperienceBar(float gainedXP, float currentXP, float neededXP)
+        {
+            Debug.Log($"[HeroUIController] Actualizando barra de experiencia:");
+            Debug.Log($"[HeroUIController] XP ganada: {gainedXP}");
+            Debug.Log($"[HeroUIController] XP actual: {currentXP}");
+            Debug.Log($"[HeroUIController] XP necesaria: {neededXP}");
+            
+            // Asegurarnos de que los valores sean válidos
+            currentXP = Mathf.Max(0, currentXP);
+            neededXP = Mathf.Max(1, neededXP); // Evitar división por cero
+            
+            if (experienceBar != null)
+            {
+                float progress = currentXP / neededXP;
+                experienceBar.value = Mathf.Clamp01(progress);
+                Debug.Log($"[HeroUIController] Valor de la barra: {experienceBar.value}");
+            }
+            else
+            {
+                Debug.LogWarning("[HeroUIController] experienceBar es null");
+            }
+            
+            if (experienceText != null)
+            {
+                experienceText.text = $"{Mathf.FloorToInt(currentXP)}/{Mathf.FloorToInt(neededXP)}";
+                Debug.Log($"[HeroUIController] Texto de experiencia actualizado: {experienceText.text}");
+            }
+            else
+            {
+                Debug.LogWarning("[HeroUIController] experienceText es null");
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (heroOwner != null)
+            {
+                heroOwner.OnExperienceGained -= UpdateExperienceBar;
             }
         }
     }

@@ -5,6 +5,7 @@ using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine.UI;
 using System.Collections;
+using System.Linq;
 
 namespace Photon.Pun.Demo.Asteroids
 {
@@ -91,6 +92,17 @@ namespace Photon.Pun.Demo.Asteroids
         [Header("Level System")]
         [SerializeField] private int _currentLevel = 1;
         public int CurrentLevel { get; private set; } = 1;
+        private float _currentExperience = 0;
+        public float CurrentExperience => _currentExperience;
+        
+        [Header("Experience Rewards")]
+        [SerializeField] private float baseCreepXP = 25f;        // XP base por matar un creep
+        [SerializeField] private float baseHeroKillXP = 100f;    // XP base por matar un héroe
+        [SerializeField] private float baseAssistXP = 50f;       // XP base por asistencia
+        [SerializeField] private float baseTowerXP = 150f;       // XP base por destruir torre
+        [SerializeField] private float heroLevelXPMultiplier = 0.1f; // Multiplicador de XP por nivel del héroe asesinado
+        [SerializeField] private float assistXPMultiplier = 0.5f;    // Multiplicador de XP para asistencias
+        [SerializeField] private float xpRangeRadius = 1000f;        // Radio para compartir experiencia
         
         [Header("Skill System")]
         [SerializeField] private int _availableSkillPoints = 1; // Campo privado para los puntos de habilidad
@@ -101,6 +113,13 @@ namespace Photon.Pun.Demo.Asteroids
             Melee,
             Ranged
         }
+        
+        // Eventos de experiencia
+        public delegate void ExperienceGainedDelegate(float amount, float total, float needed);
+        public event ExperienceGainedDelegate OnExperienceGained;
+        
+        public delegate void LevelUpDelegate(int newLevel);
+        public event LevelUpDelegate OnLevelUp;
         
         // Referencias privadas
         protected Rigidbody heroRigidbody;
@@ -146,12 +165,23 @@ namespace Photon.Pun.Demo.Asteroids
             // Inicializar controlador de UI si existe
             if (uiController == null)
             {
-                uiController = GetComponentInChildren<HeroUIController>();
+                uiController = GetComponent<HeroUIController>();
             }
             
             // Inicializar stats
             currentHealth = maxHealth;
             currentMana = maxMana;
+
+            // Inicializar valores de experiencia
+            if (heroData != null)
+            {
+                heroData.BaseExperience = 100f;
+                heroData.ExperienceScaling = 1.5f;
+                heroData.CurrentLevel = 1;
+                heroData.CurrentExperience = 0;
+                heroData.AvailableSkillPoints = 0;
+                Debug.Log($"[HeroBase] Inicializando valores de experiencia: BaseExperience={heroData.BaseExperience}, ExperienceScaling={heroData.ExperienceScaling}");
+            }
         }
         
         protected virtual void Start()
@@ -1257,6 +1287,153 @@ namespace Photon.Pun.Demo.Asteroids
             {
                 uiController.UpdateManaBar(currentMana, maxMana);
             }
+        }
+
+        /// <summary>
+        /// Otorga experiencia por matar un creep
+        /// </summary>
+        public void AwardCreepKillExperience()
+        {
+            if (!photonView.IsMine) return;
+            
+            // Encontrar héroes aliados cercanos para compartir XP
+            var nearbyAllies = Physics.OverlapSphere(transform.position, xpRangeRadius)
+                                    .Select(c => c.GetComponent<HeroBase>())
+                                    .Where(h => h != null && h.teamId == this.teamId)
+                                    .ToList();
+            
+            // Dividir la XP entre los héroes cercanos
+            float sharedXP = baseCreepXP / nearbyAllies.Count;
+            
+            foreach (var ally in nearbyAllies)
+            {
+                ally.GainExperience(sharedXP);
+            }
+        }
+        
+        /// <summary>
+        /// Otorga experiencia por matar un héroe
+        /// </summary>
+        public void AwardHeroKillExperience(HeroBase killedHero)
+        {
+            if (!photonView.IsMine || killedHero == null) return;
+            
+            // Calcular XP base más bonus por nivel
+            float xpReward = baseHeroKillXP + (baseHeroKillXP * killedHero.CurrentLevel * heroLevelXPMultiplier);
+            
+            // Encontrar héroes aliados cercanos para asistencias
+            var nearbyAllies = Physics.OverlapSphere(transform.position, xpRangeRadius)
+                                    .Select(c => c.GetComponent<HeroBase>())
+                                    .Where(h => h != null && h.teamId == this.teamId && h != this)
+                                    .ToList();
+            
+            // Otorgar XP al asesino
+            GainExperience(xpReward);
+            
+            // Otorgar XP de asistencia
+            float assistXP = xpReward * assistXPMultiplier;
+            foreach (var ally in nearbyAllies)
+            {
+                ally.GainExperience(assistXP);
+            }
+        }
+        
+        /// <summary>
+        /// Otorga experiencia por destruir una torre
+        /// </summary>
+        public void AwardTowerKillExperience()
+        {
+            if (!photonView.IsMine) return;
+            
+            // Encontrar héroes aliados cercanos para compartir XP
+            var nearbyAllies = Physics.OverlapSphere(transform.position, xpRangeRadius)
+                                    .Select(c => c.GetComponent<HeroBase>())
+                                    .Where(h => h != null && h.teamId == this.teamId)
+                                    .ToList();
+            
+            // Dividir la XP entre los héroes cercanos
+            float sharedXP = baseTowerXP / nearbyAllies.Count;
+            
+            foreach (var ally in nearbyAllies)
+            {
+                ally.GainExperience(sharedXP);
+            }
+        }
+        
+        /// <summary>
+        /// Método principal para ganar experiencia
+        /// </summary>
+        public void GainExperience(float amount)
+        {
+            if (!photonView.IsMine || amount <= 0) return;
+            
+            float experienceNeeded = GetExperienceForNextLevel();
+            _currentExperience += amount;
+            
+            // Notificar ganancia de experiencia
+            OnExperienceGained?.Invoke(amount, _currentExperience, experienceNeeded);
+            
+            // Verificar si subimos de nivel
+            while (_currentExperience >= experienceNeeded && CurrentLevel < heroData.MaxLevel)
+            {
+                _currentExperience -= experienceNeeded;
+                LevelUp();
+                experienceNeeded = GetExperienceForNextLevel();
+            }
+            
+            // Si estamos al máximo nivel, mantener la experiencia al máximo
+            if (CurrentLevel >= heroData.MaxLevel)
+            {
+                _currentExperience = experienceNeeded;
+            }
+        }
+        
+        /// <summary>
+        /// Calcula la experiencia necesaria para el siguiente nivel
+        /// </summary>
+        public float GetExperienceForNextLevel()
+        {
+            return heroData.BaseExperience * Mathf.Pow(heroData.ExperienceScaling, CurrentLevel - 1);
+        }
+        
+        /// <summary>
+        /// Maneja la subida de nivel
+        /// </summary>
+        private void LevelUp()
+        {
+            CurrentLevel++;
+            _currentLevel = CurrentLevel;
+            
+            // Otorgar puntos de habilidad
+            AddSkillPoint(heroData.SkillPointsPerLevel);
+            
+            // Actualizar stats basados en el nuevo nivel
+            UpdateStatsForLevel();
+            
+            // Notificar la subida de nivel
+            OnLevelUp?.Invoke(CurrentLevel);
+        }
+        
+        /// <summary>
+        /// Actualiza las estadísticas basadas en el nivel actual
+        /// </summary>
+        private void UpdateStatsForLevel()
+        {
+            if (heroData == null) return;
+            
+            // Actualizar estadísticas derivadas del nivel
+            maxHealth = heroData.MaxHealth;
+            maxMana = heroData.MaxMana;
+            attackDamage = heroData.CurrentAttackDamage;
+            attackSpeed = heroData.CurrentAttackSpeed;
+            armor = heroData.CurrentArmor;
+            magicResistance = heroData.CurrentMagicResistance;
+            healthRegenRate = heroData.CurrentHealthRegen;
+            manaRegenRate = heroData.CurrentManaRegen;
+            
+            // Restaurar vida y maná al subir de nivel (opcional, como en DOTA 2)
+            currentHealth = maxHealth;
+            currentMana = maxMana;
         }
     }
 }

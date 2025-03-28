@@ -2849,6 +2849,13 @@ MonoBehaviour:
   damageSound: {fileID: 0}
   deathSound: {fileID: 0}
   _currentLevel: 1
+  baseCreepXP: 25
+  baseHeroKillXP: 100
+  baseAssistXP: 50
+  baseTowerXP: 150
+  heroLevelXPMultiplier: 0.1
+  assistXPMultiplier: 0.5
+  xpRangeRadius: 1000
   _availableSkillPoints: 1
 --- !u!114 &1129096755889270088
 MonoBehaviour:

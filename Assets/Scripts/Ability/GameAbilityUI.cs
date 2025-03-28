@@ -591,36 +591,6 @@ namespace Photon.Pun.Demo.Asteroids
                 bool canBeUpgraded = ability.CanBeUpgraded && heroBase.AvailableSkillPoints > 0;
                 bool meetsLevelRequirement = heroBase.CurrentLevel >= ability.RequiredLevel;
 
-                // Configurar el fondo del slot
-                if (slot.backgroundImage != null)
-                {
-                    DebugLog($"Intentando cambiar color del background para slot {slot.slotIndex}");
-                    if (!meetsLevelRequirement)
-                    {
-                        DebugLog($"No cumple requisitos de nivel. Cambiando a gris oscuro.");
-                        slot.backgroundImage.color = new Color(0.2f, 0.2f, 0.2f, 1f);
-                    }
-                    else if (isUnlearned)
-                    {
-                        DebugLog($"Habilidad no aprendida. Cambiando a gris semi-transparente.");
-                        slot.backgroundImage.color = new Color(0.4f, 0.4f, 0.4f, 0.8f);
-                    }
-                    else if (canBeUpgraded)
-                    {
-                        DebugLog($"Puede mejorarse. Cambiando a verde.");
-                        slot.backgroundImage.color = new Color(0.2f, 0.8f, 0.2f, 1f);
-                    }
-                    else
-                    {
-                        DebugLog($"Habilidad aprendida. Cambiando a gris claro.");
-                        slot.backgroundImage.color = new Color(0.8f, 0.8f, 0.8f, 1f);
-                    }
-                }
-                else
-                {
-                    DebugLog($"Background image es null para el slot {slot.slotIndex}", true);
-                }
-
                 // Actualizar interactividad del botón de habilidad
                 if (slot.abilityButton != null)
                 {
