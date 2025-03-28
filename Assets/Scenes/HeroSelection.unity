@@ -1506,6 +1506,7 @@ GameObject:
   m_Component:
   - component: {fileID: 345162645}
   - component: {fileID: 345162644}
+  - component: {fileID: 345162646}
   m_Layer: 0
   m_Name: GameStartManager
   m_TagString: Untagged
@@ -1548,6 +1549,28 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &345162646
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 345162643}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa584fbee541324448dd18d8409c7a41, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ObservedComponentsFoldoutOpen: 1
+  Group: 0
+  prefixField: -1
+  Synchronization: 3
+  OwnershipTransfer: 0
+  observableSearch: 2
+  ObservedComponents: []
+  sceneViewId: 2
+  InstantiationId: 0
+  isRuntimeInstantiated: 0
 --- !u!1 &385201340
 GameObject:
   m_ObjectHideFlags: 0
@@ -2997,6 +3020,62 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 782993405}
   m_CullTransparentMesh: 1
+--- !u!1 &828647303
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 828647305}
+  - component: {fileID: 828647304}
+  m_Layer: 0
+  m_Name: ShootingStarManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &828647304
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 828647303}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b6d11a1fb947be549a6e41ed5c747291, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  shootingStarPrefab: {fileID: 2444162041204271679, guid: 75a988cfe33702141ad175584e54c093, type: 3}
+  minSpawnInterval: 1
+  maxSpawnInterval: 5
+  minSpeed: 5
+  maxSpeed: 50
+  trailDuration: 5
+  trailWidth: 0.05
+  trailColor: {r: 1, g: 1, b: 1, a: 0.5882353}
+  minDepth: 0
+  maxDepth: 8
+  edgeSpawnProbability: 0.7
+  edgeSpawnDistance: 0.1
+--- !u!4 &828647305
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 828647303}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 920, y: 540, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &874913110
 GameObject:
   m_ObjectHideFlags: 0
@@ -3404,7 +3483,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -0.000022997625}
+  m_AnchoredPosition: {x: 0, y: 0.00002648753}
   m_SizeDelta: {x: 0, y: 300}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &1087525489
@@ -4359,7 +4438,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 422330859}
   m_Direction: 2
   m_Value: 0
-  m_Size: 0.99989134
+  m_Size: 0.9999956
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -6503,3 +6582,4 @@ SceneRoots:
   - {fileID: 1810467749}
   - {fileID: 677721724}
   - {fileID: 345162645}
+  - {fileID: 828647305}

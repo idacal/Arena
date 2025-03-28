@@ -5856,7 +5856,7 @@ MonoBehaviour:
   shootingStarPrefab: {fileID: 2444162041204271679, guid: 75a988cfe33702141ad175584e54c093, type: 3}
   minSpawnInterval: 1
   maxSpawnInterval: 5
-  minSpeed: 5
+  minSpeed: 1
   maxSpeed: 50
   trailDuration: 5
   trailWidth: 0.05

@@ -27,148 +27,142 @@ namespace Photon.Pun.Demo.Asteroids
         private bool isCountingDown = false;
         private bool isSceneLoading = false;
         private HeroSelectionManager heroSelectionManager;
+        private float currentCountdownTime;
+        private bool hasStartedGameSound = false;
+        
+        void Awake()
+        {
+            // Asegurarse de que tenemos un PhotonView
+            if (GetComponent<PhotonView>() == null)
+            {
+                gameObject.AddComponent<PhotonView>();
+            }
+        }
         
         void Start()
         {
+            // Configurar el audio source
+            audioSource = gameObject.AddComponent<AudioSource>();
+            audioSource.volume = soundVolume;
+            
             // Obtener referencia al HeroSelectionManager
             heroSelectionManager = FindObjectOfType<HeroSelectionManager>();
-            if (heroSelectionManager == null)
+            
+            // Configurar el botón de inicio
+            if (startButton != null)
             {
-                Debug.LogError("No se encontró el HeroSelectionManager!");
-                return;
+                startButton.onClick.AddListener(OnStartButtonClicked);
             }
             
-            // Configurar el AudioSource
-            audioSource = gameObject.AddComponent<AudioSource>();
-            audioSource.playOnAwake = false;
-            audioSource.volume = soundVolume;
-            audioSource.spatialBlend = 0f; // Sonido 2D
-            audioSource.priority = 128;
-            audioSource.loop = false;
-            audioSource.pitch = 1f;
-            audioSource.panStereo = 0f;
-            audioSource.spread = 0f;
-            audioSource.dopplerLevel = 0f;
-            audioSource.minDistance = 1f;
-            audioSource.maxDistance = 500f;
-            audioSource.rolloffMode = AudioRolloffMode.Logarithmic;
-            audioSource.bypassEffects = true; // Desactivar efectos de audio
-            audioSource.bypassListenerEffects = true; // Desactivar efectos del listener
-            audioSource.outputAudioMixerGroup = null; // No usar mixer group
-            
-            // Asegurarse de que el panel esté oculto al inicio
+            // Asegurarse de que el panel de countdown está oculto al inicio
             if (countdownPanel != null)
             {
                 countdownPanel.SetActive(false);
             }
-            
-            // Configurar el botón
-            if (startButton != null)
-            {
-                startButton.onClick.RemoveAllListeners(); // Limpiar listeners existentes
-                startButton.onClick.AddListener(StartCountdown);
-            }
-            else
-            {
-                Debug.LogError("Start Button no está asignado en el GameStartManager!");
-            }
-            
-            // Verificar que el texto está asignado
-            if (countdownText == null)
-            {
-                Debug.LogError("Countdown Text no está asignado en el GameStartManager!");
-            }
-            
-            // Suscribirse al evento de carga de escena
-            SceneManager.sceneLoaded += OnSceneLoaded;
         }
         
-        void OnDestroy()
+        void Update()
         {
-            // Desuscribirse del evento de carga de escena
-            SceneManager.sceneLoaded -= OnSceneLoaded;
-        }
-        
-        void OnSceneLoaded(Scene scene, LoadSceneMode mode)
-        {
-            Debug.Log($"Escena cargada: {scene.name}");
-        }
-        
-        public void StartCountdown()
-        {
-            if (!isCountingDown && !isSceneLoading)
+            // Si estamos contando y no somos el MasterClient, actualizar el tiempo local
+            if (isCountingDown && !PhotonNetwork.IsMasterClient)
             {
-                Debug.Log("Iniciando countdown...");
-                isCountingDown = true;
-                
-                // Deshabilitar el botón
-                if (startButton != null)
-                {
-                    startButton.interactable = false;
-                }
-                
-                // Mostrar el panel de countdown
-                if (countdownPanel != null)
-                {
-                    countdownPanel.SetActive(true);
-                    Debug.Log("Panel de countdown activado");
-                }
-                else
-                {
-                    Debug.LogError("Countdown Panel no está asignado en el GameStartManager!");
-                }
-                
-                // Iniciar la corrutina del countdown
-                StartCoroutine(CountdownRoutine());
+                UpdateLocalCountdown();
             }
         }
         
-        private IEnumerator CountdownRoutine()
+        private void UpdateLocalCountdown()
         {
-            float remainingTime = countdownDuration;
-            bool hasStartedGameSound = false;
-            
-            while (remainingTime > 0)
+            if (currentCountdownTime > 0)
             {
-                // Actualizar el texto
-                if (countdownText != null)
-                {
-                    countdownText.text = Mathf.Ceil(remainingTime).ToString();
-                    Debug.Log($"Countdown: {Mathf.Ceil(remainingTime)}");
-                }
+                currentCountdownTime -= Time.deltaTime;
+                UpdateCountdownDisplay(currentCountdownTime);
+            }
+        }
+        
+        private void UpdateCountdownDisplay(float timeRemaining)
+        {
+            if (countdownText != null)
+            {
+                int secondsRemaining = Mathf.CeilToInt(timeRemaining);
+                countdownText.text = secondsRemaining.ToString();
                 
                 // Reproducir sonido de countdown
-                if (countdownSound != null && audioSource != null)
+                if (secondsRemaining > 0 && countdownSound != null && audioSource != null)
                 {
-                    audioSource.PlayOneShot(countdownSound);
+                    if (Mathf.Approximately(timeRemaining, Mathf.Floor(timeRemaining)))
+                    {
+                        audioSource.PlayOneShot(countdownSound);
+                    }
                 }
                 
-                // Si llegamos a 1, comenzar a reproducir el sonido de inicio
-                if (Mathf.Ceil(remainingTime) == 1 && !hasStartedGameSound && gameStartSound != null && audioSource != null)
+                // Reproducir sonido de inicio cuando llegue a 1
+                if (secondsRemaining == 1 && !hasStartedGameSound && gameStartSound != null && audioSource != null)
                 {
                     audioSource.PlayOneShot(gameStartSound);
                     hasStartedGameSound = true;
                 }
-                
-                // Esperar el intervalo
-                yield return new WaitForSeconds(countdownInterval);
-                remainingTime -= countdownInterval;
             }
-            
-            // Mostrar "0"
-            if (countdownText != null)
+        }
+        
+        public void OnStartButtonClicked()
+        {
+            if (!PhotonNetwork.IsMasterClient)
             {
-                countdownText.text = "0";
-                Debug.Log("0");
+                Debug.LogWarning("[GameStartManager] Solo el MasterClient puede iniciar el contador");
+                return;
             }
             
-            // Esperar 4 segundos antes de cambiar de escena
-            yield return new WaitForSeconds(4f);
+            if (isCountingDown || isSceneLoading)
+            {
+                Debug.LogWarning("[GameStartManager] El contador ya está en marcha o la escena se está cargando");
+                return;
+            }
             
-            Debug.Log("Iniciando carga de escena...");
+            Debug.Log("[GameStartManager] Iniciando countdown");
+            photonView.RPC("RPC_StartCountdown", RpcTarget.All);
+        }
+        
+        [PunRPC]
+        private void RPC_StartCountdown()
+        {
+            if (isCountingDown || isSceneLoading)
+            {
+                Debug.LogWarning("[GameStartManager] El contador ya está en marcha o la escena se está cargando");
+                return;
+            }
+            
+            Debug.Log("[GameStartManager] Iniciando countdown");
+            isCountingDown = true;
+            currentCountdownTime = countdownDuration;
+            hasStartedGameSound = false;
+            
+            // Mostrar el panel de countdown
+            if (countdownPanel != null)
+            {
+                countdownPanel.SetActive(true);
+            }
+            
+            // Si somos el MasterClient, iniciamos la corrutina de countdown
+            if (PhotonNetwork.IsMasterClient)
+            {
+                StartCoroutine(CountdownCoroutine());
+            }
+        }
+        
+        [PunRPC]
+        private void RPC_UpdateCountdown(float remainingTime)
+        {
+            currentCountdownTime = remainingTime;
+            UpdateCountdownDisplay(remainingTime);
+        }
+        
+        [PunRPC]
+        private void RPC_LoadGameScene()
+        {
+            Debug.Log("[GameStartManager] Cargando escena de juego");
             isSceneLoading = true;
             
-            // Deshabilitar el botón de inicio en el HeroSelectionManager
+            // Deshabilitar el botón de inicio
             if (heroSelectionManager != null)
             {
                 heroSelectionManager.StartGameButton.interactable = false;
@@ -176,6 +170,29 @@ namespace Photon.Pun.Demo.Asteroids
             
             // Cambiar a la escena de gameplay
             PhotonNetwork.LoadLevel("GameplayScene");
+        }
+        
+        private IEnumerator CountdownCoroutine()
+        {
+            float remainingTime = countdownDuration;
+            
+            while (remainingTime > 0)
+            {
+                // Sincronizar el tiempo con todos los clientes
+                photonView.RPC("RPC_UpdateCountdown", RpcTarget.All, remainingTime);
+                
+                yield return new WaitForSeconds(countdownInterval);
+                remainingTime -= countdownInterval;
+            }
+            
+            // Mostrar "0" final
+            photonView.RPC("RPC_UpdateCountdown", RpcTarget.All, 0f);
+            
+            // Esperar un momento antes de cargar la escena
+            yield return new WaitForSeconds(4f);
+            
+            // Cargar la escena de juego
+            photonView.RPC("RPC_LoadGameScene", RpcTarget.All);
         }
     }
 } 

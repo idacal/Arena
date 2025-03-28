@@ -215,17 +215,28 @@ namespace Photon.Pun.Demo.Asteroids
 
         public void OnStartGameButtonClicked()
         {
-            if (!AreAllPlayersReady()) return;
+            if (!PhotonNetwork.IsMasterClient)
+            {
+                Debug.LogWarning("Solo el MasterClient puede iniciar el juego");
+                return;
+            }
 
-            // Buscar el GameStartManager y llamar a su método StartCountdown
+            if (!AreAllPlayersReady())
+            {
+                Debug.LogWarning("No todos los jugadores están listos");
+                return;
+            }
+
+            // Buscar el GameStartManager y llamar a su método OnStartButtonClicked
             GameStartManager gameStartManager = FindObjectOfType<GameStartManager>();
             if (gameStartManager != null)
             {
-                gameStartManager.StartCountdown();
+                Debug.Log("Iniciando el contador del juego...");
+                gameStartManager.OnStartButtonClicked();
             }
             else
             {
-                Debug.LogError("No se encontró el GameStartManager!");
+                Debug.LogError("No se encontró el GameStartManager! Asegúrate de que existe en la escena.");
             }
         }
 
