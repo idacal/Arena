@@ -14,6 +14,12 @@ namespace Photon.Pun.Demo.Asteroids
         public float trailWidth = 0.1f;
         public Color trailColor = Color.white;
         
+        [Header("Depth Settings")]
+        [Tooltip("Distancia mínima desde la cámara")]
+        public float minDepth = 5f;
+        [Tooltip("Distancia máxima desde la cámara")]
+        public float maxDepth = 20f;
+        
         [Header("Spawn Settings")]
         [Tooltip("Probabilidad de spawn desde los bordes (0-1)")]
         public float edgeSpawnProbability = 0.7f;
@@ -63,6 +69,10 @@ namespace Photon.Pun.Demo.Asteroids
                 direction = GetRandomDirection();
             }
             
+            // Ajustar la profundidad Z aleatoriamente
+            float randomDepth = Random.Range(minDepth, maxDepth);
+            spawnPosition.z = -randomDepth;
+            
             // Crear la estrella fugaz
             GameObject star = Instantiate(shootingStarPrefab, spawnPosition, Quaternion.identity);
             
@@ -70,8 +80,10 @@ namespace Photon.Pun.Demo.Asteroids
             TrailRenderer trail = star.GetComponent<TrailRenderer>();
             if (trail != null)
             {
+                // Ajustar el ancho del trail según la profundidad
+                float depthScale = 1f - (randomDepth - minDepth) / (maxDepth - minDepth);
                 trail.time = trailDuration;
-                trail.startWidth = trailWidth;
+                trail.startWidth = trailWidth * depthScale;
                 trail.endWidth = 0f;
                 trail.startColor = trailColor;
                 trail.endColor = new Color(trailColor.r, trailColor.g, trailColor.b, 0f);
@@ -86,6 +98,8 @@ namespace Photon.Pun.Demo.Asteroids
             if (rb != null)
             {
                 float speed = Random.Range(minSpeed, maxSpeed);
+                // Ajustar la velocidad según la profundidad (las estrellas más lejanas se mueven más rápido)
+                speed *= 1f + (randomDepth - minDepth) / (maxDepth - minDepth);
                 rb.velocity = direction * speed;
             }
             
