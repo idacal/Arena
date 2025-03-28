@@ -360,6 +360,7 @@ namespace Photon.Pun.Demo.Asteroids
             foreach (Image image in allImages)
             {
                 string componentName = image.gameObject.name;
+                DebugLog($"Encontrada imagen: {componentName}");
                 
                 if (componentName.Contains("AbilityIcon") || componentName.Contains("Icon"))
                 {
@@ -371,19 +372,11 @@ namespace Photon.Pun.Demo.Asteroids
                     uiSlot.cooldownOverlay = image;
                     DebugLog($"Asignado CooldownOverlay: {componentName}");
                 }
-            }
-            
-            // Si no encontramos un icono específico, usar el primer Image que no sea el overlay
-            if (uiSlot.abilityIcon == null)
-            {
-                foreach (Image image in allImages)
+                else
                 {
-                    if (image != uiSlot.cooldownOverlay)
-                    {
-                        uiSlot.abilityIcon = image;
-                        DebugLog($"Usando imagen alternativa como AbilityIcon: {image.gameObject.name}");
-                        break;
-                    }
+                    // Intentar asignar el background si no es ninguno de los anteriores
+                    uiSlot.backgroundImage = image;
+                    DebugLog($"Asignado Background por defecto: {componentName}");
                 }
             }
             
@@ -596,34 +589,52 @@ namespace Photon.Pun.Demo.Asteroids
                 // Actualizar estado visual basado en el nivel de la habilidad
                 bool isUnlearned = ability.GetCurrentLevel() == 0;
                 bool canBeUpgraded = ability.CanBeUpgraded && heroBase.AvailableSkillPoints > 0;
+                bool meetsLevelRequirement = heroBase.CurrentLevel >= ability.RequiredLevel;
 
                 // Configurar el fondo del slot
                 if (slot.backgroundImage != null)
                 {
-                    if (isUnlearned)
+                    DebugLog($"Intentando cambiar color del background para slot {slot.slotIndex}");
+                    if (!meetsLevelRequirement)
                     {
-                        slot.backgroundImage.color = new Color(0.3f, 0.3f, 0.3f, 1f); // Gris oscuro para no aprendida
+                        DebugLog($"No cumple requisitos de nivel. Cambiando a gris oscuro.");
+                        slot.backgroundImage.color = new Color(0.2f, 0.2f, 0.2f, 1f);
+                    }
+                    else if (isUnlearned)
+                    {
+                        DebugLog($"Habilidad no aprendida. Cambiando a gris semi-transparente.");
+                        slot.backgroundImage.color = new Color(0.4f, 0.4f, 0.4f, 0.8f);
                     }
                     else if (canBeUpgraded)
                     {
-                        slot.backgroundImage.color = new Color(0.2f, 0.8f, 0.2f, 1f); // Verde para disponible para subir
+                        DebugLog($"Puede mejorarse. Cambiando a verde.");
+                        slot.backgroundImage.color = new Color(0.2f, 0.8f, 0.2f, 1f);
                     }
                     else
                     {
-                        slot.backgroundImage.color = Color.white; // Normal para aprendida
+                        DebugLog($"Habilidad aprendida. Cambiando a gris claro.");
+                        slot.backgroundImage.color = new Color(0.8f, 0.8f, 0.8f, 1f);
                     }
+                }
+                else
+                {
+                    DebugLog($"Background image es null para el slot {slot.slotIndex}", true);
                 }
 
                 // Actualizar interactividad del botón de habilidad
                 if (slot.abilityButton != null)
                 {
-                    slot.abilityButton.interactable = !isUnlearned;
+                    slot.abilityButton.interactable = !isUnlearned && meetsLevelRequirement;
                 }
 
                 // Actualizar interactividad del botón de subir nivel
                 if (slot.levelUpButton != null)
                 {
-                    slot.levelUpButton.interactable = canBeUpgraded;
+                    // Ocultar el botón si no hay puntos disponibles
+                    slot.levelUpButton.gameObject.SetActive(heroBase.AvailableSkillPoints > 0);
+                    
+                    // El botón está deshabilitado si no cumple requisitos de nivel o no hay puntos
+                    slot.levelUpButton.interactable = meetsLevelRequirement && canBeUpgraded;
                 }
 
                 // Actualizar textos
@@ -634,7 +645,21 @@ namespace Photon.Pun.Demo.Asteroids
 
                 if (slot.levelUpText != null)
                 {
-                    slot.levelUpText.text = heroBase.AvailableSkillPoints.ToString();
+                    // Solo mostrar el texto si hay puntos disponibles
+                    slot.levelUpText.gameObject.SetActive(heroBase.AvailableSkillPoints > 0);
+                    
+                    if (!meetsLevelRequirement)
+                    {
+                        slot.levelUpText.text = "-";
+                    }
+                    else if (heroBase.AvailableSkillPoints > 0)
+                    {
+                        slot.levelUpText.text = heroBase.AvailableSkillPoints.ToString();
+                    }
+                    else
+                    {
+                        slot.levelUpText.text = "0";
+                    }
                 }
 
                 // Actualizar overlay de cooldown

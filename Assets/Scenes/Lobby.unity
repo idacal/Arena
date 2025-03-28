@@ -3390,7 +3390,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   clickSound: {fileID: 8300000, guid: 643be44ae455bfb4793f2deefdb0b7ba, type: 3}
-  volume: 0.6
+  volume: 0.5
 --- !u!4 &1262232586
 Transform:
   m_ObjectHideFlags: 0
