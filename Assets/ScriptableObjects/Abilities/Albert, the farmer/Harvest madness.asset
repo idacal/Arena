@@ -28,8 +28,8 @@ MonoBehaviour:
   CooldownScaling: 0
   ManaCostScaling: 0
   MaxLevel: 5
-  LevelRequirements: 0100000003000000050000000700000009000000
-  SkillPointCosts: 0100000001000000010000000100000001000000
+  LevelRequirements: 060000000c0000001200000018000000
+  SkillPointCosts: 01000000010000000100000001000000
   StartingLevel: 0
   AbilityPrefab: {fileID: 5462789346991478595, guid: 93291330930f290438a3b243a9b9a50f, type: 3}
   AbilitySound: {fileID: 0}

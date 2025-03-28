@@ -23,6 +23,7 @@ namespace Photon.Pun.Demo.Asteroids
             public TMP_Text levelUpText;       // Texto para mostrar puntos disponibles
             public Button levelUpButton;       // Botón para subir de nivel
             public Button abilityButton;       // Botón para activar la habilidad
+            public Image backgroundImage;      // Imagen de fondo del slot
             public int slotIndex;              // Índice del slot correspondiente
         }
 
@@ -465,9 +466,7 @@ namespace Photon.Pun.Demo.Asteroids
 
             if (uiSlot.levelUpText != null)
             {
-                // Mostrar puntos disponibles
-                uiSlot.levelUpText.text = heroBase != null ? heroBase.AvailableSkillPoints.ToString() : "0";
-                DebugLog($"LevelUpText configurado para {abilityName}: {heroBase?.AvailableSkillPoints ?? 0} puntos disponibles");
+                uiSlot.levelUpText.text = heroBase.AvailableSkillPoints.ToString();
             }
             
             // Configurar texto de información adicional (daño, duración, rango)
@@ -585,71 +584,102 @@ namespace Photon.Pun.Demo.Asteroids
         /// </summary>
         private void UpdateAbilityUI()
         {
-            if (abilityController == null)
+            if (abilityController == null || heroBase == null)
                 return;
-                
-            for (int i = 0; i < abilitySlots.Count; i++)
+
+            foreach (var slot in abilitySlots)
             {
-                if (i >= abilityController.abilitySlots.Count)
-                    break;
-                    
-                HeroAbilityController.AbilitySlot abilityData = abilityController.abilitySlots[i];
-                AbilitySlotUI uiSlot = abilitySlots[i];
-                
-                // Actualizar overlay de cooldown
-                if (uiSlot.cooldownOverlay != null)
+                var ability = abilityController.GetAbilityData(slot.slotIndex);
+                if (ability == null)
+                    continue;
+
+                // Actualizar estado visual basado en el nivel de la habilidad
+                bool isUnlearned = ability.GetCurrentLevel() == 0;
+                bool canBeUpgraded = ability.CanBeUpgraded && heroBase.AvailableSkillPoints > 0;
+
+                // Configurar el fondo del slot
+                if (slot.backgroundImage != null)
                 {
-                    if (abilityData.cooldownRemaining > 0)
+                    if (isUnlearned)
                     {
-                        float cooldownRatio = abilityData.cooldownRemaining / abilityData.abilityData.Cooldown;
-                        uiSlot.cooldownOverlay.fillAmount = cooldownRatio;
-                        uiSlot.cooldownOverlay.enabled = true;
+                        slot.backgroundImage.color = new Color(0.3f, 0.3f, 0.3f, 1f); // Gris oscuro para no aprendida
+                    }
+                    else if (canBeUpgraded)
+                    {
+                        slot.backgroundImage.color = new Color(0.2f, 0.8f, 0.2f, 1f); // Verde para disponible para subir
+                    }
+                    else
+                    {
+                        slot.backgroundImage.color = Color.white; // Normal para aprendida
+                    }
+                }
+
+                // Actualizar interactividad del botón de habilidad
+                if (slot.abilityButton != null)
+                {
+                    slot.abilityButton.interactable = !isUnlearned;
+                }
+
+                // Actualizar interactividad del botón de subir nivel
+                if (slot.levelUpButton != null)
+                {
+                    slot.levelUpButton.interactable = canBeUpgraded;
+                }
+
+                // Actualizar textos
+                if (slot.abilityLevelText != null)
+                {
+                    slot.abilityLevelText.text = isUnlearned ? "0" : $"{ability.GetCurrentLevel()}";
+                }
+
+                if (slot.levelUpText != null)
+                {
+                    slot.levelUpText.text = heroBase.AvailableSkillPoints.ToString();
+                }
+
+                // Actualizar overlay de cooldown
+                if (slot.cooldownOverlay != null)
+                {
+                    float cooldownRemaining = abilityController.GetCooldownRemaining(slot.slotIndex);
+                    if (cooldownRemaining > 0)
+                    {
+                        float cooldownRatio = cooldownRemaining / ability.CurrentCooldown;
+                        slot.cooldownOverlay.fillAmount = cooldownRatio;
+                        slot.cooldownOverlay.enabled = true;
                         
                         // Mostrar texto de tiempo restante
-                        if (uiSlot.cooldownText != null)
+                        if (slot.cooldownText != null)
                         {
-                            uiSlot.cooldownText.gameObject.SetActive(true);
-                            uiSlot.cooldownText.text = Mathf.Ceil(abilityData.cooldownRemaining).ToString("0");
+                            slot.cooldownText.gameObject.SetActive(true);
+                            slot.cooldownText.text = Mathf.Ceil(cooldownRemaining).ToString("0");
                         }
                     }
                     else
                     {
-                        uiSlot.cooldownOverlay.fillAmount = 0f;
-                        uiSlot.cooldownOverlay.enabled = false;
+                        slot.cooldownOverlay.fillAmount = 0f;
+                        slot.cooldownOverlay.enabled = false;
                         
                         // Ocultar texto de cooldown
-                        if (uiSlot.cooldownText != null)
+                        if (slot.cooldownText != null)
                         {
-                            uiSlot.cooldownText.gameObject.SetActive(false);
+                            slot.cooldownText.gameObject.SetActive(false);
                         }
                     }
                 }
                 
-                // Actualizar texto de nivel de habilidad
-                if (uiSlot.abilityLevelText != null)
-                {
-                    uiSlot.abilityLevelText.text = abilityData.abilityData.CurrentLevel.ToString();
-                }
-                
                 // Actualizar efecto visual si no hay suficiente maná
-                bool enoughMana = heroBase != null && heroBase.currentMana >= abilityData.abilityData.ManaCost;
+                bool enoughMana = heroBase != null && heroBase.currentMana >= ability.CurrentManaCost;
                 
                 // Cambiar color del icono según si hay suficiente maná
-                if (uiSlot.abilityIcon != null)
+                if (slot.abilityIcon != null)
                 {
-                    uiSlot.abilityIcon.color = enoughMana ? Color.white : new Color(0.5f, 0.5f, 0.5f, 1f);
+                    slot.abilityIcon.color = enoughMana ? Color.white : new Color(0.5f, 0.5f, 0.5f, 1f);
                 }
                 
                 // Cambiar color del texto de maná
-                if (uiSlot.manaCostText != null)
+                if (slot.manaCostText != null)
                 {
-                    uiSlot.manaCostText.color = enoughMana ? Color.white : Color.red;
-                }
-                
-                // Actualizar interactividad del botón
-                if (uiSlot.abilityButton != null)
-                {
-                    uiSlot.abilityButton.interactable = enoughMana && abilityData.cooldownRemaining <= 0 && !heroBase.IsDead;
+                    slot.manaCostText.color = enoughMana ? Color.white : Color.red;
                 }
             }
         }

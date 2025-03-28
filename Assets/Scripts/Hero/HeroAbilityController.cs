@@ -272,36 +272,39 @@ namespace Photon.Pun.Demo.Asteroids
         /// <summary>
         /// Usa la habilidad en el slot especificado
         /// </summary>
-        private void UseAbility(int slotIndex)
+        private void UseAbility(int index)
         {
-            if (slotIndex < 0 || slotIndex >= abilitySlots.Count)
+            if (!photonView.IsMine || index < 0 || index >= abilitySlots.Count)
                 return;
-                
-            AbilitySlot slot = abilitySlots[slotIndex];
-            
-            // Verificar si está en cooldown
+
+            var slot = abilitySlots[index];
+            if (slot == null || slot.abilityData == null)
+                return;
+
+            // Verificar si la habilidad está aprendida
+            if (slot.abilityData.GetCurrentLevel() == 0)
+            {
+                // Opcional: Mostrar un mensaje al jugador
+                Debug.Log("Esta habilidad aún no ha sido aprendida.");
+                return;
+            }
+
+            // Verificar cooldown
             if (slot.cooldownRemaining > 0)
                 return;
-                
-            // Verificar si tenemos datos de habilidad
-            if (slot.abilityData == null)
+
+            // Verificar maná
+            if (heroBase.currentMana < slot.abilityData.CurrentManaCost)
                 return;
-                
-            // Verificar si tenemos suficiente maná
-            if (!heroBase.ConsumeMana(slot.abilityData.ManaCost))
-                return;
-                
-            // Aplicar cooldown
-            slot.cooldownRemaining = slot.abilityData.Cooldown;
-            
-            // Actualizar imagen de cooldown
-            if (slot.cooldownImage != null)
-            {
-                slot.cooldownImage.fillAmount = 1.0f;
-            }
+
+            // Usar maná
+            heroBase.UseMana(slot.abilityData.CurrentManaCost);
+
+            // Establecer cooldown
+            slot.cooldownRemaining = slot.abilityData.CurrentCooldown;
             
             // Lanzar la habilidad en el servidor
-            photonView.RPC("RPC_UseAbility", RpcTarget.All, slotIndex, transform.position, transform.forward);
+            photonView.RPC("RPC_UseAbility", RpcTarget.All, index, transform.position, transform.forward);
         }
         
         /// <summary>

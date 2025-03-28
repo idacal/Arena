@@ -1242,5 +1242,21 @@ namespace Photon.Pun.Demo.Asteroids
             // Aquí podrías agregar lógica adicional cuando el héroe sube de nivel
             // Por ejemplo, otorgar puntos de habilidad
         }
+
+        /// <summary>
+        /// Usa maná del héroe
+        /// </summary>
+        public void UseMana(int amount)
+        {
+            if (amount <= 0) return;
+            
+            currentMana = Mathf.Max(0, currentMana - amount);
+            
+            // Notificar a la UI si es necesario
+            if (uiController != null)
+            {
+                uiController.UpdateManaBar(currentMana, maxMana);
+            }
+        }
     }
 }
