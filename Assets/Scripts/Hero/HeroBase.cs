@@ -14,6 +14,7 @@ namespace Photon.Pun.Demo.Asteroids
         [Header("Hero Identity")]
         public int heroId = -1;          // ID del héroe, debe coincidir con HeroData
         public string heroName = "";      // Nombre del héroe
+        public HeroData heroData;         // Datos del héroe
         
         [Header("Team Settings")]
         public int teamId = 0;            // 0 = Rojo, 1 = Azul
@@ -86,6 +87,14 @@ namespace Photon.Pun.Demo.Asteroids
         
         // Constante para propiedad de equipo en Photon
         private const string PLAYER_TEAM = "PlayerTeam";
+        
+        [Header("Level System")]
+        [SerializeField] private int _currentLevel = 1;
+        public int CurrentLevel { get; private set; } = 1;
+        
+        [Header("Skill System")]
+        [SerializeField] private int _availableSkillPoints = 1; // Campo privado para los puntos de habilidad
+        public int AvailableSkillPoints { get; private set; } = 1; // Comienza con 1 punto de habilidad
         
         public enum AttackType
         {
@@ -347,21 +356,21 @@ namespace Photon.Pun.Demo.Asteroids
                     teamId = HeroManager.Instance.GetPlayerTeam(player);
                     
                     // Cargar datos del héroe
-                    HeroData heroData = HeroManager.Instance.GetHeroData(heroId);
+                    heroData = HeroManager.Instance.GetHeroData(heroId);
                     if (heroData != null)
                     {
                         heroName = heroData.Name;
-                        maxHealth = heroData.Health;
+                        maxHealth = heroData.MaxHealth;
                         currentHealth = maxHealth;
-                        maxMana = heroData.Mana;
+                        maxMana = heroData.MaxMana;
                         currentMana = maxMana;
-                        attackDamage = heroData.AttackDamage;
-                        attackSpeed = heroData.AttackSpeed;
+                        attackDamage = heroData.CurrentAttackDamage;
+                        attackSpeed = heroData.CurrentAttackSpeed;
                         moveSpeed = heroData.MovementSpeed * 0.01f; // Convertir a unidades de Unity
-                        armor = heroData.Armor;
-                        magicResistance = heroData.MagicResistance;
-                        healthRegenRate = heroData.HealthRegenRate;
-                        manaRegenRate = heroData.ManaRegenRate;
+                        armor = heroData.CurrentArmor;
+                        magicResistance = heroData.CurrentMagicResistance;
+                        healthRegenRate = heroData.CurrentHealthRegen;
+                        manaRegenRate = heroData.CurrentManaRegen;
                         respawnTime = heroData.RespawnTime;
                         
                         // Configurar habilidades
@@ -1202,6 +1211,36 @@ namespace Photon.Pun.Demo.Asteroids
                 Vector3 fleePosition = transform.position + randomDirection * 10f;
                 moveController.SetDestination(fleePosition);
             }
+        }
+
+        public void AddSkillPoint(int points = 1)
+        {
+            _availableSkillPoints += points;
+            AvailableSkillPoints = _availableSkillPoints;
+            // Notificar a la UI para que se actualice
+            if (abilityController != null)
+            {
+                abilityController.RefreshAbilityUI();
+            }
+        }
+
+        public bool UseSkillPoint()
+        {
+            if (_availableSkillPoints > 0)
+            {
+                _availableSkillPoints--;
+                AvailableSkillPoints = _availableSkillPoints;
+                return true;
+            }
+            return false;
+        }
+
+        public void SetLevel(int level)
+        {
+            _currentLevel = Mathf.Max(1, level);
+            CurrentLevel = _currentLevel;
+            // Aquí podrías agregar lógica adicional cuando el héroe sube de nivel
+            // Por ejemplo, otorgar puntos de habilidad
         }
     }
 }

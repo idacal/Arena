@@ -12,13 +12,22 @@ namespace Photon.Pun.Demo.Asteroids
         public Slider manaBar;
         public TMP_Text healthText;
         public TMP_Text manaText;
-        public GameObject healthRegenPanel;  // Panel que contiene el texto de regeneración de vida
-        public GameObject manaRegenPanel;    // Panel que contiene el texto de regeneración de maná
+        public GameObject healthRegenPanel;  // Panel containing health regeneration text
+        public GameObject manaRegenPanel;    // Panel containing mana regeneration text
         
         [Header("Player Information")]
         public TMP_Text playerNameText;
         public TMP_Text heroNameText;
         public TMP_Text levelText;
+        public TMP_Text primaryAttributeText; // New: to show primary attribute
+        
+        [Header("Base Stats")]
+        public TMP_Text strengthText;
+        public TMP_Text intelligenceText;
+        public TMP_Text agilityText;
+        public TMP_Text strengthScalingText;
+        public TMP_Text intelligenceScalingText;
+        public TMP_Text agilityScalingText;
         
         [Header("Hero Stats")]
         public TMP_Text attackDamageText;
@@ -57,9 +66,9 @@ namespace Photon.Pun.Demo.Asteroids
         public void Initialize(HeroBase hero)
         {
             heroOwner = hero;
-            Debug.Log($"[HeroUIController] Inicializado para el héroe: {hero.heroName}");
+            Debug.Log($"[HeroUIController] Initialized for hero: {hero.heroName}");
             
-            // Inicializar barras de salud y maná con valores iniciales
+            // Initialize health and mana bars with initial values
             if (hero != null)
             {
                 UpdateHealthBar(hero.CurrentHealth, hero.MaxHealth);
@@ -99,7 +108,7 @@ namespace Photon.Pun.Demo.Asteroids
             
             if (heroOwner == null)
             {
-                Debug.LogError("[HeroUIController] No se pudo encontrar el HeroBase asociado a este UI");
+                Debug.LogError("[HeroUIController] Could not find HeroBase associated with this UI");
             }
             
             // Auto-find UI references if not assigned
@@ -107,24 +116,24 @@ namespace Photon.Pun.Demo.Asteroids
             {
                 heroNameText = transform.FindDeepChild<TMP_Text>("Hero Name");
                 if (heroNameText == null)
-                    Debug.LogWarning("[HeroUIController] No se pudo encontrar el elemento Hero Name");
+                    Debug.LogWarning("[HeroUIController] Could not find Hero Name element");
                 else
-                    Debug.Log("[HeroUIController] Se encontró automáticamente Hero Name");
+                    Debug.Log("[HeroUIController] Hero Name found automatically");
             }
             
             if (playerNameText == null)
             {
                 playerNameText = transform.FindDeepChild<TMP_Text>("PlayerName");
                 if (playerNameText == null)
-                    Debug.LogWarning("[HeroUIController] No se pudo encontrar el elemento PlayerName");
+                    Debug.LogWarning("[HeroUIController] Could not find PlayerName element");
                 else
-                    Debug.Log("[HeroUIController] Se encontró automáticamente PlayerName");
+                    Debug.Log("[HeroUIController] PlayerName found automatically");
             }
         }
         
         void Start()
         {
-            Debug.Log("[HeroUIController] Inicializando UI para: " + (heroOwner != null ? heroOwner.heroName : "Desconocido"));
+            Debug.Log("[HeroUIController] Initializing UI for: " + (heroOwner != null ? heroOwner.heroName : "Unknown"));
             
             // Obtener la cámara principal
             cameraTransform = Camera.main.transform;
@@ -181,20 +190,20 @@ namespace Photon.Pun.Demo.Asteroids
         {
             if (mainCanvas == null)
             {
-                Debug.LogError("[HeroUIController] No hay Canvas configurado");
+                Debug.LogError("[HeroUIController] No Canvas configured");
                 return;
             }
             
             // Si no es el jugador local, desactivar la interfaz
             if (heroOwner != null && !heroOwner.photonView.IsMine)
             {
-                Debug.Log("[HeroUIController] Desactivando UI para jugador remoto");
+                Debug.Log("[HeroUIController] Disabling UI for remote player");
                 mainCanvas.enabled = false;
                 return;
             }
             
             // Es el jugador local, configurar correctamente
-            Debug.Log("[HeroUIController] Configurando UI para jugador local");
+            Debug.Log("[HeroUIController] Configuring UI for local player");
             
             // Forzar a pantalla completa si está configurado así
             if (forceScreenSpaceOverlay)
@@ -243,7 +252,7 @@ namespace Photon.Pun.Demo.Asteroids
             
             if (missingRefs != "")
             {
-                Debug.LogWarning("[HeroUIController] Faltan referencias: " + missingRefs);
+                Debug.LogWarning("[HeroUIController] Missing references: " + missingRefs);
             }
         }
         
@@ -343,56 +352,60 @@ namespace Photon.Pun.Demo.Asteroids
         /// </summary>
         public void UpdateHeroStats(HeroBase hero)
         {
-            if (hero == null) return;
+            if (hero == null || hero.heroData == null)
+            {
+                Debug.LogWarning("[HeroUIController] No hero data to update");
+                return;
+            }
 
-            // Actualizar daño de ataque
+            var heroData = hero.heroData;
+
+            // Actualizar atributo principal con color
+            if (primaryAttributeText != null)
+            {
+                string attributeColor = heroData.PrimaryAttribute switch
+                {
+                    "Strength" => "#FF4444",    // Rojo para fuerza
+                    "Intelligence" => "#4444FF", // Azul para inteligencia
+                    "Agility" => "#44FF44",     // Verde para agilidad
+                    _ => "#FFFFFF"              // Blanco por defecto
+                };
+                primaryAttributeText.text = $"Primary Attribute: <color={attributeColor}>{heroData.PrimaryAttribute}</color>";
+            }
+
+            // Update base stats
+            if (strengthText != null)
+                strengthText.text = $"{Mathf.FloorToInt(heroData.CurrentStrength)}";
+            if (intelligenceText != null)
+                intelligenceText.text = $"{Mathf.FloorToInt(heroData.CurrentIntelligence)}";
+            if (agilityText != null)
+                agilityText.text = $"{Mathf.FloorToInt(heroData.CurrentAgility)}";
+            if (strengthScalingText != null)
+                strengthScalingText.text = $"+{Mathf.FloorToInt(heroData.StrengthScaling)}";
+            if (intelligenceScalingText != null)
+                intelligenceScalingText.text = $"+{Mathf.FloorToInt(heroData.IntelligenceScaling)}";
+            if (agilityScalingText != null)
+                agilityScalingText.text = $"+{Mathf.FloorToInt(heroData.AgilityScaling)}";
+
+            // Actualizar estadísticas derivadas
             if (attackDamageText != null)
-            {
-                attackDamageText.text = $"Attack Damage: {hero.AttackDamage:F0}";
-            }
-
-            // Actualizar velocidad de ataque
+                attackDamageText.text = $"Damage: {heroData.CurrentAttackDamage:F0}";
             if (attackSpeedText != null)
-            {
-                attackSpeedText.text = $"Attack Speed: {hero.AttackSpeed:F2}/s";
-            }
-
-            // Actualizar velocidad de movimiento
+                attackSpeedText.text = $"Attack Speed: {heroData.CurrentAttackSpeed:F2}";
             if (moveSpeedText != null)
-            {
-                moveSpeedText.text = $"Movement Speed: {hero.moveSpeed:F0}";
-            }
-
-            // Actualizar rango de ataque
-            if (attackRangeText != null)
-            {
-                attackRangeText.text = $"Attack Range: {hero.AttackRange:F1}m";
-            }
-
-            // Actualizar armadura
+                moveSpeedText.text = $"Speed: {heroData.MovementSpeed:F0}";
             if (armorText != null)
-            {
-                armorText.text = $"Armor: {hero.armor:F0}";
-            }
-
-            // Actualizar resistencia mágica
+                armorText.text = $"Armor: {heroData.CurrentArmor:F1}";
             if (magicResistanceText != null)
-            {
-                magicResistanceText.text = $"Magic Resistance: {hero.magicResistance:F0}";
-            }
-
-            // Actualizar regeneración de salud (solo el texto, no la visibilidad)
+                magicResistanceText.text = $"Magic Resist: {heroData.CurrentMagicResistance:F1}";
             if (healthRegenText != null)
-            {
-                healthRegenText.text = $"{hero.healthRegenRate:F1}";
-            }
-
-            // Actualizar regeneración de maná (solo el texto, no la visibilidad)
+                healthRegenText.text = $"Health Regen: {heroData.CurrentHealthRegen:F1}/s";
             if (manaRegenText != null)
-            {
-                float manaRegenRate = hero.maxMana * 0.01f; // 1% por segundo
-                manaRegenText.text = $"{manaRegenRate:F1}";
-            }
+                manaRegenText.text = $"Mana Regen: {heroData.CurrentManaRegen:F1}/s";
+
+            // Actualizar nivel
+            if (levelText != null)
+                levelText.text = $"{heroData.CurrentLevel}";
         }
         
         /// <summary>

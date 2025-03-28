@@ -305,72 +305,139 @@ namespace Photon.Pun.Demo.Asteroids
 
         private void CreateDefaultHeroes()
         {
-            // Crear algunos héroes por defecto con habilidades
-            
-            // Guerrero
-            HeroData warrior = new HeroData 
-            { 
-                Id = 0, 
-                Name = "Guerrero", 
-                Description = "Tanque con alta vida y resistencia",
-                AvatarSprite = null,
-                IconSprite = null,
-                Health = 1000,
-                Mana = 400,
-                HeroType = "Tanque",
-                AttackDamage = 80,
-                AttackSpeed = 0.8f,
-                MovementSpeed = 340,
-                Armor = 30,
-                MagicResistance = 25
+            // Crear un héroe de fuerza
+            HeroData strengthHero = new HeroData
+            {
+                Id = 0,
+                Name = "Guerrero",
+                Description = "Un guerrero fuerte y resistente",
+                PrefabName = "Warrior",
+                
+                // Atributos base
+                BaseStrength = 25f,
+                BaseIntelligence = 15f,
+                BaseAgility = 20f,
+                PrimaryAttribute = "Strength",
+                
+                // Escalados
+                StrengthScaling = 2.5f,
+                IntelligenceScaling = 1.5f,
+                AgilityScaling = 1.5f,
+                
+                // Estadísticas derivadas
+                HealthPerStrength = 20f,
+                ManaPerIntelligence = 10f,
+                ArmorPerAgility = 0.5f,
+                AttackDamagePerStrength = 1.5f,
+                AttackDamagePerIntelligence = 0.5f,
+                AttackDamagePerAgility = 0.5f,
+                AttackSpeedPerAgility = 0.01f,
+                MagicResistancePerIntelligence = 0.5f,
+                HealthRegenPerStrength = 0.1f,
+                ManaRegenPerIntelligence = 0.05f,
+                MovementSpeed = 350f,
+                RespawnTime = 5.0f,
+                
+                // Sistema de niveles
+                MaxLevel = 18,
+                BaseExperience = 100f,
+                ExperienceScaling = 1.5f,
+                SkillPointsPerLevel = 1,
+                CurrentLevel = 1,
+                CurrentExperience = 0,
+                AvailableSkillPoints = 0
             };
-            
-            // Añadir habilidades...
-            
-            // Mago
-            HeroData mage = new HeroData 
-            { 
-                Id = 1, 
-                Name = "Mago", 
-                Description = "Especialista en daño mágico a distancia",
-                AvatarSprite = null,
-                IconSprite = null,
-                Health = 650,
-                Mana = 800,
-                HeroType = "Daño Mágico",
-                AttackDamage = 60,
-                AttackSpeed = 0.6f,
-                MovementSpeed = 330,
-                Armor = 15,
-                MagicResistance = 30
+            AvailableHeroes.Add(strengthHero);
+
+            // Crear un héroe de inteligencia
+            HeroData intelligenceHero = new HeroData
+            {
+                Id = 1,
+                Name = "Mago",
+                Description = "Un poderoso mago con gran control mágico",
+                PrefabName = "Mage",
+                
+                // Atributos base
+                BaseStrength = 15f,
+                BaseIntelligence = 25f,
+                BaseAgility = 20f,
+                PrimaryAttribute = "Intelligence",
+                
+                // Escalados
+                StrengthScaling = 1.5f,
+                IntelligenceScaling = 2.5f,
+                AgilityScaling = 1.5f,
+                
+                // Estadísticas derivadas
+                HealthPerStrength = 15f,
+                ManaPerIntelligence = 15f,
+                ArmorPerAgility = 0.5f,
+                AttackDamagePerStrength = 0.5f,
+                AttackDamagePerIntelligence = 1.5f,
+                AttackDamagePerAgility = 0.5f,
+                AttackSpeedPerAgility = 0.01f,
+                MagicResistancePerIntelligence = 0.8f,
+                HealthRegenPerStrength = 0.05f,
+                ManaRegenPerIntelligence = 0.1f,
+                MovementSpeed = 350f,
+                RespawnTime = 5.0f,
+                
+                // Sistema de niveles
+                MaxLevel = 18,
+                BaseExperience = 100f,
+                ExperienceScaling = 1.5f,
+                SkillPointsPerLevel = 1,
+                CurrentLevel = 1,
+                CurrentExperience = 0,
+                AvailableSkillPoints = 0
             };
-            
-            // Añadir habilidades...
-            
-            // Arquero
-            HeroData archer = new HeroData 
-            { 
-                Id = 2, 
-                Name = "Arquero", 
-                Description = "Daño físico a distancia con alta velocidad de ataque",
-                AvatarSprite = null,
-                IconSprite = null,
-                Health = 700,
-                Mana = 500,
-                HeroType = "Daño Físico",
-                AttackDamage = 75,
-                AttackSpeed = 1.2f,
-                MovementSpeed = 345,
-                Armor = 20,
-                MagicResistance = 20
+            AvailableHeroes.Add(intelligenceHero);
+
+            // Crear un héroe de agilidad
+            HeroData agilityHero = new HeroData
+            {
+                Id = 2,
+                Name = "Asesino",
+                Description = "Un asesino rápido y ágil",
+                PrefabName = "Assassin",
+                
+                // Atributos base
+                BaseStrength = 20f,
+                BaseIntelligence = 15f,
+                BaseAgility = 25f,
+                PrimaryAttribute = "Agility",
+                
+                // Escalados
+                StrengthScaling = 1.5f,
+                IntelligenceScaling = 1.5f,
+                AgilityScaling = 2.5f,
+                
+                // Estadísticas derivadas
+                HealthPerStrength = 15f,
+                ManaPerIntelligence = 10f,
+                ArmorPerAgility = 0.8f,
+                AttackDamagePerStrength = 0.5f,
+                AttackDamagePerIntelligence = 0.5f,
+                AttackDamagePerAgility = 1.5f,
+                AttackSpeedPerAgility = 0.02f,
+                MagicResistancePerIntelligence = 0.5f,
+                HealthRegenPerStrength = 0.05f,
+                ManaRegenPerIntelligence = 0.05f,
+                MovementSpeed = 350f,
+                RespawnTime = 5.0f,
+                
+                // Sistema de niveles
+                MaxLevel = 18,
+                BaseExperience = 100f,
+                ExperienceScaling = 1.5f,
+                SkillPointsPerLevel = 1,
+                CurrentLevel = 1,
+                CurrentExperience = 0,
+                AvailableSkillPoints = 0
             };
-            
-            // Añadir habilidades...
-            
-            // Añadir los héroes a la lista
-            AvailableHeroes.Add(warrior);
-            AvailableHeroes.Add(mage);
-            AvailableHeroes.Add(archer);
+            AvailableHeroes.Add(agilityHero);
+
+            Debug.Log($"Se han creado {AvailableHeroes.Count} héroes por defecto.");
         }
 
         private void PopulateHeroGrid()

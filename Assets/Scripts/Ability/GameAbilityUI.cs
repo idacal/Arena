@@ -19,6 +19,9 @@ namespace Photon.Pun.Demo.Asteroids
             public TMP_Text manaCostText;      // Texto para mostrar costo de maná
             public TMP_Text abilityNameText;   // Texto para mostrar nombre de la habilidad
             public TMP_Text abilityInfoText;   // Texto para mostrar información adicional (duración, daño, rango)
+            public TMP_Text abilityLevelText;  // Texto para mostrar el nivel actual de la habilidad
+            public TMP_Text levelUpText;       // Texto para mostrar puntos disponibles
+            public Button levelUpButton;       // Botón para subir de nivel
             public Button abilityButton;       // Botón para activar la habilidad
             public int slotIndex;              // Índice del slot correspondiente
         }
@@ -255,6 +258,37 @@ namespace Photon.Pun.Demo.Asteroids
                     uiSlot.abilityInfoText = text;
                     DebugLog($"Asignado AbilityInfoText: {componentName}");
                 }
+                else if (componentName.Contains("LevelText") || componentName.Contains("AbilityLevel"))
+                {
+                    uiSlot.abilityLevelText = text;
+                    DebugLog($"Asignado AbilityLevelText: {componentName}");
+                }
+                else if (componentName.Contains("LevelUP_txt"))
+                {
+                    uiSlot.levelUpText = text;
+                    DebugLog($"Asignado LevelUpText: {componentName}");
+                }
+            }
+            
+            // Buscar el botón de subir de nivel
+            Button[] allButtons = slotObject.GetComponentsInChildren<Button>(true);
+            foreach (Button button in allButtons)
+            {
+                string buttonName = button.gameObject.name;
+                if (buttonName.Contains("LevelUP"))
+                {
+                    uiSlot.levelUpButton = button;
+                    DebugLog($"Asignado LevelUpButton: {buttonName}");
+                    
+                    // Configurar el listener del botón
+                    int slotIndex = uiSlot.slotIndex; // Renombramos la variable para evitar el conflicto
+                    button.onClick.AddListener(() => OnLevelUpButtonClicked(slotIndex));
+                }
+                else if (buttonName.Contains("AbilityButton"))
+                {
+                    uiSlot.abilityButton = button;
+                    DebugLog($"Asignado AbilityButton: {buttonName}");
+                }
             }
             
             // Si no encontramos específicamente el AbilityNameText, buscar por contenido
@@ -269,7 +303,8 @@ namespace Photon.Pun.Demo.Asteroids
                     if (text != uiSlot.hotkeyText && 
                         text != uiSlot.cooldownText && 
                         text != uiSlot.manaCostText &&
-                        text != uiSlot.abilityInfoText)
+                        text != uiSlot.abilityInfoText &&
+                        text != uiSlot.abilityLevelText)
                     {
                         uiSlot.abilityNameText = text;
                         DebugLog($"Usando texto sin asignar como AbilityNameText: {text.gameObject.name}");
@@ -407,18 +442,32 @@ namespace Photon.Pun.Demo.Asteroids
             {
                 uiSlot.abilityNameText.text = abilityName;
                 DebugLog($"Ability name configurado para {abilityName}");
-                
-                // Hacer un log del estado del texto después de configurarlo
-                DebugLog($"AbilityNameText después de configurar: text='{uiSlot.abilityNameText.text}', " +
-                      $"enabled={uiSlot.abilityNameText.enabled}, " +
-                      $"gameObject.active={uiSlot.abilityNameText.gameObject.activeSelf}, " +
-                      $"color={uiSlot.abilityNameText.color}, " +
-                      $"alpha={uiSlot.abilityNameText.color.a}, " +
-                      $"fontSize={uiSlot.abilityNameText.fontSize}");
             }
-            else
+            
+            // Configurar texto de nivel de habilidad
+            if (uiSlot.abilityLevelText != null)
             {
-                DebugLog($"AbilityNameText es nulo para {abilityName}, no se puede configurar el nombre", true);
+                uiSlot.abilityLevelText.text = abilityData.abilityData.CurrentLevel.ToString();
+                DebugLog($"Ability level configurado para {abilityName}: {abilityData.abilityData.CurrentLevel}");
+            }
+            
+            // Configurar botón y texto de subir de nivel
+            if (uiSlot.levelUpButton != null)
+            {
+                // El botón solo está activo si hay puntos disponibles y la habilidad no está al máximo nivel
+                bool canLevelUp = heroBase != null && 
+                                 heroBase.AvailableSkillPoints > 0 && 
+                                 abilityData.abilityData.CurrentLevel < abilityData.abilityData.MaxLevel;
+                
+                uiSlot.levelUpButton.interactable = canLevelUp;
+                DebugLog($"LevelUpButton configurado para {abilityName}: interactable={canLevelUp}");
+            }
+
+            if (uiSlot.levelUpText != null)
+            {
+                // Mostrar puntos disponibles
+                uiSlot.levelUpText.text = heroBase != null ? heroBase.AvailableSkillPoints.ToString() : "0";
+                DebugLog($"LevelUpText configurado para {abilityName}: {heroBase?.AvailableSkillPoints ?? 0} puntos disponibles");
             }
             
             // Configurar texto de información adicional (daño, duración, rango)
@@ -576,6 +625,12 @@ namespace Photon.Pun.Demo.Asteroids
                     }
                 }
                 
+                // Actualizar texto de nivel de habilidad
+                if (uiSlot.abilityLevelText != null)
+                {
+                    uiSlot.abilityLevelText.text = abilityData.abilityData.CurrentLevel.ToString();
+                }
+                
                 // Actualizar efecto visual si no hay suficiente maná
                 bool enoughMana = heroBase != null && heroBase.currentMana >= abilityData.abilityData.ManaCost;
                 
@@ -652,6 +707,22 @@ namespace Photon.Pun.Demo.Asteroids
             }
             
             return null;
+        }
+
+        /// <summary>
+        /// Maneja el clic en el botón de subir de nivel
+        /// </summary>
+        private void OnLevelUpButtonClicked(int index)
+        {
+            if (abilityController == null || heroBase == null)
+                return;
+                
+            // Intentar subir de nivel la habilidad
+            if (abilityController.LevelUpAbility(index))
+            {
+                // Actualizar la UI para reflejar los cambios
+                UpdateAbilityUI();
+            }
         }
     }
 }

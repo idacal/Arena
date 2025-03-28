@@ -390,6 +390,58 @@ namespace Photon.Pun.Demo.Asteroids
             return 0f;
         }
         
+        /// <summary>
+        /// Intenta subir de nivel una habilidad
+        /// </summary>
+        public bool LevelUpAbility(int abilityIndex)
+        {
+            if (!photonView.IsMine || abilityIndex < 0 || abilityIndex >= abilitySlots.Count)
+                return false;
+
+            var abilitySlot = abilitySlots[abilityIndex];
+            if (abilitySlot == null || abilitySlot.abilityData == null)
+                return false;
+
+            // Verificar si el héroe tiene puntos de habilidad disponibles
+            if (heroBase == null || !heroBase.UseSkillPoint())
+                return false;
+
+            // Intentar subir de nivel la habilidad
+            if (abilitySlot.abilityData.TryUpgrade(heroBase.CurrentLevel, 1))
+            {
+                // Actualizar la UI
+                if (gameAbilityUI != null)
+                {
+                    gameAbilityUI.RefreshAbilityUI();
+                }
+                return true;
+            }
+
+            // Si no se pudo subir de nivel, devolver el punto de habilidad
+            heroBase.AddSkillPoint();
+            return false;
+        }
+        
+        /// <summary>
+        /// Actualiza la UI de habilidades
+        /// </summary>
+        public void RefreshAbilityUI()
+        {
+            if (gameAbilityUI != null)
+            {
+                gameAbilityUI.RefreshAbilityUI();
+            }
+            else
+            {
+                // Buscar la UI si no está asignada
+                gameAbilityUI = GetComponentInChildren<GameAbilityUI>();
+                if (gameAbilityUI != null)
+                {
+                    gameAbilityUI.RefreshAbilityUI();
+                }
+            }
+        }
+        
         #region PHOTON RPC
         
         [PunRPC]

@@ -18,14 +18,29 @@ MonoBehaviour:
   IconSprite: {fileID: 21300000, guid: 8ecf2a832293df742aa199869f034164, type: 3}
   AvatarSprite: {fileID: 21300000, guid: 8c427c2194647c94c81be5798c7ff648, type: 3}
   PrefabName: Albert, the farmer
-  Health: 150
-  Mana: 200
-  HeroType: Farmer
-  AttackDamage: 10
-  AttackSpeed: 0.5
+  BaseStrength: 20
+  BaseIntelligence: 20
+  BaseAgility: 20
+  PrimaryAttribute: Agility
+  HealthPerStrength: 20
+  ManaPerIntelligence: 10
+  ArmorPerAgility: 0.5
+  AttackDamagePerStrength: 1
+  AttackDamagePerIntelligence: 1
+  AttackDamagePerAgility: 1
+  AttackSpeedPerAgility: 0.01
+  MagicResistancePerIntelligence: 0.5
+  HealthRegenPerStrength: 0.1
+  ManaRegenPerIntelligence: 0.05
   MovementSpeed: 350
-  Armor: 15
-  MagicResistance: 20
+  RespawnTime: 5
+  MaxLevel: 18
+  BaseExperience: 100
+  ExperienceScaling: 1.5
+  SkillPointsPerLevel: 1
+  StrengthScaling: 2
+  IntelligenceScaling: 2
+  AgilityScaling: 2
   Abilities:
   - {fileID: 11400000, guid: d720a7199df4c084885c1c8819a4163f, type: 2}
   - {fileID: 11400000, guid: 4b22962c5942a3b478342c7957f73406, type: 2}

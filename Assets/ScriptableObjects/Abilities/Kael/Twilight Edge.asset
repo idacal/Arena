@@ -22,5 +22,14 @@ MonoBehaviour:
   DamageAmount: 100
   Duration: 3
   Range: 5
+  DamageScaling: 0
+  DurationScaling: 0
+  RangeScaling: 0
+  CooldownScaling: 0
+  ManaCostScaling: 0
+  MaxLevel: 5
+  LevelRequirements: 0100000003000000050000000700000009000000
+  SkillPointCosts: 0100000001000000010000000100000001000000
+  StartingLevel: 0
   AbilityPrefab: {fileID: 0}
   AbilitySound: {fileID: 0}

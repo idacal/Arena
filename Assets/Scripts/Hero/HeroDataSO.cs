@@ -20,18 +20,36 @@ namespace Photon.Pun.Demo.Asteroids
         
         public string PrefabName;
 
-        [Header("Estadísticas")]
-        public int Health = 1000;
-        public int Mana = 500;
-        public string HeroType = "Luchador";
-        public float AttackDamage = 60;
-        public float AttackSpeed = 1.0f;
-        public float MovementSpeed = 350;
-        public float Armor = 20;
-        public float MagicResistance = 20;
-        public float HealthRegenRate = 1.0f;
-        public float ManaRegenRate = 0.01f;  // 1% por segundo por defecto
-        public float RespawnTime = 5.0f;
+        [Header("Estadísticas Base")]
+        public float BaseStrength = 20f;      // Fuerza base
+        public float BaseIntelligence = 20f;  // Inteligencia base
+        public float BaseAgility = 20f;       // Agilidad base
+        public string PrimaryAttribute = "Strength"; // Atributo principal (Strength, Intelligence, Agility)
+        
+        [Header("Estadísticas Derivadas")]
+        public float HealthPerStrength = 20f;     // Vida por punto de fuerza
+        public float ManaPerIntelligence = 10f;   // Maná por punto de inteligencia
+        public float ArmorPerAgility = 0.5f;      // Armadura por punto de agilidad
+        public float AttackDamagePerStrength = 1f;    // Daño de ataque por punto de fuerza
+        public float AttackDamagePerIntelligence = 1f; // Daño de ataque por punto de inteligencia
+        public float AttackDamagePerAgility = 1f;      // Daño de ataque por punto de agilidad
+        public float AttackSpeedPerAgility = 0.01f;    // Velocidad de ataque por punto de agilidad
+        public float MagicResistancePerIntelligence = 0.5f; // Resistencia mágica por punto de inteligencia
+        public float HealthRegenPerStrength = 0.1f;    // Regeneración de vida por punto de fuerza
+        public float ManaRegenPerIntelligence = 0.05f; // Regeneración de maná por punto de inteligencia
+        public float MovementSpeed = 350f;             // Velocidad de movimiento base
+        public float RespawnTime = 5.0f;               // Tiempo de respawn
+
+        [Header("Sistema de Niveles")]
+        public int MaxLevel = 18;
+        public float BaseExperience = 100f;
+        public float ExperienceScaling = 1.5f;
+        public int SkillPointsPerLevel = 1;
+        
+        [Header("Escalado de Atributos por Nivel")]
+        public float StrengthScaling = 2f;        // Fuerza por nivel
+        public float IntelligenceScaling = 2f;    // Inteligencia por nivel
+        public float AgilityScaling = 2f;         // Agilidad por nivel
 
         [Header("Habilidades")]
         public List<AbilitySO> Abilities = new List<AbilitySO>();
@@ -49,17 +67,40 @@ namespace Photon.Pun.Demo.Asteroids
                 IconSprite = this.IconSprite,
                 AvatarSprite = this.AvatarSprite,
                 PrefabName = this.PrefabName,
-                Health = this.Health,
-                Mana = this.Mana,
-                HeroType = this.HeroType,
-                AttackDamage = this.AttackDamage,
-                AttackSpeed = this.AttackSpeed,
+                
+                // Atributos base
+                BaseStrength = this.BaseStrength,
+                BaseIntelligence = this.BaseIntelligence,
+                BaseAgility = this.BaseAgility,
+                PrimaryAttribute = this.PrimaryAttribute,
+                
+                // Escalados de atributos
+                StrengthScaling = this.StrengthScaling,
+                IntelligenceScaling = this.IntelligenceScaling,
+                AgilityScaling = this.AgilityScaling,
+                
+                // Estadísticas derivadas
+                HealthPerStrength = this.HealthPerStrength,
+                ManaPerIntelligence = this.ManaPerIntelligence,
+                ArmorPerAgility = this.ArmorPerAgility,
+                AttackDamagePerStrength = this.AttackDamagePerStrength,
+                AttackDamagePerIntelligence = this.AttackDamagePerIntelligence,
+                AttackDamagePerAgility = this.AttackDamagePerAgility,
+                AttackSpeedPerAgility = this.AttackSpeedPerAgility,
+                MagicResistancePerIntelligence = this.MagicResistancePerIntelligence,
+                HealthRegenPerStrength = this.HealthRegenPerStrength,
+                ManaRegenPerIntelligence = this.ManaRegenPerIntelligence,
                 MovementSpeed = this.MovementSpeed,
-                Armor = this.Armor,
-                MagicResistance = this.MagicResistance,
-                HealthRegenRate = this.HealthRegenRate,
-                ManaRegenRate = this.ManaRegenRate,
-                RespawnTime = this.RespawnTime
+                RespawnTime = this.RespawnTime,
+                
+                // Sistema de niveles
+                MaxLevel = this.MaxLevel,
+                BaseExperience = this.BaseExperience,
+                ExperienceScaling = this.ExperienceScaling,
+                SkillPointsPerLevel = this.SkillPointsPerLevel,
+                CurrentLevel = 1,
+                CurrentExperience = 0,
+                AvailableSkillPoints = 0
             };
 
             // Convertir habilidades
