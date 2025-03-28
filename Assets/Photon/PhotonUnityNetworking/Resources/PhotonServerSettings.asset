@@ -84,6 +84,7 @@ MonoBehaviour:
   - RPC_CreateBombZoneVisual
   - RPC_DestroyScarecrow
   - RPC_ApplySelfKnockback
+  - RPC_PlayDeathSound
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

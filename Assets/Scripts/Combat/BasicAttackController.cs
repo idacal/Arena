@@ -77,15 +77,15 @@ public class BasicAttackController : MonoBehaviourPun
         {
             Debug.Log("Clic derecho detectado");
             
-            // Raycast para detectar enemigo bajo el cursor
+            // Raycast para detectar objetivo bajo el cursor
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             RaycastHit hit;
             
-            // Usar la máscara de layer para jugadores
-            int playerLayerMask = LayerManager.GetPlayerLayerMask();
-            Debug.Log($"Buscando jugadores con layer mask: {playerLayerMask}, mi tag: {gameObject.tag}");
+            // Usar la máscara de layer para jugadores y creeps
+            int targetLayerMask = LayerManager.GetPlayerLayerMask() | LayerManager.GetCreepLayerMask();
+            Debug.Log($"Buscando objetivos con layer mask: {targetLayerMask}, mi tag: {gameObject.tag}");
             
-            if (Physics.Raycast(ray, out hit, 100f, playerLayerMask))
+            if (Physics.Raycast(ray, out hit, 100f, targetLayerMask))
             {
                 Debug.Log($"Hit detectado en: {hit.collider.gameObject.name}, layer: {hit.collider.gameObject.layer}, tag: {hit.collider.gameObject.tag}");
                 
@@ -96,37 +96,40 @@ public class BasicAttackController : MonoBehaviourPun
                     return;
                 }
                 
-                // Verificar si es un enemigo basado en tags
-                if (!LayerManager.IsEnemy(gameObject, hit.collider.gameObject))
+                // Verificar si es un objetivo válido
+                if (!IsValidTarget(hit.collider.gameObject))
                 {
-                    Debug.Log($"No puedo atacar a {hit.collider.gameObject.name} porque no es enemigo (tags: {gameObject.tag} vs {hit.collider.gameObject.tag})");
+                    Debug.Log($"No puedo atacar a {hit.collider.gameObject.name} porque no es un objetivo válido");
                     return;
                 }
                 
+                // Intentar obtener el componente HeroBase o NeutralCreep
                 HeroBase targetHero = hit.collider.GetComponent<HeroBase>();
-                if (targetHero != null)
+                NeutralCreep targetCreep = hit.collider.GetComponent<NeutralCreep>();
+                
+                if (targetHero != null || targetCreep != null)
                 {
-                    Debug.Log($"Objetivo detectado: {targetHero.heroName}, tag: {hit.collider.gameObject.tag}");
+                    Debug.Log($"Objetivo detectado: {(targetHero != null ? targetHero.heroName : targetCreep.creepName)}, tag: {hit.collider.gameObject.tag}");
                     // Atacar al objetivo
-                    bool attackSuccess = TryAttack(targetHero.transform);
+                    bool attackSuccess = TryAttack(hit.collider.transform);
                     Debug.Log($"Resultado del ataque: {(attackSuccess ? "ÉXITO" : "FALLIDO")}");
                     
                     // También establecerlo como objetivo actual en el sistema de targeting
                     TargetingSystem targetingSystem = GetComponent<TargetingSystem>();
                     if (targetingSystem != null)
                     {
-                        bool targetSuccess = targetingSystem.SetTarget(targetHero.transform);
+                        bool targetSuccess = targetingSystem.SetTarget(hit.collider.transform);
                         Debug.Log($"Establecer como objetivo: {(targetSuccess ? "ÉXITO" : "FALLIDO")}");
                     }
                 }
                 else
                 {
-                    Debug.Log("El objeto golpeado no tiene componente HeroBase");
+                    Debug.Log("El objeto golpeado no tiene componente HeroBase ni NeutralCreep");
                 }
             }
             else
             {
-                Debug.Log("El raycast no golpeó ningún enemigo");
+                Debug.Log("El raycast no golpeó ningún objetivo válido");
             }
         }
         
@@ -139,6 +142,27 @@ public class BasicAttackController : MonoBehaviourPun
                 canAttack = true;
             }
         }
+    }
+    
+    private bool IsValidTarget(GameObject target)
+    {
+        if (target == null) return false;
+        
+        // Verificar si es un héroe enemigo
+        HeroBase targetHero = target.GetComponent<HeroBase>();
+        if (targetHero != null)
+        {
+            return LayerManager.IsEnemy(gameObject, target);
+        }
+        
+        // Verificar si es un creep neutral
+        NeutralCreep targetCreep = target.GetComponent<NeutralCreep>();
+        if (targetCreep != null)
+        {
+            return true; // Siempre podemos atacar a creeps neutrales
+        }
+        
+        return false;
     }
     
     /// <summary>
@@ -240,7 +264,6 @@ public class BasicAttackController : MonoBehaviourPun
         OnShoot();
     }
     
-    // Este método ahora es privado ya que no será llamado por un Animation Event
     private void OnShoot()
     {
         if (currentAttackTarget == null) return;
@@ -351,16 +374,23 @@ public class BasicAttackController : MonoBehaviourPun
             }
         }
         
-        // Aplicar daño directamente
-        HeroBase targetHeroBase = target.GetComponent<HeroBase>();
-        if (targetHeroBase != null)
+        // Aplicar daño según el tipo de objetivo
+        HeroBase targetHero = target.GetComponent<HeroBase>();
+        NeutralCreep targetCreep = target.GetComponent<NeutralCreep>();
+        
+        if (targetHero != null)
         {
             // Solo dañar a enemigos (equipos diferentes)
-            if (targetHeroBase.teamId != heroBase.teamId)
+            if (targetHero.teamId != heroBase.teamId)
             {
                 // Usar HeroBase para el ataque directo
-                heroBase.TryBasicAttack(targetHeroBase);
+                heroBase.TryBasicAttack(targetHero);
             }
+        }
+        else if (targetCreep != null)
+        {
+            // Aplicar daño al creep
+            targetCreep.TakeDamage(heroBase.AttackDamage, heroBase);
         }
         
         // Notificar a través de RPC que se realizó un ataque

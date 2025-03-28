@@ -1304,9 +1304,17 @@ namespace Photon.Pun.Demo.Asteroids
         /// <summary>
         /// Otorga experiencia por matar un creep
         /// </summary>
-        public void AwardCreepKillExperience()
+        public void AwardCreepKillExperience(NeutralCreep killedCreep)
         {
-            if (!photonView.IsMine) return;
+            if (!photonView.IsMine || killedCreep == null)
+            {
+                Debug.Log($"[HeroBase] No se otorga XP: IsMine={photonView.IsMine}, Creep={killedCreep != null}");
+                return;
+            }
+            
+            // Usar la experiencia del creep asesinado
+            float creepXP = killedCreep.experienceReward;
+            Debug.Log($"[HeroBase] {heroName} recibirá {creepXP} XP por matar a {killedCreep.creepName}");
             
             // Encontrar héroes aliados cercanos para compartir XP
             var nearbyAllies = Physics.OverlapSphere(transform.position, xpRangeRadius)
@@ -1314,12 +1322,19 @@ namespace Photon.Pun.Demo.Asteroids
                                     .Where(h => h != null && h.teamId == this.teamId)
                                     .ToList();
             
+            Debug.Log($"[HeroBase] Héroes aliados cercanos: {nearbyAllies.Count}");
+            
             // Dividir la XP entre los héroes cercanos
-            float sharedXP = baseCreepXP / nearbyAllies.Count;
+            float sharedXP = creepXP / nearbyAllies.Count;
+            Debug.Log($"[HeroBase] XP compartida: {sharedXP} por héroe");
             
             foreach (var ally in nearbyAllies)
             {
-                ally.GainExperience(sharedXP);
+                if (ally != null)
+                {
+                    ally.GainExperience(sharedXP);
+                    Debug.Log($"[HeroBase] {ally.heroName} recibió {sharedXP} XP");
+                }
             }
         }
         

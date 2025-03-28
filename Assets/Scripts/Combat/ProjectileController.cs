@@ -137,8 +137,9 @@ public class ProjectileController : MonoBehaviourPun
             
         Debug.Log($"Proyectil golpeó a: {other.gameObject.name}, tag: {other.gameObject.tag}");
         
-        // Verificar si es un hero
+        // Verificar si es un hero o un creep
         HeroBase targetHero = other.GetComponent<HeroBase>();
+        NeutralCreep targetCreep = other.GetComponent<NeutralCreep>();
         GameObject hitObject = other.gameObject;
         
         if (targetHero != null)
@@ -162,18 +163,21 @@ public class ProjectileController : MonoBehaviourPun
                 }
             }
         }
-        
-        // Crear efecto de impacto
-        if (hitEffectPrefab != null && PhotonNetwork.IsConnected)
+        else if (targetCreep != null)
         {
-            if (photonView.IsMine)
+            Debug.Log("Golpeó a un creep");
+            
+            // Obtener el héroe que disparó
+            HeroBase shooterHero = shooter?.GetComponent<HeroBase>();
+            if (shooterHero != null)
             {
-                PhotonNetwork.Instantiate(hitEffectPrefab.name, transform.position, Quaternion.identity);
+                Debug.Log($"Aplicando daño de {damage} a {hitObject.name} desde {shooterHero.heroName}");
+                targetCreep.TakeDamage(damage, shooterHero);
             }
-        }
-        else if (hitEffectPrefab != null)
-        {
-            Instantiate(hitEffectPrefab, transform.position, Quaternion.identity);
+            else
+            {
+                Debug.LogError("No se encontró el héroe que disparó el proyectil");
+            }
         }
         
         // Destruir el proyectil al impactar
