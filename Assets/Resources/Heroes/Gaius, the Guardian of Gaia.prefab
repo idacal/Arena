@@ -167,6 +167,40 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   heroId: -1
   heroName: 
+  heroData:
+    Id: 0
+    Name: 
+    Description: 
+    IconSprite: {fileID: 0}
+    AvatarSprite: {fileID: 0}
+    PrefabName: 
+    BaseStrength: 0
+    BaseIntelligence: 0
+    BaseAgility: 0
+    PrimaryAttribute: 
+    StrengthScaling: 0
+    IntelligenceScaling: 0
+    AgilityScaling: 0
+    HealthPerStrength: 0
+    ManaPerIntelligence: 0
+    ArmorPerAgility: 0
+    AttackDamagePerStrength: 0
+    AttackDamagePerIntelligence: 0
+    AttackDamagePerAgility: 0
+    AttackSpeedPerAgility: 0
+    MagicResistancePerIntelligence: 0
+    HealthRegenPerStrength: 0
+    ManaRegenPerIntelligence: 0
+    MovementSpeed: 0
+    RespawnTime: 0
+    MaxLevel: 0
+    BaseExperience: 0
+    ExperienceScaling: 0
+    SkillPointsPerLevel: 0
+    CurrentLevel: 0
+    CurrentExperience: 0
+    AvailableSkillPoints: 0
+    Abilities: []
   teamId: 0
   teamRedMaterial: {fileID: 2100000, guid: 04e621de2731cac4a9abcd4c2e3a31c6, type: 2}
   teamBlueMaterial: {fileID: 2100000, guid: b9d43d412abe0234bacffba7890ee67c, type: 2}
@@ -197,6 +231,15 @@ MonoBehaviour:
   deathEffectPrefab: {fileID: 0}
   damageSound: {fileID: 0}
   deathSound: {fileID: 0}
+  _currentLevel: 1
+  baseCreepXP: 25
+  baseHeroKillXP: 100
+  baseAssistXP: 50
+  baseTowerXP: 150
+  heroLevelXPMultiplier: 0.1
+  assistXPMultiplier: 0.5
+  xpRangeRadius: 1000
+  _availableSkillPoints: 1
 --- !u!114 &5826635703823206055
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -100,12 +100,16 @@ namespace Photon.Pun.Demo.Asteroids
                     UpdateExperienceBar(0, hero.CurrentExperience, experienceNeeded);
                 }
                 
-                // Suscribirse al evento de experiencia
+                // Suscribirse a los eventos
                 hero.OnExperienceGained += UpdateExperienceBar;
+                hero.OnLevelUp += UpdateLevelText;
+                
+                // Actualizar el texto del nivel inicial
+                UpdateLevelText(hero.CurrentLevel);
                 
                 if (playerNameText != null && hero.photonView != null && hero.photonView.Owner != null)
                 {
-                    SetPlayerName(hero.photonView.Owner.NickName);
+                    playerNameText.text = hero.photonView.Owner.NickName;
                 }
                 
                 if (heroNameText != null)
@@ -433,7 +437,10 @@ namespace Photon.Pun.Demo.Asteroids
 
             // Actualizar nivel
             if (levelText != null)
-                levelText.text = $"{heroData.CurrentLevel}";
+            {
+                levelText.text = $"Nivel {hero.CurrentLevel}";
+                Debug.Log($"[HeroUIController] Actualizando texto del nivel a: {hero.CurrentLevel}");
+            }
         }
         
         /// <summary>
@@ -614,11 +621,21 @@ namespace Photon.Pun.Demo.Asteroids
             }
         }
 
+        private void UpdateLevelText(int newLevel)
+        {
+            if (levelText != null)
+            {
+                levelText.text = $"{newLevel}";
+                Debug.Log($"[HeroUIController] Actualizando texto del nivel a: {newLevel}");
+            }
+        }
+
         private void OnDestroy()
         {
             if (heroOwner != null)
             {
                 heroOwner.OnExperienceGained -= UpdateExperienceBar;
+                heroOwner.OnLevelUp -= UpdateLevelText;
             }
         }
     }

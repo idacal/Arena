@@ -454,6 +454,12 @@ namespace Photon.Pun.Demo.Asteroids
             if (Time.time - lastDamageTime < damageImmunityTime) return;
             lastDamageTime = Time.time;
             
+            // Establecer el atacante como objetivo actual
+            if (attacker != null)
+            {
+                currentTarget = attacker;
+            }
+            
             // Solo enviar al Master Client para procesar el daño
             if (attacker != null)
             {
@@ -541,6 +547,12 @@ namespace Photon.Pun.Demo.Asteroids
             // Notificar a los listeners
             OnHeroDeath?.Invoke(this);
             OnHeroDied?.Invoke(this);
+
+            // Otorgar experiencia al héroe que causó la muerte
+            if (currentTarget != null)
+            {
+                currentTarget.AwardHeroKillExperience(this);
+            }
         }
         
         private IEnumerator RespawnAfterDelay()
@@ -1376,9 +1388,24 @@ namespace Photon.Pun.Demo.Asteroids
             // Verificar si subimos de nivel
             while (_currentExperience >= experienceNeeded && CurrentLevel < heroData.MaxLevel)
             {
-                _currentExperience -= experienceNeeded;
-                LevelUp();
+                _currentExperience = 0; // Reiniciar la experiencia a 0 al subir de nivel
+                CurrentLevel++;
+                _currentLevel = CurrentLevel;
+                
+                // Otorgar puntos de habilidad
+                AddSkillPoint(heroData.SkillPointsPerLevel);
+                
+                // Actualizar stats basados en el nuevo nivel
+                UpdateStatsForLevel();
+                
+                // Notificar la subida de nivel
+                OnLevelUp?.Invoke(CurrentLevel);
+                
+                // Calcular la experiencia necesaria para el siguiente nivel
                 experienceNeeded = GetExperienceForNextLevel();
+                
+                // Notificar la actualización de la UI con la nueva experiencia (0)
+                OnExperienceGained?.Invoke(0, 0, experienceNeeded);
             }
             
             // Si estamos al máximo nivel, mantener la experiencia al máximo
@@ -1394,24 +1421,6 @@ namespace Photon.Pun.Demo.Asteroids
         public float GetExperienceForNextLevel()
         {
             return heroData.BaseExperience * Mathf.Pow(heroData.ExperienceScaling, CurrentLevel - 1);
-        }
-        
-        /// <summary>
-        /// Maneja la subida de nivel
-        /// </summary>
-        private void LevelUp()
-        {
-            CurrentLevel++;
-            _currentLevel = CurrentLevel;
-            
-            // Otorgar puntos de habilidad
-            AddSkillPoint(heroData.SkillPointsPerLevel);
-            
-            // Actualizar stats basados en el nuevo nivel
-            UpdateStatsForLevel();
-            
-            // Notificar la subida de nivel
-            OnLevelUp?.Invoke(CurrentLevel);
         }
         
         /// <summary>
