@@ -711,15 +711,15 @@ MonoBehaviour:
   currentHealth: 0
   attackDamage: 10
   attackSpeed: 1
-  moveSpeed: 3
+  moveSpeed: 4.5
   armor: 0
   magicResistance: 0
   experienceReward: 15
   goldReward: 10
   healthRestore: 0
   manaRestore: 0
-  aggroRange: 4
-  attackRange: 1.5
+  aggroRange: 5
+  attackRange: 2
   respawnTime: 10
   patrolRadius: 5
   minPatrolTime: 3
