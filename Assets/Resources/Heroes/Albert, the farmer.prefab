@@ -2925,7 +2925,7 @@ MonoBehaviour:
   projectilePrefab: {fileID: 6741892917690559728, guid: 290b32eb675521a49bc8d38ea510788b, type: 3}
   projectileSpawnPoint: {fileID: 8650101137014165894}
   muzzleFlashPrefab: {fileID: 0}
-  attackSound: {fileID: 0}
+  attackSound: {fileID: 8300000, guid: e1023eb4bb06a5246abb78910c0d06ca, type: 3}
   meleeAttackEffectPrefab: {fileID: 0}
 --- !u!114 &3489095124540123679
 MonoBehaviour:

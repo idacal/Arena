@@ -438,7 +438,7 @@ namespace Photon.Pun.Demo.Asteroids
             // Actualizar nivel
             if (levelText != null)
             {
-                levelText.text = $"Nivel {hero.CurrentLevel}";
+                levelText.text = $"{hero.CurrentLevel}";
                 Debug.Log($"[HeroUIController] Actualizando texto del nivel a: {hero.CurrentLevel}");
             }
         }

@@ -29,6 +29,9 @@ namespace Photon.Pun.Demo.Asteroids
         [Header("Debug")]
         public bool debugMode = false;
         
+        [Header("Audio")]
+        private AudioSource audioSource;
+        
         // Referencias privadas
         private HeroBase heroBase;
         private Camera mainCamera;
@@ -40,6 +43,16 @@ namespace Photon.Pun.Demo.Asteroids
         {
             // Obtener componentes
             heroBase = GetComponent<HeroBase>();
+            
+            // Configurar AudioSource
+            audioSource = GetComponent<AudioSource>();
+            if (audioSource == null)
+            {
+                audioSource = gameObject.AddComponent<AudioSource>();
+                audioSource.spatialBlend = 1.0f;  // Sonido 3D
+                audioSource.minDistance = 2.0f;
+                audioSource.maxDistance = 20.0f;
+            }
         }
         
         void Start()
@@ -547,19 +560,20 @@ namespace Photon.Pun.Demo.Asteroids
                 moveController.PlayAttackAnimation();
             }
             
-            // Reproducir efectos de sonido si es el cliente local
-            if (photonView.IsMine)
+            // Reproducir efectos de sonido para todos los clientes
+            if (slot.abilityData != null && slot.abilityData.AbilitySound != null)
             {
-                // Reproducir sonido de habilidad si está configurado
-                if (slot.abilityData != null && slot.abilityData.AbilitySound != null)
+                if (audioSource != null)
                 {
-                    AudioSource audioSource = GetComponent<AudioSource>();
-                    if (audioSource == null)
-                    {
-                        audioSource = gameObject.AddComponent<AudioSource>();
-                    }
-                    
                     audioSource.PlayOneShot(slot.abilityData.AbilitySound);
+                    if (debugMode)
+                    {
+                        Debug.Log($"Reproduciendo sonido de habilidad: {slot.abilityData.Name}");
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning("AudioSource no encontrado para reproducir sonido de habilidad");
                 }
             }
         }
