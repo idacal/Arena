@@ -9,6 +9,7 @@ TagManager:
   - BlueTeam
   - RedTeam
   - SpawnPoint
+  - Trees
   layers:
   - Default
   - TransparentFX

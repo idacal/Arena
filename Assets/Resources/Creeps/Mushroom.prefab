@@ -14,15 +14,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: ddb95ed53876a924694d8ce9c41edcab, type: 3}
       propertyPath: m_LocalScale.x
-      value: 0.5
+      value: 0.55
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: ddb95ed53876a924694d8ce9c41edcab, type: 3}
       propertyPath: m_LocalScale.y
-      value: 0.5
+      value: 0.55
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: ddb95ed53876a924694d8ce9c41edcab, type: 3}
       propertyPath: m_LocalScale.z
-      value: 0.5
+      value: 0.55
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: ddb95ed53876a924694d8ce9c41edcab, type: 3}
       propertyPath: m_LocalPosition.x
@@ -711,7 +711,7 @@ MonoBehaviour:
   currentHealth: 0
   attackDamage: 10
   attackSpeed: 1
-  moveSpeed: 4.5
+  moveSpeed: 3
   armor: 0
   magicResistance: 0
   experienceReward: 15

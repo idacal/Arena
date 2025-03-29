@@ -53,25 +53,25 @@ MonoBehaviour:
   fogColor: {r: 0.019607844, g: 0.05882353, b: 0.09803922, a: 1}
   fogPlaneAlpha: 1
   fogLerpSpeed: 2.5
-  fogPlaneScale: {x: 5, y: 1, z: 5}
+  fogPlaneScale: {x: 4, y: 1, z: 4}
   keepRevealedTiles: 0
   revealedTileOpacity: 0.5
   fogPlaneTextureLerpTarget: {fileID: 0}
   fogPlaneTextureLerpBuffer: {fileID: 0}
-  LevelDataToLoad: {fileID: 4900000, guid: c0eadd96a9180bb43b99f45d5c475b59, type: 3}
+  LevelDataToLoad: {fileID: 0}
   saveDataOnScan: 1
-  levelNameToSave: GameplayScene_pro
-  levelDimensionX: 26
-  levelDimensionY: 37
+  levelNameToSave: GPS_Q
+  levelDimensionX: 31
+  levelDimensionY: 31
   unitScale: 1
   scanSpacingPerUnit: 0.25
   rayStartHeight: 3
   rayMaxDistance: 5
   obstacleLayers:
     serializedVersion: 2
-    m_Bits: 4096
+    m_Bits: 16
   ignoreTriggers: 1
-  drawGizmos: 0
+  drawGizmos: 1
   LogOutOfRange: 0
 --- !u!114 &6902294057935951343
 MonoBehaviour:
