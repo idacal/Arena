@@ -188,14 +188,16 @@ namespace Photon.Pun.Demo.Asteroids
         {
             if (photonView.IsMine)
             {
-                animator = GetComponentInChildren<Animator>();
+                // Inicializar el animator
+                animator = GetComponent<Animator>();
+                if (animator == null)
+                {
+                    Debug.LogError($"[HeroBase] No se encontró el componente Animator en {gameObject.name}");
+                    return;
+                }
+
+                // Inicializar el controlador de UI
                 uiController = GetComponent<HeroUIController>();
-                
-                // Configuración inicial
-                currentHealth = maxHealth;
-                currentMana = maxMana;
-                
-                // Inicializar controlador de UI si no existe
                 if (uiController == null && uiCanvasPrefab != null)
                 {
                     GameObject uiCanvas = Instantiate(uiCanvasPrefab, transform);
@@ -205,29 +207,23 @@ namespace Photon.Pun.Demo.Asteroids
                         uiController.Initialize(this);
                     }
                 }
-                
-                // Verificar que el NavMeshAgent está activado (muy importante para la colisión)
+
+                // Verificar NavMeshAgent
                 UnityEngine.AI.NavMeshAgent navAgent = GetComponent<UnityEngine.AI.NavMeshAgent>();
-                if (navAgent != null)
+                if (navAgent == null)
                 {
-                    if (!navAgent.enabled)
-                    {
-                        navAgent.enabled = true;
-                        Debug.LogWarning($"[HeroBase] NavMeshAgent estaba desactivado en Start, activándolo para {heroName}");
-                    }
-                    
-                    Debug.Log($"[HeroBase] Estado de NavMeshAgent en Start: {(navAgent.enabled ? "ACTIVO" : "INACTIVO")} - {heroName}");
+                    Debug.LogError($"[HeroBase] No se encontró el componente NavMeshAgent en {gameObject.name}");
+                    return;
                 }
-                else
-                {
-                    Debug.LogError($"[HeroBase] ¡Error grave! No se encontró NavMeshAgent en {heroName}");
-                }
-                
+
+                // Configuración inicial
+                currentHealth = maxHealth;
+                currentMana = maxMana;
+
                 // Verificar que el teamId sea correcto según los datos del jugador
                 Player player = photonView.Owner;
                 if (player != null)
                 {
-                    // Obtener la propiedad de equipo desde el objeto Player (usando la constante correcta)
                     if (player.CustomProperties.TryGetValue(PLAYER_TEAM, out object teamObj))
                     {
                         int networkTeamId = (int)teamObj;
@@ -237,21 +233,14 @@ namespace Photon.Pun.Demo.Asteroids
                             teamId = networkTeamId;
                         }
                     }
-                    else
-                    {
-                        Debug.LogWarning($"[HeroBase] El jugador no tiene configurada la propiedad '{PLAYER_TEAM}'. Usando teamId por defecto: {teamId}");
-                    }
                 }
-                
+
                 // Aplicar color de equipo según teamId
                 ApplyTeamColor();
-                
+
                 // Configurar layer según equipo usando LayerManager
                 LayerManager.SetTeamLayerAndTag(gameObject, teamId);
-                
-                // Validar que los layers existen en el proyecto
-                LayerManager.ValidateLayersAndTags();
-                
+
                 // Si tenemos photonView, sincronizamos la inicialización
                 if (PhotonNetwork.IsConnected)
                 {
@@ -259,9 +248,19 @@ namespace Photon.Pun.Demo.Asteroids
                     photonView.RPC("RPC_SyncTeamConfig", RpcTarget.AllBuffered, teamId);
                     photonView.RPC("RPC_ForceModelUpdate", RpcTarget.OthersBuffered);
                 }
-                
-                // Programar una verificación final del NavMeshAgent
-                Invoke("CheckNavMeshAgentDelayed", 0.5f);
+
+                // Registrar en el sistema de niebla de guerra
+                var fogWarManager = MOBAFogWar.Instance;
+                if (fogWarManager != null)
+                {
+                    fogWarManager.SetLocalPlayerTeam(teamId);
+                    fogWarManager.RegisterHero(this);
+                    Debug.Log($"[HeroBase] Héroe {heroName} registrado en el sistema de niebla de guerra");
+                }
+                else
+                {
+                    Debug.LogError("[HeroBase] No se encontró el MOBAFogWar en la escena!");
+                }
             }
             else
             {
@@ -1458,6 +1457,20 @@ namespace Photon.Pun.Demo.Asteroids
             // Restaurar vida y maná al subir de nivel (opcional, como en DOTA 2)
             currentHealth = maxHealth;
             currentMana = maxMana;
+        }
+
+        private void OnDestroy()
+        {
+            // Desregistrar del sistema de niebla de guerra
+            if (photonView.IsMine)
+            {
+                var fogWarManager = MOBAFogWar.Instance;
+                if (fogWarManager != null)
+                {
+                    fogWarManager.UnregisterHero(this);
+                    Debug.Log($"[HeroBase] Héroe {heroName} desregistrado del sistema de niebla de guerra");
+                }
+            }
         }
     }
 }
