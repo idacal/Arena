@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 5528648639128491474}
   - component: {fileID: 3743436192946859911}
   - component: {fileID: -2121496850688926873}
-  m_Layer: 6
+  m_Layer: 5
   m_Name: Click Indicator
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -127,3 +127,5 @@ MonoBehaviour:
   fadeSpeed: 2
   indicatorColor: {r: 0.2, g: 0.8, b: 0.2, a: 0.5}
   spriteRenderer: {fileID: 0}
+  fadeTime: 0.5
+  displayTime: 1

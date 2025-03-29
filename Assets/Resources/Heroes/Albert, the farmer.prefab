@@ -2603,6 +2603,7 @@ GameObject:
   m_Component:
   - component: {fileID: 186444006395306346}
   - component: {fileID: 1990095753215674147}
+  - component: {fileID: 6395509389728269480}
   - component: {fileID: -2281489205445462793}
   - component: {fileID: -4301948564441146595}
   - component: {fileID: -5398946073904400917}
@@ -2614,7 +2615,7 @@ GameObject:
   - component: {fileID: -6046582980940072358}
   - component: {fileID: 9221196167736871162}
   - component: {fileID: 3489095124540123679}
-  - component: {fileID: 6395509389728269480}
+  - component: {fileID: -8847485816151862654}
   m_Layer: 6
   m_Name: Albert, the farmer
   m_TagString: Untagged
@@ -2631,7 +2632,7 @@ Transform:
   m_GameObject: {fileID: 8713352010430717119}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 7.582255, y: -1.901079, z: -10.97168}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -2661,6 +2662,29 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!136 &6395509389728269480
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8713352010430717119}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.71
+  m_Height: 1
+  m_Direction: 1
+  m_Center: {x: 0, y: 1, z: 0}
 --- !u!54 &-2281489205445462793
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -2952,29 +2976,27 @@ MonoBehaviour:
   normalCursor: {fileID: 2800000, guid: f3f1c7253d7db1d47872a98919dfbf90, type: 3}
   enemyCursor: {fileID: 2800000, guid: 1d78ea13ed0615c4996735add71cbd43, type: 3}
   cursorHotspot: {x: 16, y: 16}
---- !u!136 &6395509389728269480
-CapsuleCollider:
+--- !u!114 &-8847485816151862654
+MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8713352010430717119}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 0.71
-  m_Height: 1
-  m_Direction: 1
-  m_Center: {x: 0, y: 1, z: 0}
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1310c7a022c860c48864e57f72b014c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  visionRadius: 7
+  teamTag: RedTeam
+  shape: 0
+  coneAngle: 60
+  resolution: 36
+  blockedByObstacles: 1
+  obstacleMask:
+    serializedVersion: 2
+    m_Bits: 4096
 --- !u!1 &9210927903783845167
 GameObject:
   m_ObjectHideFlags: 0
