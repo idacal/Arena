@@ -19,8 +19,8 @@ namespace Photon.Pun.Demo.Asteroids
         public float edgeScrollThreshold = 20.0f;
         public bool useEdgeScrolling = true;
         public float mouseWheelZoomSpeed = 5.0f;
-        public Vector2 heightZoomRange = new Vector2(12f, 28f);
-        public Vector2 distanceZoomRange = new Vector2(10f, 22f);
+        public Vector2 heightZoomRange = new Vector2(7f, 23f);
+        public Vector2 distanceZoomRange = new Vector2(7f, 19f);
         public float snapToTargetSpeed = 8.0f;
         
         [Header("Map Boundaries")]
@@ -242,7 +242,7 @@ namespace Photon.Pun.Demo.Asteroids
             float currentDistance = Mathf.Lerp(distanceZoomRange.x, distanceZoomRange.y, currentZoomFactor);
             
             // Ajustar ángulo basado en el factor de zoom para un efecto más MOBA
-            float currentPitch = Mathf.Lerp(65f, 55f, currentZoomFactor); // Más cercano = más empinado
+            float currentPitch = Mathf.Lerp(35f, 75f, currentZoomFactor); // Más bajo = más horizontal (35°), más alto = más inclinado (75°)
             
             // Calcular posición deseada usando parámetros actuales
             Vector3 directionFromTarget = new Vector3(0, 0, -1); // Dirección base (hacia -Z)

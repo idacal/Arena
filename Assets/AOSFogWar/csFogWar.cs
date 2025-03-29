@@ -211,6 +211,8 @@ namespace FischlWorks_FogWar
         [SerializeField]
         [Range(1, 5)]
         private float fogLerpSpeed = 2.5f;
+        [SerializeField]
+        private Vector3 fogPlaneScale = new Vector3(5f, 1f, 5f);
         public bool keepRevealedTiles = false;
         [ShowIf("keepRevealedTiles")]
         [Range(0, 1)]
@@ -383,10 +385,7 @@ namespace FischlWorks_FogWar
                 levelMidPoint.position.y + fogPlaneHeight,
                 levelMidPoint.position.z);
 
-            fogPlane.transform.localScale = new Vector3(
-                (levelDimensionX * unitScale) / 10.0f,
-                1,
-                (levelDimensionY * unitScale) / 10.0f);
+            fogPlane.transform.localScale = fogPlaneScale;
 
             fogPlaneTextureLerpTarget = new Texture2D(levelDimensionX, levelDimensionY);
             fogPlaneTextureLerpBuffer = new Texture2D(levelDimensionX, levelDimensionY);
