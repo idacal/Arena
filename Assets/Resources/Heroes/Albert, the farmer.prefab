@@ -2615,7 +2615,6 @@ GameObject:
   - component: {fileID: -6046582980940072358}
   - component: {fileID: 9221196167736871162}
   - component: {fileID: 3489095124540123679}
-  - component: {fileID: -8847485816151862654}
   m_Layer: 6
   m_Name: Albert, the farmer
   m_TagString: Untagged
@@ -2833,6 +2832,7 @@ MonoBehaviour:
     HealthRegenPerStrength: 0
     ManaRegenPerIntelligence: 0
     MovementSpeed: 0
+    AttackRange: 0
     RespawnTime: 0
     MaxLevel: 0
     BaseExperience: 0
@@ -2976,27 +2976,6 @@ MonoBehaviour:
   normalCursor: {fileID: 2800000, guid: f3f1c7253d7db1d47872a98919dfbf90, type: 3}
   enemyCursor: {fileID: 2800000, guid: 1d78ea13ed0615c4996735add71cbd43, type: 3}
   cursorHotspot: {x: 16, y: 16}
---- !u!114 &-8847485816151862654
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8713352010430717119}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1310c7a022c860c48864e57f72b014c0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  visionRadius: 7
-  teamTag: RedTeam
-  shape: 0
-  coneAngle: 60
-  resolution: 36
-  blockedByObstacles: 1
-  obstacleMask:
-    serializedVersion: 2
-    m_Bits: 4096
 --- !u!1 &9210927903783845167
 GameObject:
   m_ObjectHideFlags: 0

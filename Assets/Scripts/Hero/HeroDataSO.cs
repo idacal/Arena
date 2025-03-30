@@ -38,6 +38,7 @@ namespace Photon.Pun.Demo.Asteroids
         public float HealthRegenPerStrength = 0.1f;    // Regeneración de vida por punto de fuerza
         public float ManaRegenPerIntelligence = 0.05f; // Regeneración de maná por punto de inteligencia
         public float MovementSpeed = 350f;             // Velocidad de movimiento base
+        public float AttackRange = 5.0f;               // Rango de ataque
         public float RespawnTime = 5.0f;               // Tiempo de respawn
 
         [Header("Sistema de Niveles")]
@@ -91,6 +92,7 @@ namespace Photon.Pun.Demo.Asteroids
                 HealthRegenPerStrength = this.HealthRegenPerStrength,
                 ManaRegenPerIntelligence = this.ManaRegenPerIntelligence,
                 MovementSpeed = this.MovementSpeed,
+                AttackRange = this.AttackRange,
                 RespawnTime = this.RespawnTime,
                 
                 // Sistema de niveles

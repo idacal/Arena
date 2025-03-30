@@ -397,49 +397,50 @@ namespace Photon.Pun.Demo.Asteroids
             {
                 string attributeColor = heroData.PrimaryAttribute switch
                 {
-                    "Strength" => "#FF4444",    // Rojo para fuerza
-                    "Intelligence" => "#4444FF", // Azul para inteligencia
-                    "Agility" => "#44FF44",     // Verde para agilidad
+                    "Strength" => "#FF5555",    // Rojo para fuerza
+                    "Intelligence" => "#5555FF", // Azul para inteligencia
+                    "Agility" => "#55FF55",     // Verde para agilidad
                     _ => "#FFFFFF"              // Blanco por defecto
                 };
-                primaryAttributeText.text = $"Primary Attribute: <color={attributeColor}>{heroData.PrimaryAttribute}</color>";
+                primaryAttributeText.text = $"<color={attributeColor}>{heroData.PrimaryAttribute}</color>";
             }
 
-            // Update base stats
+            // Update base stats con colores
             if (strengthText != null)
-                strengthText.text = $"{Mathf.FloorToInt(heroData.CurrentStrength)}";
+                strengthText.text = $"<color=#FF5555>{Mathf.FloorToInt(heroData.CurrentStrength)}</color>";
             if (intelligenceText != null)
-                intelligenceText.text = $"{Mathf.FloorToInt(heroData.CurrentIntelligence)}";
+                intelligenceText.text = $"<color=#5555FF>{Mathf.FloorToInt(heroData.CurrentIntelligence)}</color>";
             if (agilityText != null)
-                agilityText.text = $"{Mathf.FloorToInt(heroData.CurrentAgility)}";
+                agilityText.text = $"<color=#55FF55>{Mathf.FloorToInt(heroData.CurrentAgility)}</color>";
             if (strengthScalingText != null)
-                strengthScalingText.text = $"+{Mathf.FloorToInt(heroData.StrengthScaling)}";
+                strengthScalingText.text = $"<color=#FF5555>+{Mathf.FloorToInt(heroData.StrengthScaling)}</color>";
             if (intelligenceScalingText != null)
-                intelligenceScalingText.text = $"+{Mathf.FloorToInt(heroData.IntelligenceScaling)}";
+                intelligenceScalingText.text = $"<color=#5555FF>+{Mathf.FloorToInt(heroData.IntelligenceScaling)}</color>";
             if (agilityScalingText != null)
-                agilityScalingText.text = $"+{Mathf.FloorToInt(heroData.AgilityScaling)}";
+                agilityScalingText.text = $"<color=#55FF55>+{Mathf.FloorToInt(heroData.AgilityScaling)}</color>";
 
-            // Actualizar estadísticas derivadas
+            // Actualizar estadísticas derivadas con solo valores
             if (attackDamageText != null)
-                attackDamageText.text = $"Damage: {heroData.CurrentAttackDamage:F0}";
+                attackDamageText.text = $"{heroData.CurrentAttackDamage:F0}";
             if (attackSpeedText != null)
-                attackSpeedText.text = $"Attack Speed: {heroData.CurrentAttackSpeed:F2}";
+                attackSpeedText.text = $"{heroData.CurrentAttackSpeed:F2}";
             if (moveSpeedText != null)
-                moveSpeedText.text = $"Speed: {heroData.MovementSpeed:F0}";
+                moveSpeedText.text = $"{heroData.MovementSpeed:F0}";
+            if (attackRangeText != null)
+                attackRangeText.text = $"{hero.AttackRange:F1}";
             if (armorText != null)
-                armorText.text = $"Armor: {heroData.CurrentArmor:F1}";
+                armorText.text = $"{heroData.CurrentArmor:F1}";
             if (magicResistanceText != null)
-                magicResistanceText.text = $"Magic Resist: {heroData.CurrentMagicResistance:F1}";
+                magicResistanceText.text = $"{heroData.CurrentMagicResistance:F1}";
             if (healthRegenText != null)
-                healthRegenText.text = $"Health Regen: {heroData.CurrentHealthRegen:F1}/s";
+                healthRegenText.text = $"+{heroData.CurrentHealthRegen:F1}/s";
             if (manaRegenText != null)
-                manaRegenText.text = $"Mana Regen: {heroData.CurrentManaRegen:F1}/s";
+                manaRegenText.text = $"+{heroData.CurrentManaRegen:F1}/s";
 
             // Actualizar nivel
             if (levelText != null)
             {
-                levelText.text = $"{hero.CurrentLevel}";
-                Debug.Log($"[HeroUIController] Actualizando texto del nivel a: {hero.CurrentLevel}");
+                levelText.text = $"Lvl {hero.CurrentLevel}";
             }
         }
         
@@ -625,7 +626,7 @@ namespace Photon.Pun.Demo.Asteroids
         {
             if (levelText != null)
             {
-                levelText.text = $"{newLevel}";
+                levelText.text = $"Lvl {newLevel}";
                 Debug.Log($"[HeroUIController] Actualizando texto del nivel a: {newLevel}");
             }
         }

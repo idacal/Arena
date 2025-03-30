@@ -40,6 +40,7 @@ namespace Photon.Pun.Demo.Asteroids
         public float HealthRegenPerStrength;
         public float ManaRegenPerIntelligence;
         public float MovementSpeed;
+        public float AttackRange;
         public float RespawnTime;
         
         // Level System
