@@ -24,6 +24,7 @@ namespace Photon.Pun.Demo.Asteroids
         public TMP_Text heroNameText;
         public TMP_Text levelText;
         public TMP_Text primaryAttributeText; // New: to show primary attribute
+        public TMP_Text goldText; // Para mostrar el oro del jugador
         
         [Header("Base Stats")]
         public TMP_Text strengthText;
@@ -51,6 +52,7 @@ namespace Photon.Pun.Demo.Asteroids
         public Color damageColor = Color.red;
         public Color magicDamageColor = Color.magenta;
         public Color healColor = Color.green;
+        public Color goldColor = new Color(1f, 0.84f, 0f); // Color dorado para recompensas de oro
         
         [Header("Positioning")]
         public Vector3 floatingTextOffset = new Vector3(0, 2, 0);
@@ -106,6 +108,12 @@ namespace Photon.Pun.Demo.Asteroids
                 
                 // Actualizar el texto del nivel inicial
                 UpdateLevelText(hero.CurrentLevel);
+                
+                // Actualizar el texto del oro inicial
+                if (goldText != null)
+                {
+                    UpdateGoldText(hero.CurrentGold);
+                }
                 
                 if (playerNameText != null && hero.photonView != null && hero.photonView.Owner != null)
                 {
@@ -263,20 +271,27 @@ namespace Photon.Pun.Demo.Asteroids
         {
             string missingRefs = "";
             
+            // Verificar referencias de UI
             if (healthBar == null) missingRefs += "healthBar, ";
             if (manaBar == null) missingRefs += "manaBar, ";
             if (healthText == null) missingRefs += "healthText, ";
             if (manaText == null) missingRefs += "manaText, ";
+            if (experienceBar == null) missingRefs += "experienceBar, ";
+            if (experienceText == null) missingRefs += "experienceText, ";
+            if (levelText == null) missingRefs += "levelText, ";
             if (playerNameText == null) missingRefs += "playerNameText, ";
             if (heroNameText == null) missingRefs += "heroNameText, ";
-            if (healthRegenPanel == null) missingRefs += "healthRegenPanel, ";
-            if (manaRegenPanel == null) missingRefs += "manaRegenPanel, ";
+            if (primaryAttributeText == null) missingRefs += "primaryAttributeText, ";
+            if (goldText == null) missingRefs += "goldText, ";
             
-            // Verificar referencias de estadísticas
+            // Verificar referencias de stats
+            if (strengthText == null) missingRefs += "strengthText, ";
+            if (intelligenceText == null) missingRefs += "intelligenceText, ";
+            if (agilityText == null) missingRefs += "agilityText, ";
             if (attackDamageText == null) missingRefs += "attackDamageText, ";
             if (attackSpeedText == null) missingRefs += "attackSpeedText, ";
-            if (moveSpeedText == null) missingRefs += "moveSpeedText, ";
             if (attackRangeText == null) missingRefs += "attackRangeText, ";
+            if (moveSpeedText == null) missingRefs += "moveSpeedText, ";
             if (armorText == null) missingRefs += "armorText, ";
             if (magicResistanceText == null) missingRefs += "magicResistanceText, ";
             if (healthRegenText == null) missingRefs += "healthRegenText, ";
@@ -628,6 +643,273 @@ namespace Photon.Pun.Demo.Asteroids
             {
                 levelText.text = $"Lvl {newLevel}";
                 Debug.Log($"[HeroUIController] Actualizando texto del nivel a: {newLevel}");
+            }
+        }
+
+        /// <summary>
+        /// Actualiza el texto del oro
+        /// </summary>
+        public void UpdateGoldText(float amount)
+        {
+            if (goldText != null)
+            {
+                goldText.text = $"{amount:F0}";
+                // Añade una pequeña animación para destacar el cambio
+                StartCoroutine(AnimateGoldText());
+            }
+        }
+        
+        /// <summary>
+        /// Anima el texto del oro para destacar cambios
+        /// </summary>
+        private IEnumerator AnimateGoldText()
+        {
+            if (goldText == null) yield break;
+            
+            // Guardar el color original
+            Color originalColor = goldText.color;
+            
+            // Cambiar a color de destaque (dorado)
+            goldText.color = new Color(1f, 0.8f, 0f);
+            
+            // Escalar ligeramente
+            Vector3 originalScale = goldText.transform.localScale;
+            goldText.transform.localScale = originalScale * 1.2f;
+            
+            // Esperar un momento
+            yield return new WaitForSeconds(0.3f);
+            
+            // Volver al color y escala original gradualmente
+            float duration = 0.5f;
+            float elapsed = 0;
+            
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = elapsed / duration;
+                
+                goldText.color = Color.Lerp(new Color(1f, 0.8f, 0f), originalColor, t);
+                goldText.transform.localScale = Vector3.Lerp(originalScale * 1.2f, originalScale, t);
+                
+                yield return null;
+            }
+            
+            // Asegurar que vuelve exactamente a los valores originales
+            goldText.color = originalColor;
+            goldText.transform.localScale = originalScale;
+        }
+
+        /// <summary>
+        /// Muestra un texto flotante para el oro ganado
+        /// </summary>
+        public void ShowGoldRewardText(float amount, string sourceText = "", Vector3? enemyPosition = null)
+        {
+            // Usar la posición del enemigo si se proporciona, sino la del jugador
+            Vector3 position = (enemyPosition.HasValue) 
+                ? enemyPosition.Value + Vector3.up * 2.0f // Posición más alta para que caiga
+                : transform.position + floatingTextOffset + new Vector3(0, 1.0f, 0);
+                
+            // Preparar el texto a mostrar
+            string displayText = $"+{Mathf.FloorToInt(amount)}";
+            if (!string.IsNullOrEmpty(sourceText))
+            {
+                displayText = $"{displayText}";
+            }
+            
+            // Intentar usar el prefab si existe
+            if (floatingTextPrefab != null)
+            {
+                // Crear el texto flotante sin padre para evitar errores con objetos persistentes
+                GameObject textObj = Instantiate(floatingTextPrefab, position, Quaternion.identity);
+                
+                // Configurar el texto
+                TMP_Text textComponent = textObj.GetComponent<TMP_Text>();
+                if (textComponent != null)
+                {
+                    // Establecer el texto
+                    textComponent.text = displayText.Trim();
+                    textComponent.color = goldColor;
+                    textComponent.fontSize *= 1.2f; // Texto ligeramente más grande
+                    
+                    Debug.Log($"Mostrando texto de oro: '{textComponent.text}' en posición {position}");
+                    
+                    // Animar el texto con corrutina directa
+                    StartCoroutine(AnimateGoldFloatingText(textObj));
+                    
+                    // Asegurar que el objeto mire a la cámara
+                    Billboard billboard = textObj.GetComponent<Billboard>();
+                    if (billboard == null)
+                    {
+                        billboard = textObj.AddComponent<Billboard>();
+                    }
+                    
+                    // Asegurar destrucción en caso de fallo
+                    Destroy(textObj, 5f);
+                }
+                else
+                {
+                    Debug.LogError("El prefab de texto flotante no tiene componente TextMeshPro");
+                    Destroy(textObj);
+                    
+                    // Crear texto dinámicamente como fallback
+                    CreateDynamicFloatingText(position, displayText);
+                }
+            }
+            else
+            {
+                // Si no hay prefab, crear el texto dinámicamente
+                CreateDynamicFloatingText(position, displayText);
+            }
+        }
+        
+        /// <summary>
+        /// Crea un texto flotante dinámicamente sin necesidad de prefab
+        /// </summary>
+        private GameObject CreateDynamicFloatingText(Vector3 position, string text)
+        {
+            Debug.Log($"Creando texto flotante dinámico: '{text}' en posición {position}");
+            
+            // Intentar usar el FloatingTextCreator si existe
+            FloatingTextCreator creator = FloatingTextCreator.Instance;
+            if (creator != null)
+            {
+                GameObject textObj = creator.CreateFloatingText(position, text, goldColor, 3f, 2f);
+                
+                // Animar el texto con nuestra corrutina
+                StartCoroutine(AnimateGoldFloatingText(textObj));
+                return textObj;
+            }
+            else
+            {
+                // Crear manualmente como último recurso
+                GameObject textObj = new GameObject("FloatingText");
+                textObj.transform.position = position;
+                
+                // Añadir TextMeshPro
+                TextMeshPro textComponent = textObj.AddComponent<TextMeshPro>();
+                textComponent.text = text;
+                textComponent.fontSize = 3;
+                textComponent.fontStyle = FontStyles.Bold;
+                textComponent.alignment = TextAlignmentOptions.Center;
+                textComponent.color = goldColor;
+                textComponent.enableCulling = false;
+                
+                // Añadir Billboard
+                textObj.AddComponent<Billboard>();
+                
+                // Animar
+                StartCoroutine(AnimateGoldFloatingText(textObj));
+                
+                // Destruir después de tiempo
+                Destroy(textObj, 5f);
+                
+                return textObj;
+            }
+        }
+        
+        /// <summary>
+        /// Anima el texto flotante del oro con efecto especial (caída y desvanecimiento)
+        /// </summary>
+        private IEnumerator AnimateGoldFloatingText(GameObject textObj)
+        {
+            // Comprobación inicial de seguridad
+            if (textObj == null) 
+            {
+                Debug.LogWarning("AnimateGoldFloatingText: objeto de texto nulo");
+                yield break;
+            }
+            
+            // Obtener componente de texto
+            TMP_Text textComponent = textObj.GetComponent<TMP_Text>();
+            if (textComponent == null) 
+            {
+                Debug.LogWarning("AnimateGoldFloatingText: componente de texto no encontrado");
+                Destroy(textObj);
+                yield break;
+            }
+            
+            // Guardar texto original para debug
+            string originalText = textComponent.text;
+            Debug.Log($"Animando texto de oro: '{originalText}'");
+            
+            float duration = 1.5f; // Duración de la animación
+            float elapsed = 0f;
+            
+            // Posición inicial
+            Vector3 startPos = textObj.transform.position;
+            // Posición final (caída)
+            Vector3 endPos = startPos + new Vector3(0, -1.5f, 0);
+            
+            // Escala inicial
+            Vector3 startScale = textObj.transform.localScale;
+            Vector3 maxScale = startScale * 1.5f;
+            Vector3 endScale = startScale * 0.8f;
+            
+            // Color inicial
+            Color startColor = textComponent.color;
+            Color peakColor = new Color(1f, 0.9f, 0.1f, 1f); // Amarillo brillante
+            Color endColor = startColor;
+            endColor.a = 0f; // Transparente al final
+            
+            // Fase 1: Aparecer y crecer
+            float appearDuration = duration * 0.2f;
+            while (elapsed < appearDuration && textObj != null)
+            {
+                float t = elapsed / appearDuration;
+                textObj.transform.localScale = Vector3.Lerp(startScale, maxScale, t);
+                textComponent.color = Color.Lerp(startColor, peakColor, t);
+                
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+            
+            // Verificar si el objeto aún existe
+            if (textObj == null) yield break;
+            
+            // Fase 2: Mantener brevemente
+            float holdTime = 0.2f;
+            elapsed = 0f;
+            while (elapsed < holdTime && textObj != null)
+            {
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+            
+            // Verificar si el objeto aún existe
+            if (textObj == null) yield break;
+            
+            // Fase 3: Caer y desvanecer
+            elapsed = 0f;
+            float fallDuration = duration * 0.6f;
+            
+            // Añadir un ligero movimiento horizontal aleatorio
+            float randomX = Random.Range(-0.5f, 0.5f);
+            Vector3 horizontalOffset = new Vector3(randomX, 0, 0);
+            
+            while (elapsed < fallDuration && textObj != null)
+            {
+                float t = elapsed / fallDuration;
+                
+                // Movimiento con rebote suave al caer
+                float verticalOffset = Mathf.Sin(t * Mathf.PI) * 0.2f;
+                Vector3 currentPos = Vector3.Lerp(startPos, endPos, t) + horizontalOffset;
+                currentPos.y += verticalOffset;
+                
+                textObj.transform.position = currentPos;
+                textObj.transform.localScale = Vector3.Lerp(maxScale, endScale, t);
+                textComponent.color = Color.Lerp(peakColor, endColor, t);
+                
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+            
+            Debug.Log($"Animación de oro completada para: '{originalText}'");
+            
+            // Asegurar que siempre se destruya el objeto al final
+            if (textObj != null)
+            {
+                Destroy(textObj);
+                Debug.Log("Texto de oro destruido correctamente");
             }
         }
 

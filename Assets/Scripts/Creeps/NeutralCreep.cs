@@ -400,6 +400,26 @@ namespace Photon.Pun.Demo.Asteroids
                 {
                     Debug.Log($"[NeutralCreep] El héroe {killer.heroName} es el dueño, otorgando XP");
                     killer.AwardCreepKillExperience(this);
+                    
+                    // Otorgar oro al jugador con el nombre del creep como origen
+                    float goldAmount = goldReward;
+                    string creepKillText = $"¡{creepName} eliminado!";
+                    Vector3 creepPosition = transform.position;
+                    
+                    Debug.Log($"[NeutralCreep] Otorgando {goldAmount} de oro desde posición {creepPosition} por matar a {creepKillText}");
+                    
+                    // Reproducir el sonido de oro directamente si existe
+                    if (killer.goldSound != null)
+                    {
+                        // Forzar la reproducción del sonido de oro directamente como sonido GLOBAL
+                        Debug.Log("[NeutralCreep] Forzando reproducción del sonido de oro GLOBAL");
+                        killer.PlaySound(killer.goldSound, 1.5f, true); // Force global = true
+                    }
+                    
+                    // Otorgar el oro al jugador
+                    killer.AddGold(goldAmount, creepKillText, creepPosition);
+                    
+                    Debug.Log($"[NeutralCreep] Oro otorgado a {killer.heroName}");
                 }
                 else
                 {

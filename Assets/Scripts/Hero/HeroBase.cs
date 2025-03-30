@@ -108,6 +108,16 @@ namespace Photon.Pun.Demo.Asteroids
         [SerializeField] private int _availableSkillPoints = 1; // Campo privado para los puntos de habilidad
         public int AvailableSkillPoints { get; private set; } = 1; // Comienza con 1 punto de habilidad
         
+        [Header("Currency")]
+        [SerializeField] private float _currentGold = 0f;
+        public float CurrentGold => _currentGold;
+        public float StartingGold = 500f;
+        
+        [Header("Audio")]
+        public AudioClip goldSound; // Sonido básico de oro
+        public AudioClip bigGoldSound; // Sonido para cantidades grandes (>= 100)
+        public AudioClip smallGoldSound; // Sonido para cantidades pequeñas (< 20)
+        
         public enum AttackType
         {
             Melee,
@@ -194,6 +204,7 @@ namespace Photon.Pun.Demo.Asteroids
                 // Configuración inicial
                 currentHealth = maxHealth;
                 currentMana = maxMana;
+                _currentGold = StartingGold; // Inicializar oro
                 
                 // Inicializar controlador de UI si no existe
                 if (uiController == null && uiCanvasPrefab != null)
@@ -1458,6 +1469,258 @@ namespace Photon.Pun.Demo.Asteroids
             // Restaurar vida y maná al subir de nivel (opcional, como en DOTA 2)
             currentHealth = maxHealth;
             currentMana = maxMana;
+        }
+
+        // Método para añadir oro al jugador
+        public void AddGold(float amount, string sourceText = "", Vector3? sourcePosition = null)
+        {
+            if (!photonView.IsMine) return;
+            
+            _currentGold += amount;
+            Debug.Log($"[HeroBase] {heroName} ganó {amount} de oro. Total: {_currentGold}");
+            
+            // Notificar a la UI si existe
+            if (uiController != null)
+            {
+                // Actualizar contador de oro
+                uiController.UpdateGoldText(_currentGold);
+                
+                // Mostrar texto flotante con el oro ganado en la posición del origen
+                uiController.ShowGoldRewardText(amount, sourceText, sourcePosition);
+            }
+            
+            // PRUEBA: Reproducir sonido como 2D global
+            if (amount > 0)
+            {
+                AudioClip clipToPlay = null;
+                
+                // Seleccionar el sonido apropiado según la cantidad
+                if (amount >= 100 && bigGoldSound != null)
+                {
+                    clipToPlay = bigGoldSound;
+                    Debug.Log("[HeroBase] Usando sonido de oro GRANDE");
+                }
+                else if (amount < 20 && smallGoldSound != null)
+                {
+                    clipToPlay = smallGoldSound;
+                    Debug.Log("[HeroBase] Usando sonido de oro PEQUEÑO");
+                }
+                else if (goldSound != null)
+                {
+                    clipToPlay = goldSound;
+                    Debug.Log("[HeroBase] Usando sonido de oro NORMAL");
+                }
+                
+                // Reproducir el sonido como GLOBAL con volumen alto
+                if (clipToPlay != null)
+                {
+                    Debug.Log($"[HeroBase] Intentando reproducir sonido de oro: {clipToPlay.name}");
+                    // Usar forceGlobal=true para reproducir como sonido 2D global
+                    PlaySound(clipToPlay, 1.0f, true);
+                }
+                else
+                {
+                    Debug.LogError($"[HeroBase] Error: No hay sonido de oro asignado");
+                }
+            }
+        }
+        
+        // Método para usar oro (por ejemplo, en compras)
+        public bool SpendGold(float amount)
+        {
+            if (!photonView.IsMine) return false;
+            
+            // Verificar si hay suficiente oro
+            if (_currentGold < amount)
+            {
+                Debug.Log($"[HeroBase] {heroName} no tiene suficiente oro. Necesita: {amount}, Disponible: {_currentGold}");
+                return false;
+            }
+            
+            _currentGold -= amount;
+            Debug.Log($"[HeroBase] {heroName} gastó {amount} de oro. Restante: {_currentGold}");
+            
+            // Notificar a la UI si existe
+            if (uiController != null)
+            {
+                uiController.UpdateGoldText(_currentGold);
+            }
+            
+            return true;
+        }
+
+        // Método para reproducir explícitamente un efecto de sonido
+        public void PlaySound(AudioClip sound, float volume = 1.0f, bool forceGlobal = false)
+        {
+            if (sound == null)
+            {
+                Debug.LogError($"[HeroBase] Intento de reproducir un sonido nulo en {heroName}");
+                return;
+            }
+            
+            // PRUEBA: Crear un AudioSource temporal para cada sonido
+            if (forceGlobal)
+            {
+                // Crear un objeto separado para reproducir el sonido
+                GameObject audioObj = new GameObject("TempAudio_" + sound.name);
+                audioObj.transform.position = Camera.main ? Camera.main.transform.position : transform.position;
+                AudioSource tempSource = audioObj.AddComponent<AudioSource>();
+                
+                // Configurar como sonido global (2D)
+                tempSource.spatialBlend = 0f; // 0 = 2D, 1 = 3D
+                tempSource.volume = 1.0f;
+                tempSource.priority = 0; // Alta prioridad
+                tempSource.clip = sound;
+                tempSource.Play();
+                
+                // Destruir después de reproducir
+                Destroy(audioObj, sound.length + 0.5f);
+                
+                Debug.Log($"[HeroBase] Reproduciendo sonido en fuente TEMPORAL: {sound.name} (vol={volume})");
+                return;
+            }
+            
+            // Método original usando el AudioSource del objeto
+            if (audioSource == null)
+            {
+                audioSource = gameObject.AddComponent<AudioSource>();
+                audioSource.spatialBlend = 0f; // Cambiado a 0 para hacer que sea 2D (global)
+                audioSource.volume = 1.0f;
+                audioSource.priority = 128; // Prioridad media (0 es la más alta)
+                Debug.Log($"[HeroBase] Creado nuevo AudioSource para {heroName}");
+            }
+            
+            // Configurar audio source para asegurar que se escuche
+            audioSource.mute = false;
+            audioSource.spatialBlend = 0f; // Forzar a 2D para pruebas
+            audioSource.volume = 1.0f; // Aumentar volumen base
+            
+            // Reproducir el sonido con volumen más alto
+            audioSource.PlayOneShot(sound, volume * 2.0f); // Duplicar volumen para pruebas
+            
+            Debug.Log($"[HeroBase] Reproduciendo sonido: {sound.name} con volumen {volume * 2.0f}");
+        }
+        
+        // Método de depuración para el sonido de oro
+        public void DebugGoldSound()
+        {
+            Debug.Log($"[HeroBase] Depuración de sonido de oro:");
+            Debug.Log($"[HeroBase] goldSound asignado: {(goldSound != null ? "SÍ" : "NO")}");
+            Debug.Log($"[HeroBase] smallGoldSound asignado: {(smallGoldSound != null ? "SÍ" : "NO")}");
+            Debug.Log($"[HeroBase] bigGoldSound asignado: {(bigGoldSound != null ? "SÍ" : "NO")}");
+            Debug.Log($"[HeroBase] audioSource presente: {(audioSource != null ? "SÍ" : "NO")}");
+            
+            if (audioSource != null)
+            {
+                Debug.Log($"[HeroBase] audioSource.mute: {audioSource.mute}");
+                Debug.Log($"[HeroBase] audioSource.volume: {audioSource.volume}");
+                Debug.Log($"[HeroBase] audioSource.enabled: {audioSource.enabled}");
+            }
+            
+            // Reproducir cada sonido disponible para probar
+            if (goldSound != null)
+            {
+                Debug.Log("[HeroBase] Probando sonido de oro normal...");
+                PlaySound(goldSound, 1.0f);
+            }
+            
+            // Esperar un momento y reproducir el siguiente sonido
+            StartCoroutine(PlayDelayedSmallGoldSound());
+        }
+        
+        private IEnumerator PlayDelayedSmallGoldSound()
+        {
+            yield return new WaitForSeconds(1.0f);
+            
+            if (smallGoldSound != null)
+            {
+                Debug.Log("[HeroBase] Probando sonido de oro pequeño...");
+                PlaySound(smallGoldSound, 1.0f);
+            }
+            
+            yield return new WaitForSeconds(1.0f);
+            
+            if (bigGoldSound != null)
+            {
+                Debug.Log("[HeroBase] Probando sonido de oro grande...");
+                PlaySound(bigGoldSound, 1.0f);
+            }
+        }
+
+        // Método para probar los sonidos de oro inmediatamente
+        public void TestGoldSounds()
+        {
+            // Intentar cada método posible para reproducir el sonido
+            Debug.Log("========== PRUEBA DE SONIDOS DE ORO ==========");
+            
+            // 1. Prueba con AudioSource normal
+            if (goldSound != null)
+            {
+                Debug.Log("1. Probando con AudioSource normal");
+                
+                // Asegurar que tenemos AudioSource
+                if (audioSource == null)
+                {
+                    audioSource = gameObject.AddComponent<AudioSource>();
+                }
+                
+                // Configurarlo para reproducción óptima
+                audioSource.spatialBlend = 0f; // 2D
+                audioSource.volume = 1.0f;
+                audioSource.pitch = 1.0f;
+                audioSource.mute = false;
+                
+                // Reproducir directamente
+                audioSource.PlayOneShot(goldSound, 1.0f);
+                Debug.Log("   Sonido reproducido con PlayOneShot");
+            }
+            
+            // 2. Prueba con AudioSource temporal
+            if (goldSound != null)
+            {
+                Debug.Log("2. Probando con AudioSource temporal");
+                GameObject tempObj = new GameObject("TempAudioTest");
+                tempObj.transform.position = Camera.main ? Camera.main.transform.position : transform.position;
+                
+                AudioSource tempSource = tempObj.AddComponent<AudioSource>();
+                tempSource.spatialBlend = 0f; // 2D
+                tempSource.volume = 1.0f;
+                tempSource.priority = 0;
+                tempSource.clip = goldSound;
+                tempSource.Play();
+                
+                Destroy(tempObj, goldSound.length + 0.5f);
+                Debug.Log("   Sonido reproducido con AudioSource temporal");
+            }
+            
+            // 3. Prueba con AudioSource.PlayClipAtPoint
+            if (goldSound != null)
+            {
+                Debug.Log("3. Probando con PlayClipAtPoint");
+                Vector3 cameraPos = Camera.main ? Camera.main.transform.position : transform.position;
+                AudioSource.PlayClipAtPoint(goldSound, cameraPos, 1.0f);
+                Debug.Log("   Sonido reproducido con PlayClipAtPoint");
+            }
+            
+            // 4. Prueba con nuestro método mejorado
+            if (goldSound != null)
+            {
+                Debug.Log("4. Probando con nuestro método PlaySound");
+                PlaySound(goldSound, 1.0f, true);
+                Debug.Log("   Sonido reproducido con PlaySound");
+            }
+            
+            // Información de depuración
+            if (goldSound != null)
+            {
+                Debug.Log($"Información del clip de oro: Nombre={goldSound.name}, Duración={goldSound.length}s, Canales={goldSound.channels}, Frecuencia={goldSound.frequency}Hz");
+            }
+            else
+            {
+                Debug.LogError("ERROR: No hay clip de sonido de oro asignado");
+            }
+            
+            Debug.Log("===========================================");
         }
     }
 }

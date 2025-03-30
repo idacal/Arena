@@ -2881,6 +2881,11 @@ MonoBehaviour:
   assistXPMultiplier: 0.5
   xpRangeRadius: 1000
   _availableSkillPoints: 1
+  _currentGold: 0
+  StartingGold: 500
+  goldSound: {fileID: 8300000, guid: 5eb8f7147365341309306e1d4463381b, type: 3}
+  bigGoldSound: {fileID: 8300000, guid: 5eb8f7147365341309306e1d4463381b, type: 3}
+  smallGoldSound: {fileID: 8300000, guid: 5eb8f7147365341309306e1d4463381b, type: 3}
 --- !u!114 &1129096755889270088
 MonoBehaviour:
   m_ObjectHideFlags: 0

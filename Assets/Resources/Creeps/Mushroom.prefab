@@ -707,14 +707,14 @@ MonoBehaviour:
   creepName: Creep
   creepType: Neutral
   level: 1
-  maxHealth: 100
+  maxHealth: 40
   currentHealth: 0
   attackDamage: 10
-  attackSpeed: 1
+  attackSpeed: 0.5
   moveSpeed: 3
   armor: 0
   magicResistance: 0
-  experienceReward: 15
+  experienceReward: 10
   goldReward: 10
   healthRestore: 0
   manaRestore: 0
@@ -726,7 +726,7 @@ MonoBehaviour:
   maxPatrolTime: 8
   deathEffectPrefab: {fileID: 0}
   deathSound: {fileID: 8300000, guid: 97538b780296fc84c965df122791ad9f, type: 3}
-  deathSoundVolume: 2
+  deathSoundVolume: 1.5
   animator: {fileID: 0}
   healthBarPrefab: {fileID: 4535606929876781843, guid: 6eb7e3dded83c414c891e045e943dc0d, type: 3}
 --- !u!54 &689864451395785247
