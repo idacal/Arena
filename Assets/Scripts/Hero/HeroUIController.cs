@@ -704,6 +704,20 @@ namespace Photon.Pun.Demo.Asteroids
         /// </summary>
         public void ShowGoldRewardText(float amount, string sourceText = "", Vector3? enemyPosition = null)
         {
+            // Evitar llamadas duplicadas usando una ID única para cada posición
+            string positionId = enemyPosition.HasValue ? enemyPosition.Value.ToString("F2") : "player";
+            string callId = $"{positionId}_{Time.frameCount}";
+            
+            // Verificar si ya se mostró un efecto en esta posición recientemente
+            if (IsRecentGoldEffect(positionId))
+            {
+                Debug.LogWarning($"Evitando crear efecto de oro duplicado en {positionId} (frame: {Time.frameCount})");
+                return;
+            }
+            
+            // Registrar esta llamada
+            RegisterGoldEffect(positionId);
+            
             // Usar la posición del enemigo si se proporciona, sino la del jugador
             Vector3 position = (enemyPosition.HasValue) 
                 ? enemyPosition.Value + Vector3.up * 2.0f // Posición más alta para que caiga
@@ -711,16 +725,34 @@ namespace Photon.Pun.Demo.Asteroids
                 
             // Preparar el texto a mostrar
             string displayText = $"+{Mathf.FloorToInt(amount)}";
+            
+            // Añadir el texto de la fuente para dar más contexto
             if (!string.IsNullOrEmpty(sourceText))
             {
-                displayText = $"{displayText}";
+                // Si es una cantidad grande o viene de matar héroe, hacer el texto más visible
+                if (sourceText.Contains("eliminado") || amount >= 100)
+                {
+                    displayText = $"{displayText} ORO\n{sourceText}";
+                }
+                else
+                {
+                    displayText = $"{displayText}\n{sourceText}";
+                }
             }
+            
+            // Incrementar partículas para recompensas grandes (matar héroes)
+            bool isHeroKill = !string.IsNullOrEmpty(sourceText) && sourceText.Contains("eliminado");
+            float particleMultiplier = isHeroKill ? 2.0f : 1.0f;
+            
+            // Crear las partículas de monedas (más si es una recompensa grande)
+            CreateGoldParticles(position, amount * particleMultiplier);
             
             // Intentar usar el prefab si existe
             if (floatingTextPrefab != null)
             {
                 // Crear el texto flotante sin padre para evitar errores con objetos persistentes
                 GameObject textObj = Instantiate(floatingTextPrefab, position, Quaternion.identity);
+                textObj.name = $"GoldText_{callId}";
                 
                 // Configurar el texto
                 TMP_Text textComponent = textObj.GetComponent<TMP_Text>();
@@ -729,12 +761,24 @@ namespace Photon.Pun.Demo.Asteroids
                     // Establecer el texto
                     textComponent.text = displayText.Trim();
                     textComponent.color = goldColor;
-                    textComponent.fontSize *= 1.2f; // Texto ligeramente más grande
+                    
+                    // Si es recompensa por matar héroe, hacer texto más grande y duradero
+                    if (isHeroKill || amount >= 100)
+                    {
+                        textComponent.fontSize *= 1.5f;
+                        textComponent.fontStyle = TMPro.FontStyles.Bold;
+                        
+                        // Animar con corrutina especial para recompensas de héroe
+                        StartCoroutine(AnimateHeroKillGoldText(textObj));
+                    }
+                    else
+                    {
+                        textComponent.fontSize *= 1.2f; // Texto ligeramente más grande
+                        // Animar el texto con corrutina estándar
+                        StartCoroutine(AnimateGoldFloatingText(textObj));
+                    }
                     
                     Debug.Log($"Mostrando texto de oro: '{textComponent.text}' en posición {position}");
-                    
-                    // Animar el texto con corrutina directa
-                    StartCoroutine(AnimateGoldFloatingText(textObj));
                     
                     // Asegurar que el objeto mire a la cámara
                     Billboard billboard = textObj.GetComponent<Billboard>();
@@ -759,6 +803,110 @@ namespace Photon.Pun.Demo.Asteroids
             {
                 // Si no hay prefab, crear el texto dinámicamente
                 CreateDynamicFloatingText(position, displayText);
+            }
+        }
+        
+        /// <summary>
+        /// Anima el texto flotante para recompensas de oro por matar héroes (efecto especial)
+        /// </summary>
+        private IEnumerator AnimateHeroKillGoldText(GameObject textObj)
+        {
+            if (textObj == null) yield break;
+            
+            TMP_Text textComponent = textObj.GetComponent<TMP_Text>();
+            if (textComponent == null) yield break;
+            
+            // Variables de animación
+            float duration = 2.5f; // Duración más larga para recompensas importantes
+            float startTime = Time.time;
+            Vector3 startPosition = textObj.transform.position;
+            Vector3 targetPosition = startPosition + Vector3.up * 2.5f;
+            Color startColor = textComponent.color;
+            
+            // Efecto de pulso para recompensas de héroe
+            float pulseSpeed = 5.0f;
+            float maxScale = 1.5f;
+            
+            // Bucle de animación
+            while (Time.time - startTime < duration)
+            {
+                float elapsed = Time.time - startTime;
+                float t = elapsed / duration;
+                
+                // Movimiento hacia arriba con rebote
+                float yOffset = Mathf.Sin(t * Mathf.PI) * 0.5f;
+                textObj.transform.position = Vector3.Lerp(startPosition, targetPosition, t) + new Vector3(Mathf.Sin(t * 8f) * 0.2f, yOffset, 0);
+                
+                // Efecto de pulso en el tamaño
+                float pulse = 1.0f + Mathf.Sin(elapsed * pulseSpeed) * 0.2f;
+                textObj.transform.localScale = Vector3.one * Mathf.Lerp(1.0f, pulse, Mathf.Min(1, elapsed * 2));
+                
+                // Color con brillo extra
+                Color glowColor = Color.Lerp(startColor, Color.white, Mathf.Sin(elapsed * 10f) * 0.3f);
+                textComponent.color = Color.Lerp(glowColor, new Color(glowColor.r, glowColor.g, glowColor.b, 0), Mathf.Pow(t, 0.5f));
+                
+                yield return null;
+            }
+            
+            // Asegurar que el objeto se destruye
+            Destroy(textObj);
+        }
+
+        /// <summary>
+        /// Registro de efectos de oro recientes para evitar duplicación
+        /// </summary>
+        private System.Collections.Generic.Dictionary<string, float> recentGoldEffects = new System.Collections.Generic.Dictionary<string, float>();
+        private const float GOLD_EFFECT_COOLDOWN = 0.5f; // Medio segundo de cooldown
+        
+        /// <summary>
+        /// Verifica si se mostró un efecto de oro recientemente en esta posición
+        /// </summary>
+        private bool IsRecentGoldEffect(string positionId)
+        {
+            if (recentGoldEffects.TryGetValue(positionId, out float time))
+            {
+                if (Time.time - time < GOLD_EFFECT_COOLDOWN)
+                {
+                    return true; // Es muy reciente, no crear otro
+                }
+            }
+            
+            return false;
+        }
+        
+        /// <summary>
+        /// Registra que se mostró un efecto de oro en esta posición
+        /// </summary>
+        private void RegisterGoldEffect(string positionId)
+        {
+            recentGoldEffects[positionId] = Time.time;
+            
+            // Limpiar posiciones antiguas cada cierto tiempo
+            if (Time.frameCount % 100 == 0)
+            {
+                CleanupOldEffects();
+            }
+        }
+        
+        /// <summary>
+        /// Limpia registros de efectos antiguos
+        /// </summary>
+        private void CleanupOldEffects()
+        {
+            float currentTime = Time.time;
+            System.Collections.Generic.List<string> keysToRemove = new System.Collections.Generic.List<string>();
+            
+            foreach (var entry in recentGoldEffects)
+            {
+                if (currentTime - entry.Value > GOLD_EFFECT_COOLDOWN * 2)
+                {
+                    keysToRemove.Add(entry.Key);
+                }
+            }
+            
+            foreach (var key in keysToRemove)
+            {
+                recentGoldEffects.Remove(key);
             }
         }
         
@@ -910,6 +1058,271 @@ namespace Photon.Pun.Demo.Asteroids
             {
                 Destroy(textObj);
                 Debug.Log("Texto de oro destruido correctamente");
+            }
+        }
+
+        /// <summary>
+        /// Crea partículas de monedas en la posición especificada
+        /// </summary>
+        private void CreateGoldParticles(Vector3 position, float goldAmount)
+        {
+            // Asegurarnos de que existe el CoinSpriteCreator en la escena
+            CoinSpriteCreator coinCreator = FindObjectOfType<CoinSpriteCreator>();
+            if (coinCreator == null)
+            {
+                GameObject creatorObj = new GameObject("CoinSpriteCreator");
+                coinCreator = creatorObj.AddComponent<CoinSpriteCreator>();
+                Debug.Log("Creado CoinSpriteCreator porque no existía en la escena");
+            }
+            
+            // Ajustar la cantidad de partículas según la cantidad de oro
+            // Más monedas para cantidades grandes como recompensas por matar héroes
+            int baseParticles = Mathf.Clamp(Mathf.FloorToInt(3 + goldAmount / 10), 5, 20);
+            
+            // Detectar si es una recompensa grande (ej: matar héroe)
+            bool isLargeReward = goldAmount >= 100;
+            int particleCount = isLargeReward ? baseParticles * 2 : baseParticles;
+            
+            // Crear objeto de partículas con nombre único
+            string particleId = $"GoldCoins_{Random.Range(1000, 9999)}";
+            GameObject particleObj = new GameObject(particleId);
+            particleObj.transform.position = position;
+            
+            // Añadir sistema de partículas con configuración para oro por héroe
+            ParticleSystem particleSystem = particleObj.AddComponent<ParticleSystem>();
+            
+            // Configurar sistema de partículas
+            var main = particleSystem.main;
+            main.startLifetime = 1.5f;
+            main.startSpeed = new ParticleSystem.MinMaxCurve(1.0f, 3.0f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.15f, 0.3f);
+            main.startColor = new Color(1f, 1f, 1f); // Color blanco para no afectar al sprite
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.maxParticles = particleCount * 2;
+            main.gravityModifier = 2.0f; // Aumentar gravedad para efecto más realista
+            main.loop = false; // Asegurar que el sistema NO se repita
+            main.playOnAwake = false; // No reproducir automáticamente al crearse
+            
+            // Emisión
+            var emission = particleSystem.emission;
+            emission.enabled = true;
+            emission.rateOverTime = 0; // Sin emisión continua
+            emission.rateOverDistance = 0; // Sin emisión por distancia
+            
+            // Configurar un solo burst al inicio
+            ParticleSystem.Burst singleBurst = new ParticleSystem.Burst(0f, (short)particleCount);
+            singleBurst.cycleCount = 1; // Solo un ciclo
+            singleBurst.repeatInterval = 999f; // Intervalo muy largo para asegurar que no se repita
+            emission.SetBursts(new ParticleSystem.Burst[] { singleBurst });
+            
+            // Forma
+            var shape = particleSystem.shape;
+            shape.shapeType = ParticleSystemShapeType.Cone;
+            shape.angle = 30f;
+            shape.radius = 0.1f;
+            shape.arc = 360f;
+            
+            // Rotación inicial aleatoria
+            main.startRotation = new ParticleSystem.MinMaxCurve(-Mathf.PI, Mathf.PI);
+            
+            // Rotación durante el ciclo de vida
+            var rotation = particleSystem.rotationOverLifetime;
+            rotation.enabled = true;
+            rotation.separateAxes = false;
+            rotation.z = new ParticleSystem.MinMaxCurve(-5f, 5f);
+            
+            // Velocidad sobre tiempo de vida (ligero efecto de resistencia del aire)
+            var velocityOverLifetime = particleSystem.velocityOverLifetime;
+            velocityOverLifetime.enabled = true;
+            // En lugar de dampen, usar curva de velocidad X, Y, Z
+            velocityOverLifetime.x = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(
+                new Keyframe(0f, 1f),
+                new Keyframe(1f, 0.2f)
+            ));
+            velocityOverLifetime.y = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(
+                new Keyframe(0f, 1f),
+                new Keyframe(1f, 0.2f)
+            ));
+            velocityOverLifetime.z = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(
+                new Keyframe(0f, 1f),
+                new Keyframe(1f, 0.2f)
+            ));
+            
+            // Tamaño sobre tiempo de vida
+            var sizeOverLifetime = particleSystem.sizeOverLifetime;
+            sizeOverLifetime.enabled = true;
+            AnimationCurve sizeCurve = new AnimationCurve();
+            sizeCurve.AddKey(0f, 1f);
+            sizeCurve.AddKey(0.8f, 1f);
+            sizeCurve.AddKey(1f, 0f);
+            sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f, sizeCurve);
+            
+            // Colisiones
+            var collision = particleSystem.collision;
+            collision.enabled = true;
+            collision.type = ParticleSystemCollisionType.World;
+            collision.mode = ParticleSystemCollisionMode.Collision3D;
+            collision.dampen = 0.6f;
+            collision.bounce = 0.4f;
+            collision.lifetimeLoss = 0.2f;
+            
+            // Color sobre tiempo de vida (para desvanecer al final)
+            var colorOverLifetime = particleSystem.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            Gradient gradient = new Gradient();
+            gradient.SetKeys(
+                new GradientColorKey[] { 
+                    new GradientColorKey(Color.white, 0f),
+                    new GradientColorKey(Color.white, 0.8f),
+                    new GradientColorKey(Color.white, 1f)
+                },
+                new GradientAlphaKey[] { 
+                    new GradientAlphaKey(1f, 0f),
+                    new GradientAlphaKey(1f, 0.7f),
+                    new GradientAlphaKey(0f, 1f)
+                }
+            );
+            colorOverLifetime.color = gradient;
+            
+            // Renderizador
+            var renderer = particleSystem.GetComponent<ParticleSystemRenderer>();
+            if (renderer != null)
+            {
+                // Obtener sprite de moneda
+                Sprite coinSprite = CoinSpriteCreator.GetCoinSprite();
+                if (coinSprite != null)
+                {
+                    // Crear y configurar material con shader disponible
+                    Material material = null;
+                    
+                    // Intentar usar Particles/Standard Unlit
+                    Shader particleShader = Shader.Find("Particles/Standard Unlit");
+                    if (particleShader != null)
+                    {
+                        material = new Material(particleShader);
+                    }
+                    else
+                    {
+                        // Alternativa: usar shader estándar
+                        Debug.LogWarning("Shader 'Particles/Standard Unlit' no encontrado, usando shader alternativo");
+                        
+                        // Intentar con Unlit/Texture primero
+                        Shader unlitShader = Shader.Find("Unlit/Texture");
+                        if (unlitShader != null)
+                        {
+                            material = new Material(unlitShader);
+                        }
+                        else
+                        {
+                            // Último recurso: usar el shader estándar
+                            material = new Material(Shader.Find("Standard"));
+                        }
+                    }
+                    
+                    // Asignar textura
+                    material.mainTexture = coinSprite.texture;
+                    renderer.material = material;
+                    
+                    // Configurar renderizador
+                    renderer.renderMode = ParticleSystemRenderMode.Billboard;
+                    renderer.sortMode = ParticleSystemSortMode.Distance;
+                    renderer.alignment = ParticleSystemRenderSpace.View;
+                    renderer.normalDirection = 1f;
+                    renderer.allowRoll = true;
+                    
+                    // Cada partícula es una imagen cuadrada
+                    renderer.pivot = new Vector3(0.5f, 0.5f, 0.5f);
+                    
+                    // Intentar añadir efectos de brillo según el shader
+                    if (particleShader != null)
+                    {
+                        // Para Standard Unlit
+                        try
+                        {
+                            material.SetFloat("_Glossiness", 0.7f);
+                            material.SetColor("_EmissionColor", new Color(0.3f, 0.3f, 0.1f));
+                            material.EnableKeyword("_EMISSION");
+                        }
+                        catch (System.Exception ex)
+                        {
+                            Debug.LogWarning($"No se pudieron aplicar propiedades de material: {ex.Message}");
+                        }
+                    }
+                }
+                else
+                {
+                    Debug.LogError("No se pudo crear o cargar un sprite de moneda");
+                }
+            }
+            
+            // Reproducir el sistema de partículas una sola vez
+            particleSystem.Play(true); // true para reiniciar el sistema, asegurando que comienza limpio
+            
+            // Establecer un nombre único para evitar duplicados
+            string uniqueName = $"GoldParticles_{Random.Range(1000, 9999)}_{Time.frameCount}";
+            particleObj.name = uniqueName;
+            
+            Debug.Log($"Creado sistema de partículas único: {uniqueName} con {particleCount} partículas");
+            
+            // Añadir un controlador para verificar que el sistema solo se reproduzca una vez
+            GoldParticleController controller = particleObj.AddComponent<GoldParticleController>();
+            controller.Initialize(particleSystem, main.duration + main.startLifetime.constantMax + 0.5f);
+            
+            // Añadir un sonido de monedas
+            AudioSource audioSource = particleObj.AddComponent<AudioSource>();
+            audioSource.spatialBlend = 0.0f; // Sonido 2D para asegurar que se escuche
+            audioSource.volume = 0.7f;
+            audioSource.pitch = Random.Range(0.9f, 1.1f);
+            
+            // Intentar cargar sonido de monedas desde varias ubicaciones
+            AudioClip coinSound = null;
+            
+            // Intento 1: Recursos directos
+            coinSound = Resources.Load<AudioClip>("Sounds/CoinDrop");
+            
+            // Intento 2: Sonidos
+            if (coinSound == null)
+                coinSound = Resources.Load<AudioClip>("Sounds/Coin");
+                
+            // Intento 3: Efectos
+            if (coinSound == null)
+                coinSound = Resources.Load<AudioClip>("SFX/Coin");
+                
+            // Intento 4: Audio
+            if (coinSound == null)
+                coinSound = Resources.Load<AudioClip>("Audio/CoinDrop");
+            
+            // Verificar si se encontró algún sonido
+            if (coinSound != null)
+            {
+                audioSource.PlayOneShot(coinSound);
+                Debug.Log($"Reproduciendo sonido de monedas: {coinSound.name}");
+            }
+            else
+            {
+                Debug.LogWarning("No se encontró ningún sonido de monedas en los recursos");
+                
+                // Buscar sonido alternativo en el héroe dueño
+                if (heroOwner != null && heroOwner.goldSound != null)
+                {
+                    audioSource.PlayOneShot(heroOwner.goldSound);
+                    Debug.Log("Usando sonido de oro del héroe como alternativa");
+                }
+            }
+
+            // Si es recompensa grande, hacer partículas más vistosas
+            if (isLargeReward)
+            {
+                // Aumentar tamaño de partículas
+                main.startSize = new ParticleSystem.MinMaxCurve(0.2f, 0.4f);
+                
+                // Más velocidad inicial para dispersión mayor
+                main.startSpeed = new ParticleSystem.MinMaxCurve(2.0f, 4.0f);
+                
+                // Aumentar tiempo de vida para que se vean más tiempo
+                main.startLifetime = 2.0f;
+                
+                Debug.Log($"Creando efecto especial de oro por héroe con {particleCount} partículas");
             }
         }
 

@@ -71,6 +71,12 @@ namespace Photon.Pun.Demo.Asteroids
         protected float damageImmunityTime = 0.1f;
         protected AudioSource audioSource;
         
+        // Sistema de Kill Streak
+        [Header("Kill Streak")]
+        public int currentKillStreak = 0;
+        private float lastKillTime = 0f;
+        private float killStreakTimeout = 30f; // Tiempo en segundos para que expire la racha
+        
         // Eventos
         public delegate void HeroEvent(HeroBase hero);
         public event HeroEvent OnHeroDeath;
@@ -117,6 +123,12 @@ namespace Photon.Pun.Demo.Asteroids
         public AudioClip goldSound; // Sonido básico de oro
         public AudioClip bigGoldSound; // Sonido para cantidades grandes (>= 100)
         public AudioClip smallGoldSound; // Sonido para cantidades pequeñas (< 20)
+        
+        [Header("Gold Rewards")]
+        [SerializeField] private float baseHeroKillGold = 200f;    // Oro base por matar un héroe
+        [SerializeField] private float heroLevelGoldMultiplier = 0.15f; // Multiplicador de oro por nivel del héroe asesinado
+        [SerializeField] private float killStreakGoldMultiplier = 0.1f; // Multiplicador de oro por racha de asesinatos
+        [SerializeField] private float assistGoldMultiplier = 0.4f;     // Multiplicador de oro para asistencias
         
         public enum AttackType
         {
@@ -559,10 +571,14 @@ namespace Photon.Pun.Demo.Asteroids
             OnHeroDeath?.Invoke(this);
             OnHeroDied?.Invoke(this);
 
+            // Reiniciar la racha de asesinatos al morir
+            ResetKillStreak();
+
             // Otorgar experiencia al héroe que causó la muerte
             if (currentTarget != null)
             {
                 currentTarget.AwardHeroKillExperience(this);
+                currentTarget.AwardHeroKillGold(this); // Otorgar oro por matar héroe
             }
         }
         
@@ -1374,6 +1390,118 @@ namespace Photon.Pun.Demo.Asteroids
             {
                 ally.GainExperience(assistXP);
             }
+        }
+        
+        /// <summary>
+        /// Otorga oro por matar un héroe
+        /// </summary>
+        public void AwardHeroKillGold(HeroBase killedHero)
+        {
+            if (!photonView.IsMine || killedHero == null) return;
+            
+            // Actualizar racha de asesinatos
+            UpdateKillStreak();
+            
+            // Calcular oro base más bonus por nivel del héroe asesinado
+            float goldReward = baseHeroKillGold + (baseHeroKillGold * killedHero.CurrentLevel * heroLevelGoldMultiplier);
+            
+            // Añadir bonus por racha de víctima (si tiene racha alta, vale más oro)
+            if (killedHero.currentKillStreak > 1)
+            {
+                float streakBonus = baseHeroKillGold * (killedHero.currentKillStreak * killStreakGoldMultiplier);
+                goldReward += streakBonus;
+                Debug.Log($"[HeroBase] Bonus por racha de víctima: +{streakBonus} oro (racha: {killedHero.currentKillStreak})");
+            }
+            
+            // Encontrar héroes aliados cercanos para asistencias
+            var nearbyAllies = Physics.OverlapSphere(transform.position, xpRangeRadius)
+                                    .Select(c => c.GetComponent<HeroBase>())
+                                    .Where(h => h != null && h.teamId == this.teamId && h != this)
+                                    .ToList();
+            
+            // Crear mensaje descriptivo para el oro ganado
+            string killMessage = $"¡{killedHero.heroName} eliminado!";
+            
+            // IMPORTANTE: Obtener posición exacta del héroe asesinado para el efecto visual
+            Vector3 killedHeroPosition = killedHero.transform.position + Vector3.up * 1.5f;
+            
+            // Reproducir el sonido de oro directamente si existe (como en NeutralCreep)
+            if (goldSound != null)
+            {
+                // Forzar la reproducción del sonido de oro directamente como sonido GLOBAL
+                Debug.Log("[HeroBase] Forzando reproducción del sonido de oro GLOBAL por matar a un héroe");
+                PlaySound(goldSound, 1.5f, true); // Force global = true
+            }
+            
+            // Otorgar oro al asesino
+            AddGold(goldReward, killMessage, killedHeroPosition);
+            Debug.Log($"[HeroBase] {heroName} recibió {goldReward} oro por matar a {killedHero.heroName}");
+            
+            // Otorgar oro de asistencia
+            float assistGold = goldReward * assistGoldMultiplier;
+            foreach (var ally in nearbyAllies)
+            {
+                // Usar la misma posición para los efectos de oro de asistencia
+                ally.AddGold(assistGold, $"Asistencia: {killedHero.heroName}", killedHeroPosition);
+                Debug.Log($"[HeroBase] {ally.heroName} recibió {assistGold} oro por asistencia");
+            }
+        }
+        
+        /// <summary>
+        /// Actualiza la racha de asesinatos del héroe
+        /// </summary>
+        private void UpdateKillStreak()
+        {
+            // Verificar si la última muerte fue reciente para continuar la racha
+            if (Time.time - lastKillTime > killStreakTimeout)
+            {
+                currentKillStreak = 0; // Reiniciar racha si pasó mucho tiempo
+            }
+            
+            // Incrementar la racha y actualizar tiempo
+            currentKillStreak++;
+            lastKillTime = Time.time;
+            
+            // Anunciar rachas importantes
+            if (currentKillStreak >= 3)
+            {
+                string streakMessage = GetKillStreakMessage(currentKillStreak);
+                Debug.Log($"[HeroBase] {heroName}: {streakMessage}");
+                
+                // Aquí se podría implementar un anuncio en el chat o UI
+            }
+        }
+        
+        /// <summary>
+        /// Obtiene un mensaje apropiado según la racha de asesinatos
+        /// </summary>
+        private string GetKillStreakMessage(int streak)
+        {
+            switch (streak)
+            {
+                case 3: return "¡Triple Kill!";
+                case 4: return "¡Quadra Kill!";
+                case 5: return "¡Penta Kill!";
+                case 6: return "¡Unstoppable!";
+                case 7: return "¡Godlike!";
+                case 8: return "¡Legendary!";
+                default:
+                    if (streak > 8) return "¡DOMINACIÓN TOTAL!";
+                    return $"¡{streak} kills!";
+            }
+        }
+        
+        /// <summary>
+        /// Reinicia la racha de asesinatos al morir
+        /// </summary>
+        private void ResetKillStreak()
+        {
+            if (currentKillStreak >= 3)
+            {
+                Debug.Log($"[HeroBase] {heroName}: ¡Racha de {currentKillStreak} kills terminada!");
+            }
+            currentKillStreak = 0;
+            lastKillTime = 0f;
         }
         
         /// <summary>
