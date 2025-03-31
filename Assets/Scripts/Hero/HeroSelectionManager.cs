@@ -77,6 +77,14 @@ namespace Photon.Pun.Demo.Asteroids
 
             // Configurar el botón de Ready
             ReadyButton.onClick.AddListener(OnReadyButtonClicked);
+            
+            // Inicializar el texto del botón en inglés
+            TMP_Text buttonText = ReadyButton.GetComponentInChildren<TMP_Text>();
+            if (buttonText != null)
+            {
+                buttonText.text = "Ready";
+                buttonText.fontSize = 55.4f; // Tamaño estándar para "Ready"
+            }
 
             // Solo el host puede iniciar el juego
             StartGameButton.gameObject.SetActive(PhotonNetwork.IsMasterClient);
@@ -206,7 +214,10 @@ namespace Photon.Pun.Demo.Asteroids
             TMP_Text buttonText = ReadyButton.GetComponentInChildren<TMP_Text>();
             if (buttonText != null)
             {
-                buttonText.text = isReady ? "No Listo" : "Listo";
+                buttonText.text = isReady ? "Un-Ready" : "Ready";
+                
+                // Ajustar el tamaño de la fuente según el estado
+                buttonText.fontSize = isReady ? 45f : 55.4f; // Texto más pequeño para "Un-Ready"
             }
             
             // Actualizar la UI
@@ -494,7 +505,7 @@ namespace Photon.Pun.Demo.Asteroids
             // Actualizar texto del equipo
             if (TeamAssignmentText != null)
             {
-                TeamAssignmentText.text = "Equipo: " + (assignedTeam == TEAM_RED ? "Rojo" : "Azul");
+                TeamAssignmentText.text = "Team: " + (assignedTeam == TEAM_RED ? "Red" : "Blue");
                 TeamAssignmentText.color = (assignedTeam == TEAM_RED ? Color.red : Color.blue);
             }
             
@@ -523,7 +534,7 @@ namespace Photon.Pun.Demo.Asteroids
                     }
                 }
                 
-                GameStatusText.text = $"Jugadores Listos: {readyCount}/{totalPlayers}";
+                GameStatusText.text = $"Players Ready: {readyCount}/{totalPlayers}";
             }
         }
 
