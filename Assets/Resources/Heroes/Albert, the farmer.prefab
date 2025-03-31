@@ -2872,6 +2872,7 @@ MonoBehaviour:
   deathEffectPrefab: {fileID: 0}
   damageSound: {fileID: 0}
   deathSound: {fileID: 0}
+  currentTarget: {fileID: 0}
   currentKillStreak: 0
   _currentLevel: 1
   baseCreepXP: 25

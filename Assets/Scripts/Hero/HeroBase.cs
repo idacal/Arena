@@ -65,7 +65,7 @@ namespace Photon.Pun.Demo.Asteroids
         
         // Variables de control internas
         protected float attackCooldown = 0f;
-        protected HeroBase currentTarget;
+        public HeroBase currentTarget;  // Cambiado de protected a public
         protected bool isAttacking = false;
         protected float lastDamageTime = 0f;
         protected float damageImmunityTime = 0.1f;
@@ -412,6 +412,10 @@ namespace Photon.Pun.Demo.Asteroids
                     heroData = HeroManager.Instance.GetHeroData(heroId);
                     if (heroData != null)
                     {
+                        Debug.Log($"[HeroBase] Cargando datos para héroe {heroId}: {heroData.Name}");
+                        Debug.Log($"[HeroBase] Atributos base - Fuerza: {heroData.BaseStrength}, Inteligencia: {heroData.BaseIntelligence}, Agilidad: {heroData.BaseAgility}");
+                        Debug.Log($"[HeroBase] Escalados - Fuerza: {heroData.StrengthScaling}, Inteligencia: {heroData.IntelligenceScaling}, Agilidad: {heroData.AgilityScaling}");
+                        
                         heroName = heroData.Name;
                         maxHealth = heroData.MaxHealth;
                         currentHealth = maxHealth;
@@ -426,6 +430,8 @@ namespace Photon.Pun.Demo.Asteroids
                         manaRegenRate = heroData.CurrentManaRegen;
                         respawnTime = heroData.RespawnTime;
                         
+                        Debug.Log($"[HeroBase] Estadísticas finales - Daño: {attackDamage}, Velocidad de ataque: {attackSpeed}, Armadura: {armor}");
+                        
                         // Configurar habilidades
                         if (abilityController != null)
                         {
@@ -434,12 +440,12 @@ namespace Photon.Pun.Demo.Asteroids
                     }
                     else
                     {
-                        Debug.LogError($"[HeroBase] No se encontraron datos para el héroe con ID {heroId}");
+                        Debug.LogError($"[HeroBase] No se encontraron datos para el héroe ID: {heroId}");
                     }
                 }
                 else
                 {
-                    Debug.LogError("[HeroBase] No se ha seleccionado ningún héroe");
+                    Debug.LogError($"[HeroBase] No se encontró ID de héroe seleccionado para el jugador {player.NickName}");
                 }
             }
         }
@@ -534,6 +540,8 @@ namespace Photon.Pun.Demo.Asteroids
         /// </summary>
         protected virtual void Die()
         {
+            Debug.Log($"[HeroBase] Die() llamado para {heroName} (IsMine: {photonView.IsMine})");
+            
             // Desactivar regeneración y controles
             _isDead = true;
             DisableControls();
@@ -541,7 +549,6 @@ namespace Photon.Pun.Demo.Asteroids
             // Reproducir animación de muerte
             if (animator != null)
             {
-                // Usar parámetros genéricos que cada héroe configurará en su Animator
                 animator.SetBool("IsDead", true);
                 animator.SetTrigger("Die");
             }
@@ -577,8 +584,13 @@ namespace Photon.Pun.Demo.Asteroids
             // Otorgar experiencia al héroe que causó la muerte
             if (currentTarget != null)
             {
+                Debug.Log($"[HeroBase] Otorgando experiencia y oro a {currentTarget.heroName} por matar a {heroName}");
                 currentTarget.AwardHeroKillExperience(this);
-                currentTarget.AwardHeroKillGold(this); // Otorgar oro por matar héroe
+                currentTarget.AwardHeroKillGold(this);
+            }
+            else
+            {
+                Debug.LogWarning($"[HeroBase] No se encontró currentTarget para otorgar experiencia por la muerte de {heroName}");
             }
         }
         
@@ -998,8 +1010,7 @@ namespace Photon.Pun.Demo.Asteroids
         [PunRPC]
         private void RPC_OnDeath()
         {
-            // Este método se llama en todos los clientes cuando un héroe muere
-            Debug.Log($"[HeroBase] RPC_OnDeath recibido para {heroName}");
+            Debug.Log($"[HeroBase] RPC_OnDeath recibido para {heroName} (IsMine: {photonView.IsMine})");
             
             // Asegurarnos de que el modelo esté en estado de muerte
             if (animator != null)
@@ -1131,7 +1142,7 @@ namespace Photon.Pun.Demo.Asteroids
             
             if (basicAttackProjectilePrefab != null)
             {
-                // Posición de origen del proyectil (podría ajustarse a un punto específico del personaje)
+                // Posición de origen del proyectil
                 Vector3 spawnPosition = transform.position + transform.forward * 0.5f + Vector3.up * 1.0f;
                 
                 // Dirección hacia el objetivo
@@ -1141,7 +1152,8 @@ namespace Photon.Pun.Demo.Asteroids
                 object[] instantiationData = new object[] { 
                     attackDamage, 
                     photonView.ViewID, // ID del atacante
-                    target.photonView.ViewID // ID del objetivo
+                    target.photonView.ViewID, // ID del objetivo
+                    photonView.ViewID // Añadimos el ViewID del atacante para el currentTarget
                 };
                 
                 // Instanciar el proyectil
@@ -1399,16 +1411,23 @@ namespace Photon.Pun.Demo.Asteroids
         /// </summary>
         public void AwardHeroKillExperience(HeroBase killedHero)
         {
-            if (!photonView.IsMine || killedHero == null) return;
+            if (!photonView.IsMine || killedHero == null)
+            {
+                Debug.Log($"[HeroBase] No se otorga XP por matar héroe: IsMine={photonView.IsMine}, KilledHero={killedHero?.heroName ?? "null"}");
+                return;
+            }
             
             // Calcular XP base más bonus por nivel
             float xpReward = baseHeroKillXP + (baseHeroKillXP * killedHero.CurrentLevel * heroLevelXPMultiplier);
+            Debug.Log($"[HeroBase] {heroName} recibirá {xpReward} XP por matar a {killedHero.heroName} (nivel {killedHero.CurrentLevel})");
             
             // Encontrar héroes aliados cercanos para asistencias
             var nearbyAllies = Physics.OverlapSphere(transform.position, xpRangeRadius)
                                     .Select(c => c.GetComponent<HeroBase>())
                                     .Where(h => h != null && h.teamId == this.teamId && h != this)
                                     .ToList();
+            
+            Debug.Log($"[HeroBase] Héroes aliados cercanos para asistencia: {nearbyAllies.Count}");
             
             // Otorgar XP al asesino
             GainExperience(xpReward);
@@ -1417,6 +1436,7 @@ namespace Photon.Pun.Demo.Asteroids
             float assistXP = xpReward * assistXPMultiplier;
             foreach (var ally in nearbyAllies)
             {
+                Debug.Log($"[HeroBase] Otorgando {assistXP} XP de asistencia a {ally.heroName}");
                 ally.GainExperience(assistXP);
             }
         }
@@ -1560,10 +1580,18 @@ namespace Photon.Pun.Demo.Asteroids
         /// </summary>
         public void GainExperience(float amount)
         {
-            if (!photonView.IsMine || amount <= 0) return;
+            Debug.Log($"[HeroBase] Intentando ganar {amount} XP. IsMine: {photonView?.IsMine}, Hero: {heroName}");
+            
+            if (!photonView.IsMine || amount <= 0)
+            {
+                Debug.Log($"[HeroBase] No se otorga XP: IsMine={photonView?.IsMine}, amount={amount}");
+                return;
+            }
             
             float experienceNeeded = GetExperienceForNextLevel();
             _currentExperience += amount;
+            
+            Debug.Log($"[HeroBase] XP actual: {_currentExperience}, XP necesaria: {experienceNeeded}");
             
             // Notificar ganancia de experiencia
             OnExperienceGained?.Invoke(amount, _currentExperience, experienceNeeded);
@@ -1571,6 +1599,7 @@ namespace Photon.Pun.Demo.Asteroids
             // Verificar si subimos de nivel
             while (_currentExperience >= experienceNeeded && CurrentLevel < heroData.MaxLevel)
             {
+                Debug.Log($"[HeroBase] Subiendo de nivel de {CurrentLevel} a {CurrentLevel + 1}");
                 _currentExperience = 0; // Reiniciar la experiencia a 0 al subir de nivel
                 CurrentLevel++;
                 _currentLevel = CurrentLevel;
@@ -1587,6 +1616,8 @@ namespace Photon.Pun.Demo.Asteroids
                 // Calcular la experiencia necesaria para el siguiente nivel
                 experienceNeeded = GetExperienceForNextLevel();
                 
+                Debug.Log($"[HeroBase] Nuevo nivel: {CurrentLevel}, XP necesaria para siguiente nivel: {experienceNeeded}");
+                
                 // Notificar la actualización de la UI con la nueva experiencia (0)
                 OnExperienceGained?.Invoke(0, 0, experienceNeeded);
             }
@@ -1595,6 +1626,7 @@ namespace Photon.Pun.Demo.Asteroids
             if (CurrentLevel >= heroData.MaxLevel)
             {
                 _currentExperience = experienceNeeded;
+                Debug.Log($"[HeroBase] Alcanzado nivel máximo ({CurrentLevel})");
             }
         }
         

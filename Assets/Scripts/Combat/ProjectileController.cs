@@ -20,6 +20,7 @@ public class ProjectileController : MonoBehaviourPun
     private float damage;
     private Transform shooter;
     private int shooterActorNumber;
+    private int attackerViewID;
     
     private void Awake()
     {
@@ -71,12 +72,13 @@ public class ProjectileController : MonoBehaviourPun
     /// <param name="damage">Daño que causará el proyectil</param>
     /// <param name="shooter">Referencia al transform del disparador (para identificar al atacante)</param>
     /// <param name="shooterActorNumber">Número de actor Photon del disparador</param>
-    public void Initialize(float damage, Transform shooter, int shooterActorNumber)
+    public void Initialize(float damage, Transform shooter, int shooterActorNumber, int attackerViewID)
     {
         Debug.Log($"[ProjectileController] Inicializando proyectil - Daño: {damage}, Disparador: {shooter.name}, ActorNumber: {shooterActorNumber}");
         this.damage = damage;
         this.shooter = shooter;
         this.shooterActorNumber = shooterActorNumber;
+        this.attackerViewID = attackerViewID;
         
         // Verificar configuración de colisiones
         if (collisionMask.value == 0)
@@ -127,67 +129,59 @@ public class ProjectileController : MonoBehaviourPun
     
     private void OnTriggerEnter(Collider other)
     {
-        // Ignorar colisiones con el disparador
-        if (shooter != null && other.gameObject == shooter.gameObject)
-            return;
-            
-        // Ignorar colisiones con otros proyectiles
-        if (other.gameObject.layer == gameObject.layer)
-            return;
-            
         Debug.Log($"Proyectil golpeó a: {other.gameObject.name}, tag: {other.gameObject.tag}");
         
-        // Verificar si es un hero o un creep
-        HeroBase targetHero = other.GetComponent<HeroBase>();
-        NeutralCreep targetCreep = other.GetComponent<NeutralCreep>();
-        GameObject hitObject = other.gameObject;
-        
-        if (targetHero != null)
+        // Verificar si golpeó a un héroe
+        HeroBase hitHero = other.GetComponent<HeroBase>();
+        if (hitHero != null)
         {
             Debug.Log("Golpeó a un héroe");
             
-            // Verificar si el disparador es un héroe
-            HeroBase shooterHero = shooter?.GetComponent<HeroBase>();
-            
-            if (shooterHero != null)
+            // Obtener el atacante original
+            PhotonView attackerView = PhotonView.Find(attackerViewID);
+            if (attackerView != null)
             {
-                // Solo dañar a enemigos (usando el sistema de tags)
-                if (LayerManager.IsEnemy(shooter.gameObject, hitObject))
+                HeroBase attacker = attackerView.GetComponent<HeroBase>();
+                if (attacker != null)
                 {
-                    Debug.Log($"Aplicando daño de {damage} a {hitObject.name}");
-                    targetHero.TakeDamage(damage, shooterActorNumber);
-                }
-                else
-                {
-                    Debug.Log($"No se aplica daño a {hitObject.name} porque no es enemigo");
+                    // Establecer el atacante como currentTarget antes de aplicar el daño
+                    hitHero.currentTarget = attacker;
+                    Debug.Log($"[ProjectileController] Establecido currentTarget a {attacker.heroName} para {hitHero.heroName}");
                 }
             }
-        }
-        else if (targetCreep != null)
-        {
-            Debug.Log("Golpeó a un creep");
             
-            // Obtener el héroe que disparó
-            HeroBase shooterHero = shooter?.GetComponent<HeroBase>();
-            if (shooterHero != null)
+            // Aplicar el daño
+            hitHero.TakeDamage(damage, shooterActorNumber);
+            
+            // Destruir el proyectil
+            if (photonView.IsMine)
             {
-                Debug.Log($"Aplicando daño de {damage} a {hitObject.name} desde {shooterHero.heroName}");
-                targetCreep.TakeDamage(damage, shooterHero);
-            }
-            else
-            {
-                Debug.LogError("No se encontró el héroe que disparó el proyectil");
+                PhotonNetwork.Destroy(gameObject);
             }
         }
-        
-        // Destruir el proyectil al impactar
-        if (photonView.IsMine)
+    }
+
+    public void OnPhotonInstantiate(PhotonMessageInfo info)
+    {
+        // Obtener los datos de inicialización
+        object[] instantiationData = info.photonView.InstantiationData;
+        if (instantiationData != null && instantiationData.Length >= 4)
         {
-            PhotonNetwork.Destroy(gameObject);
+            float damage = (float)instantiationData[0];
+            int shooterViewID = (int)instantiationData[1];
+            int targetViewID = (int)instantiationData[2];
+            int attackerViewID = (int)instantiationData[3];
+            
+            // Obtener el transform del disparador
+            PhotonView shooterView = PhotonView.Find(shooterViewID);
+            Transform shooter = shooterView != null ? shooterView.transform : null;
+            
+            // Inicializar el proyectil
+            Initialize(damage, shooter, info.Sender.ActorNumber, attackerViewID);
         }
         else
         {
-            Destroy(gameObject);
+            Debug.LogError("[ProjectileController] No se recibieron los datos de inicialización correctos");
         }
     }
 } 

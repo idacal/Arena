@@ -60,6 +60,10 @@ namespace Photon.Pun.Demo.Asteroids
         /// </summary>
         public HeroData ToHeroData()
         {
+            Debug.Log($"[HeroDataSO] Convirtiendo ScriptableObject a HeroData: {Name}");
+            Debug.Log($"[HeroDataSO] Valores originales - Fuerza: {BaseStrength}, Inteligencia: {BaseIntelligence}, Agilidad: {BaseAgility}");
+            Debug.Log($"[HeroDataSO] Escalados - Fuerza: {StrengthScaling}, Inteligencia: {IntelligenceScaling}, Agilidad: {AgilityScaling}");
+            
             HeroData heroData = new HeroData
             {
                 Id = this.Id,
@@ -114,6 +118,9 @@ namespace Photon.Pun.Demo.Asteroids
                 }
             }
 
+            Debug.Log($"[HeroDataSO] Valores convertidos - Fuerza: {heroData.BaseStrength}, Inteligencia: {heroData.BaseIntelligence}, Agilidad: {heroData.BaseAgility}");
+            Debug.Log($"[HeroDataSO] Escalados convertidos - Fuerza: {heroData.StrengthScaling}, Inteligencia: {heroData.IntelligenceScaling}, Agilidad: {heroData.AgilityScaling}");
+            
             return heroData;
         }
     }

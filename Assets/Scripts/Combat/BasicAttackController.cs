@@ -322,7 +322,7 @@ public class BasicAttackController : MonoBehaviourPun
                 ProjectileController projectileController = projectile.GetComponent<ProjectileController>();
                 if (projectileController != null)
                 {
-                    projectileController.Initialize(heroBase.AttackDamage, transform, PhotonNetwork.IsConnected ? photonView.Owner.ActorNumber : 0);
+                    projectileController.Initialize(heroBase.AttackDamage, transform, PhotonNetwork.IsConnected ? photonView.Owner.ActorNumber : 0, photonView.ViewID);
                     Debug.Log($"[BasicAttackController] Proyectil inicializado con daño: {heroBase.AttackDamage}");
                 }
                 else
