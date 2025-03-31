@@ -192,6 +192,7 @@ MonoBehaviour:
     HealthRegenPerStrength: 0
     ManaRegenPerIntelligence: 0
     MovementSpeed: 0
+    AttackRange: 0
     RespawnTime: 0
     MaxLevel: 0
     BaseExperience: 0
@@ -231,6 +232,7 @@ MonoBehaviour:
   deathEffectPrefab: {fileID: 0}
   damageSound: {fileID: 0}
   deathSound: {fileID: 0}
+  currentKillStreak: 0
   _currentLevel: 1
   baseCreepXP: 25
   baseHeroKillXP: 100
@@ -240,6 +242,15 @@ MonoBehaviour:
   assistXPMultiplier: 0.5
   xpRangeRadius: 1000
   _availableSkillPoints: 1
+  _currentGold: 0
+  StartingGold: 500
+  goldSound: {fileID: 0}
+  bigGoldSound: {fileID: 0}
+  smallGoldSound: {fileID: 0}
+  baseHeroKillGold: 200
+  heroLevelGoldMultiplier: 0.15
+  killStreakGoldMultiplier: 0.1
+  assistGoldMultiplier: 0.4
 --- !u!114 &5826635703823206055
 MonoBehaviour:
   m_ObjectHideFlags: 0

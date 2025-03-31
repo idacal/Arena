@@ -464,6 +464,13 @@ namespace Photon.Pun.Demo.Asteroids
         /// </summary>
         public void ShowDamageText(float amount, bool isMagicDamage = false)
         {
+            // Verificar si el objeto está activo antes de continuar
+            if (!gameObject.activeInHierarchy)
+            {
+                Debug.LogWarning($"[HeroUIController] No se puede mostrar texto de daño: GameObject '{gameObject.name}' inactivo");
+                return;
+            }
+
             if (floatingTextPrefab == null)
                 return;
                 
@@ -478,8 +485,17 @@ namespace Photon.Pun.Demo.Asteroids
                 textComponent.text = "-" + Mathf.FloorToInt(amount).ToString();
                 textComponent.color = isMagicDamage ? magicDamageColor : damageColor;
                 
-                // Animar el texto
-                StartCoroutine(AnimateFloatingText(textObj));
+                // Animar el texto de forma segura con StartCoroutine
+                try
+                {
+                    StartCoroutine(AnimateFloatingText(textObj));
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogError($"[HeroUIController] Error al iniciar coroutine: {ex.Message}. Objeto activo: {gameObject.activeInHierarchy}");
+                    // Destruir el objeto de texto para evitar fugas de memoria
+                    Destroy(textObj);
+                }
             }
         }
         
@@ -704,6 +720,22 @@ namespace Photon.Pun.Demo.Asteroids
         /// </summary>
         public void ShowGoldRewardText(float amount, string sourceText = "", Vector3? enemyPosition = null)
         {
+            // Verificar si el objeto está activo antes de continuar
+            if (!gameObject.activeInHierarchy)
+            {
+                Debug.LogWarning($"[HeroUIController] No se puede mostrar recompensa de oro: GameObject '{gameObject.name}' inactivo");
+                try {
+                    // Intentar activar el objeto
+                    gameObject.SetActive(true);
+                    Debug.Log($"[HeroUIController] Se activó el GameObject '{gameObject.name}' para mostrar recompensa de oro");
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogError($"[HeroUIController] Error al activar GameObject: {ex.Message}");
+                    return;
+                }
+            }
+            
             // Evitar llamadas duplicadas usando una ID única para cada posición
             string positionId = enemyPosition.HasValue ? enemyPosition.Value.ToString("F2") : "player";
             string callId = $"{positionId}_{Time.frameCount}";
@@ -732,71 +764,107 @@ namespace Photon.Pun.Demo.Asteroids
                 // Si es una cantidad grande o viene de matar héroe, hacer el texto más visible
                 if (sourceText.Contains("eliminado") || amount >= 100)
                 {
-                    displayText = $"{displayText} ORO\n{sourceText}";
+                    displayText = $"{displayText}";
                 }
                 else
                 {
-                    displayText = $"{displayText}\n{sourceText}";
+                    displayText = $"{displayText}";
                 }
             }
             
-            // Incrementar partículas para recompensas grandes (matar héroes)
+            // Verificar específicamente si es oro por eliminar héroe
             bool isHeroKill = !string.IsNullOrEmpty(sourceText) && sourceText.Contains("eliminado");
+            
+            if (isHeroKill)
+            {
+                Debug.Log($"[HeroUIController] Mostrando recompensa por matar héroe: {amount} oro");
+            }
+            
             float particleMultiplier = isHeroKill ? 2.0f : 1.0f;
             
-            // Crear las partículas de monedas (más si es una recompensa grande)
-            CreateGoldParticles(position, amount * particleMultiplier);
+            try
+            {
+                // Crear las partículas de monedas (más si es una recompensa grande)
+                CreateGoldParticles(position, amount * particleMultiplier);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[HeroUIController] Error al crear partículas de oro: {ex.Message}");
+            }
             
             // Intentar usar el prefab si existe
             if (floatingTextPrefab != null)
             {
-                // Crear el texto flotante sin padre para evitar errores con objetos persistentes
-                GameObject textObj = Instantiate(floatingTextPrefab, position, Quaternion.identity);
-                textObj.name = $"GoldText_{callId}";
-                
-                // Configurar el texto
-                TMP_Text textComponent = textObj.GetComponent<TMP_Text>();
-                if (textComponent != null)
+                try
                 {
-                    // Establecer el texto
-                    textComponent.text = displayText.Trim();
-                    textComponent.color = goldColor;
+                    // Crear el texto flotante sin padre para evitar errores con objetos persistentes
+                    GameObject textObj = Instantiate(floatingTextPrefab, position, Quaternion.identity);
+                    textObj.name = $"GoldText_{callId}";
                     
-                    // Si es recompensa por matar héroe, hacer texto más grande y duradero
-                    if (isHeroKill || amount >= 100)
+                    // Configurar el texto
+                    TMP_Text textComponent = textObj.GetComponent<TMP_Text>();
+                    if (textComponent != null)
                     {
-                        textComponent.fontSize *= 1.5f;
-                        textComponent.fontStyle = TMPro.FontStyles.Bold;
+                        // Establecer el texto
+                        textComponent.text = displayText.Trim();
+                        textComponent.color = goldColor;
                         
-                        // Animar con corrutina especial para recompensas de héroe
-                        StartCoroutine(AnimateHeroKillGoldText(textObj));
+                        // Si es recompensa por matar héroe, hacer texto más grande y duradero
+                        if (isHeroKill || amount >= 100)
+                        {
+                            textComponent.fontSize *= 1.5f;
+                            textComponent.fontStyle = TMPro.FontStyles.Bold;
+                            
+                            // Animar con coroutina especial para recompensas de héroe
+                            try
+                            {
+                                StartCoroutine(AnimateHeroKillGoldText(textObj));
+                            }
+                            catch (System.Exception ex)
+                            {
+                                Debug.LogError($"[HeroUIController] Error al iniciar coroutine de animación de oro por héroe: {ex.Message}");
+                                Destroy(textObj);
+                            }
+                        }
+                        else
+                        {
+                            textComponent.fontSize *= 1.2f; // Texto ligeramente más grande
+                            // Animar el texto con corrutina estándar
+                            try
+                            {
+                                StartCoroutine(AnimateGoldFloatingText(textObj));
+                            }
+                            catch (System.Exception ex)
+                            {
+                                Debug.LogError($"[HeroUIController] Error al iniciar coroutine de animación de oro: {ex.Message}");
+                                Destroy(textObj);
+                            }
+                        }
+                        
+                        Debug.Log($"Mostrando texto de oro: '{textComponent.text}' en posición {position}");
+                        
+                        // Asegurar que el objeto mire a la cámara
+                        Billboard billboard = textObj.GetComponent<Billboard>();
+                        if (billboard == null)
+                        {
+                            billboard = textObj.AddComponent<Billboard>();
+                        }
+                        
+                        // Asegurar destrucción en caso de fallo
+                        Destroy(textObj, 5f);
                     }
                     else
                     {
-                        textComponent.fontSize *= 1.2f; // Texto ligeramente más grande
-                        // Animar el texto con corrutina estándar
-                        StartCoroutine(AnimateGoldFloatingText(textObj));
+                        Debug.LogError("El prefab de texto flotante no tiene componente TextMeshPro");
+                        Destroy(textObj);
+                        
+                        // Crear texto dinámicamente como fallback
+                        CreateDynamicFloatingText(position, displayText);
                     }
-                    
-                    Debug.Log($"Mostrando texto de oro: '{textComponent.text}' en posición {position}");
-                    
-                    // Asegurar que el objeto mire a la cámara
-                    Billboard billboard = textObj.GetComponent<Billboard>();
-                    if (billboard == null)
-                    {
-                        billboard = textObj.AddComponent<Billboard>();
-                    }
-                    
-                    // Asegurar destrucción en caso de fallo
-                    Destroy(textObj, 5f);
                 }
-                else
+                catch (System.Exception ex)
                 {
-                    Debug.LogError("El prefab de texto flotante no tiene componente TextMeshPro");
-                    Destroy(textObj);
-                    
-                    // Crear texto dinámicamente como fallback
-                    CreateDynamicFloatingText(position, displayText);
+                    Debug.LogError($"[HeroUIController] Error al crear texto flotante: {ex.Message}");
                 }
             }
             else

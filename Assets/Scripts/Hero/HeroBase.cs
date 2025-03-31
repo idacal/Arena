@@ -995,6 +995,35 @@ namespace Photon.Pun.Demo.Asteroids
             Debug.Log($"[HeroBase] Héroe respawneado en posición {position} y listo para moverse");
         }
         
+        [PunRPC]
+        private void RPC_OnDeath()
+        {
+            // Este método se llama en todos los clientes cuando un héroe muere
+            Debug.Log($"[HeroBase] RPC_OnDeath recibido para {heroName}");
+            
+            // Asegurarnos de que el modelo esté en estado de muerte
+            if (animator != null)
+            {
+                animator.SetBool("IsDead", true);
+                animator.SetTrigger("Die");
+            }
+            
+            // Desactivar colliders y controles
+            DisableControls();
+            
+            // Reproducir efecto de muerte si existe (localmente en cada cliente)
+            if (deathEffectPrefab != null)
+            {
+                Instantiate(deathEffectPrefab, transform.position, Quaternion.identity);
+            }
+            
+            // Reproducir sonido de muerte localmente
+            if (deathSound != null && audioSource != null)
+            {
+                audioSource.PlayOneShot(deathSound);
+            }
+        }
+        
         #endregion
         
         #region IPunObservable Implementation
@@ -1610,11 +1639,22 @@ namespace Photon.Pun.Demo.Asteroids
             // Notificar a la UI si existe
             if (uiController != null)
             {
+                // Verificar que el objeto de la UI esté activo
+                if (!uiController.gameObject.activeInHierarchy)
+                {
+                    Debug.LogWarning($"[HeroBase] El UI Canvas del héroe {heroName} está inactivo, intentando activarlo");
+                    uiController.gameObject.SetActive(true);
+                }
+                
                 // Actualizar contador de oro
                 uiController.UpdateGoldText(_currentGold);
                 
                 // Mostrar texto flotante con el oro ganado en la posición del origen
                 uiController.ShowGoldRewardText(amount, sourceText, sourcePosition);
+            }
+            else
+            {
+                Debug.LogError($"[HeroBase] No se pudo mostrar recompensa de oro: uiController es null para {heroName}");
             }
             
             // PRUEBA: Reproducir sonido como 2D global
