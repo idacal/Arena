@@ -11,14 +11,26 @@ public class KillFeedManager : MonoBehaviourPunCallbacks
     [SerializeField] private Transform killFeedContainer;
     [SerializeField] private float entryDuration = 5f;
     
+    [Header("Configuración de Multi-Kills")]
+    [SerializeField] private float multiKillTimeWindow = 3f; // Tiempo máximo entre kills para contar como multi-kill
+    
+    [Header("Iconos de Multi-Kills")]
     [SerializeField] private Sprite firstBloodIcon;
     [SerializeField] private Sprite doubleKillIcon;
     [SerializeField] private Sprite tripleKillIcon;
     [SerializeField] private Sprite quadraKillIcon;
     [SerializeField] private Sprite pentaKillIcon;
-    [SerializeField] private Sprite killIcon;
+    
+    [Header("Iconos de Kill Streaks")]
+    [SerializeField] private Sprite killStreakIcon;
+    [SerializeField] private Sprite dominatingIcon;
+    [SerializeField] private Sprite unstoppableIcon;
+    [SerializeField] private Sprite godlikeIcon;
+    [SerializeField] private Sprite legendaryIcon;
     
     private Dictionary<string, int> playerKillStreaks = new Dictionary<string, int>();
+    private Dictionary<string, int> playerMultiKills = new Dictionary<string, int>();
+    private Dictionary<string, float> playerLastKillTime = new Dictionary<string, float>();
     private bool firstBloodOccurred = false;
     
     private void Start()
@@ -53,12 +65,79 @@ public class KillFeedManager : MonoBehaviourPunCallbacks
             return;
         }
         
+        float currentTime = Time.time;
+        
+        // Manejar First Blood
         bool isFirstBlood = !firstBloodOccurred;
         if (isFirstBlood)
         {
             firstBloodOccurred = true;
+            CreateKillFeedEntry(killerName, victimName, firstBloodIcon, "First Blood!", entryDuration, true, 0, false);
+            return;
         }
         
+        // Manejar Multi-Kills
+        if (!playerLastKillTime.ContainsKey(killerName))
+        {
+            playerLastKillTime[killerName] = 0;
+            playerMultiKills[killerName] = 0;
+        }
+        
+        float timeSinceLastKill = currentTime - playerLastKillTime[killerName];
+        playerLastKillTime[killerName] = currentTime;
+        
+        if (timeSinceLastKill <= multiKillTimeWindow)
+        {
+            playerMultiKills[killerName]++;
+            HandleMultiKill(killerName, victimName);
+        }
+        else
+        {
+            playerMultiKills[killerName] = 1;
+            HandleKillStreak(killerName, victimName);
+            
+            // Mostrar muerte normal si no hay racha
+            if (playerKillStreaks[killerName] < 5)
+            {
+                CreateKillFeedEntry(killerName, victimName, null, "", entryDuration, false, 0, false);
+            }
+        }
+    }
+    
+    private void HandleMultiKill(string killerName, string victimName)
+    {
+        Sprite streakIcon = null;
+        string streakText = "";
+        int multiKillCount = playerMultiKills[killerName];
+        
+        switch (multiKillCount)
+        {
+            case 2:
+                streakIcon = doubleKillIcon;
+                streakText = "Double Kill!";
+                break;
+            case 3:
+                streakIcon = tripleKillIcon;
+                streakText = "Triple Kill!";
+                break;
+            case 4:
+                streakIcon = quadraKillIcon;
+                streakText = "Quadra Kill!";
+                break;
+            case 5:
+                streakIcon = pentaKillIcon;
+                streakText = "PENTA KILL!";
+                break;
+        }
+        
+        if (streakIcon != null)
+        {
+            CreateKillFeedEntry(killerName, victimName, streakIcon, streakText, entryDuration, false, multiKillCount, true);
+        }
+    }
+    
+    private void HandleKillStreak(string killerName, string victimName)
+    {
         if (!playerKillStreaks.ContainsKey(killerName))
         {
             playerKillStreaks[killerName] = 0;
@@ -67,40 +146,41 @@ public class KillFeedManager : MonoBehaviourPunCallbacks
         
         Sprite streakIcon = null;
         string streakText = "";
+        int streakCount = playerKillStreaks[killerName];
         
-        if (isFirstBlood)
+        if (streakCount >= 5)
         {
-            streakIcon = firstBloodIcon;
-            streakText = "First Blood!";
+            streakIcon = killStreakIcon;
+            streakText = $"Kill Streak x{streakCount}!";
         }
-        else
+        if (streakCount >= 10)
         {
-            int streak = playerKillStreaks[killerName];
-            switch (streak)
-            {
-                case 2:
-                    streakIcon = doubleKillIcon;
-                    streakText = "Double Kill!";
-                    break;
-                case 3:
-                    streakIcon = tripleKillIcon;
-                    streakText = "Triple Kill!";
-                    break;
-                case 4:
-                    streakIcon = quadraKillIcon;
-                    streakText = "Quadra Kill!";
-                    break;
-                case 5:
-                    streakIcon = pentaKillIcon;
-                    streakText = "PENTA KILL!";
-                    break;
-            }
+            streakIcon = dominatingIcon;
+            streakText = "Dominating!";
+        }
+        if (streakCount >= 15)
+        {
+            streakIcon = unstoppableIcon;
+            streakText = "Unstoppable!";
+        }
+        if (streakCount >= 20)
+        {
+            streakIcon = godlikeIcon;
+            streakText = "Godlike!";
+        }
+        if (streakCount >= 25)
+        {
+            streakIcon = legendaryIcon;
+            streakText = "Legendary!";
         }
         
-        CreateKillFeedEntry(killerName, victimName, killIcon, streakIcon, streakText, entryDuration);
+        if (streakIcon != null)
+        {
+            CreateKillFeedEntry(killerName, victimName, streakIcon, streakText, entryDuration, false, streakCount, false);
+        }
     }
     
-    private void CreateKillFeedEntry(string killerName, string victimName, Sprite killIcon, Sprite streakIcon, string streakText, float duration)
+    private void CreateKillFeedEntry(string killerName, string victimName, Sprite streakIcon, string streakText, float duration, bool isFirstBlood, int streakCount, bool isMultiKill)
     {
         if (killFeedEntryPrefab == null || killFeedContainer == null)
         {
@@ -115,7 +195,7 @@ public class KillFeedManager : MonoBehaviourPunCallbacks
         
         if (killFeedEntry != null)
         {
-            killFeedEntry.Setup(killerName, victimName, streakIcon, streakText, duration);
+            killFeedEntry.Setup(killerName, victimName, streakIcon, streakText, duration, isFirstBlood, streakCount, isMultiKill);
         }
         else
         {
@@ -134,6 +214,14 @@ public class KillFeedManager : MonoBehaviourPunCallbacks
         if (playerKillStreaks.ContainsKey(playerName))
         {
             playerKillStreaks[playerName] = 0;
+        }
+        if (playerMultiKills.ContainsKey(playerName))
+        {
+            playerMultiKills[playerName] = 0;
+        }
+        if (playerLastKillTime.ContainsKey(playerName))
+        {
+            playerLastKillTime[playerName] = 0;
         }
     }
 } 

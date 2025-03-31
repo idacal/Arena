@@ -91,6 +91,13 @@ MonoBehaviour:
   - SyncRevealedSector
   - SyncVisibility
   - RPC_OnDeath
+  - RPC_SetPatrolTarget
+  - RPC_SetTarget
+  - RPC_ResetKillStreak
+  - RPC_SyncFirstBlood
+  - RPC_SyncPlayerKill
+  - ResetKillStreak
+  - RPC_HandlePlayerKill
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

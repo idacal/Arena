@@ -133,25 +133,97 @@ public class ProjectileController : MonoBehaviourPun
         
         // Verificar si golpeó a un héroe
         HeroBase hitHero = other.GetComponent<HeroBase>();
+        
+        // Verificar si golpeó a una criatura neutral
+        NeutralCreep hitCreep = other.GetComponent<NeutralCreep>();
+        
+        // Obtener el atacante original
+        PhotonView attackerView = PhotonView.Find(attackerViewID);
+        HeroBase attacker = null;
+        if (attackerView != null)
+        {
+            attacker = attackerView.GetComponent<HeroBase>();
+        }
+        
         if (hitHero != null)
         {
             Debug.Log("Golpeó a un héroe");
             
-            // Obtener el atacante original
-            PhotonView attackerView = PhotonView.Find(attackerViewID);
-            if (attackerView != null)
+            if (attacker != null)
             {
-                HeroBase attacker = attackerView.GetComponent<HeroBase>();
-                if (attacker != null)
-                {
-                    // Establecer el atacante como currentTarget antes de aplicar el daño
-                    hitHero.currentTarget = attacker;
-                    Debug.Log($"[ProjectileController] Establecido currentTarget a {attacker.heroName} para {hitHero.heroName}");
-                }
+                // Establecer el atacante como currentTarget antes de aplicar el daño
+                hitHero.currentTarget = attacker;
+                Debug.Log($"[ProjectileController] Establecido currentTarget a {attacker.heroName} para {hitHero.heroName}");
             }
             
             // Aplicar el daño
             hitHero.TakeDamage(damage, shooterActorNumber);
+            
+            // Destruir el proyectil
+            if (photonView.IsMine)
+            {
+                PhotonNetwork.Destroy(gameObject);
+            }
+        }
+        else if (hitCreep != null)
+        {
+            Debug.Log($"[ProjectileController] Golpeó a una criatura neutral: {hitCreep.creepName}");
+            
+            // Aplicar el daño directamente a la criatura neutral
+            hitCreep.TakeDamage(damage, attacker);
+            
+            // Destruir el proyectil
+            if (photonView.IsMine)
+            {
+                PhotonNetwork.Destroy(gameObject);
+            }
+        }
+    }
+    
+    private void OnCollisionEnter(Collision collision)
+    {
+        Debug.Log($"[ProjectileController] Colisión detectada con: {collision.gameObject.name}");
+        
+        // Verificar si golpeó a un héroe
+        HeroBase hitHero = collision.gameObject.GetComponent<HeroBase>();
+        
+        // Verificar si golpeó a una criatura neutral
+        NeutralCreep hitCreep = collision.gameObject.GetComponent<NeutralCreep>();
+        
+        // Obtener el atacante original
+        PhotonView attackerView = PhotonView.Find(attackerViewID);
+        HeroBase attacker = null;
+        if (attackerView != null)
+        {
+            attacker = attackerView.GetComponent<HeroBase>();
+        }
+        
+        if (hitHero != null)
+        {
+            Debug.Log("[ProjectileController] Golpeó a un héroe en colisión física");
+            
+            if (attacker != null)
+            {
+                // Establecer el atacante como currentTarget antes de aplicar el daño
+                hitHero.currentTarget = attacker;
+                Debug.Log($"[ProjectileController] Establecido currentTarget a {attacker.heroName} para {hitHero.heroName}");
+            }
+            
+            // Aplicar el daño
+            hitHero.TakeDamage(damage, shooterActorNumber);
+            
+            // Destruir el proyectil
+            if (photonView.IsMine)
+            {
+                PhotonNetwork.Destroy(gameObject);
+            }
+        }
+        else if (hitCreep != null)
+        {
+            Debug.Log($"[ProjectileController] Golpeó a una criatura neutral en colisión física: {hitCreep.creepName}");
+            
+            // Aplicar el daño directamente a la criatura neutral
+            hitCreep.TakeDamage(damage, attacker);
             
             // Destruir el proyectil
             if (photonView.IsMine)

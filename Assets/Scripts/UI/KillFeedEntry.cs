@@ -30,6 +30,9 @@ namespace Photon.Pun.Demo.Asteroids
         private CanvasGroup canvasGroup;
         private RectTransform rectTransform;
         private Sequence currentSequence;
+        private bool isFirstBlood;
+        private int streakCount;
+        private bool isMultiKill;
         
         private void Awake()
         {
@@ -51,8 +54,12 @@ namespace Photon.Pun.Demo.Asteroids
             }
         }
         
-        public void Setup(string killerName, string victimName, Sprite streakIconSprite, string streakTextStr, float entryDuration)
+        public void Setup(string killerName, string victimName, Sprite streakIconSprite, string streakTextStr, float entryDuration, bool firstBlood = false, int streak = 0, bool isMultiKill = false)
         {
+            isFirstBlood = firstBlood;
+            streakCount = streak;
+            this.isMultiKill = isMultiKill;
+            
             // Asegurarnos de que el objeto esté activo
             gameObject.SetActive(true);
             
@@ -61,12 +68,14 @@ namespace Photon.Pun.Demo.Asteroids
             {
                 killerText.text = killerName;
                 killerText.color = killerColor;
+                killerText.gameObject.SetActive(true);
             }
             
             if (victimText != null)
             {
                 victimText.text = victimName;
                 victimText.color = victimColor;
+                victimText.gameObject.SetActive(true);
             }
             
             // Configurar icono y texto de racha
@@ -97,6 +106,9 @@ namespace Photon.Pun.Demo.Asteroids
             currentSequence.Append(rectTransform.DOAnchorPosX(0, slideInDuration).SetEase(slideInEase));
             currentSequence.Join(canvasGroup.DOFade(1, slideInDuration));
             
+            // Reproducir sonidos
+            PlayKillSounds();
+            
             // Esperar la duración especificada
             currentSequence.AppendInterval(entryDuration);
             
@@ -109,6 +121,30 @@ namespace Photon.Pun.Demo.Asteroids
                 gameObject.SetActive(false);
                 currentSequence = null;
             });
+        }
+        
+        private void PlayKillSounds()
+        {
+            if (KillFeedSoundManager.Instance == null) return;
+            
+            // Reproducir sonido de kill normal
+            KillFeedSoundManager.Instance.PlayKillSound();
+            
+            // Reproducir sonido de First Blood si corresponde
+            if (isFirstBlood)
+            {
+                KillFeedSoundManager.Instance.PlayFirstBloodSound();
+            }
+            // Reproducir sonido de Multi-Kill si corresponde
+            else if (isMultiKill)
+            {
+                KillFeedSoundManager.Instance.PlayMultiKillSound(streakCount);
+            }
+            // Reproducir sonido de Kill Streak si corresponde
+            else
+            {
+                KillFeedSoundManager.Instance.PlayKillStreakSound(streakCount);
+            }
         }
         
         private void OnDestroy()

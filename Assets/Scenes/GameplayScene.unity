@@ -2251,7 +2251,7 @@ Transform:
   m_GameObject: {fileID: 469765949}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -18.45, y: 2.45, z: -18.19}
+  m_LocalPosition: {x: -2.21, y: 2.45, z: -2.75}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -5309,7 +5309,7 @@ Transform:
   m_GameObject: {fileID: 1729628770}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 19.22, y: 1.6, z: 19.1}
+  m_LocalPosition: {x: 3.9, y: 1.6, z: -0.75}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -6256,7 +6256,8 @@ MonoBehaviour:
   maxCreeps: 6
   spawnInterval: 15
   spawnRadius: 6
-  showGizmos: 1
+  showGizmo: 1
+  gizmoRadius: 1
   gizmoColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
 --- !u!4 &1996106435
 Transform:

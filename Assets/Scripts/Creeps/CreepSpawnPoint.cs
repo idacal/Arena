@@ -4,6 +4,9 @@ using System.Collections.Generic;
 
 namespace Photon.Pun.Demo.Asteroids
 {
+    /// <summary>
+    /// Define un punto de spawn para criaturas neutrales
+    /// </summary>
     public class CreepSpawnPoint : MonoBehaviourPunCallbacks
     {
         [Header("Spawn Configuration")]
@@ -15,7 +18,13 @@ namespace Photon.Pun.Demo.Asteroids
         public float spawnRadius = 2f;
         
         [Header("Debug")]
-        public bool showGizmos = true;
+        [Tooltip("Mostrar el gizmo en el editor")]
+        public bool showGizmo = true;
+        
+        [Tooltip("Radio del gizmo")]
+        public float gizmoRadius = 1f;
+        
+        [Tooltip("Color del gizmo")]
         public Color gizmoColor = Color.yellow;
         
         private List<NeutralCreep> activeCreeps = new List<NeutralCreep>();
@@ -25,6 +34,17 @@ namespace Photon.Pun.Demo.Asteroids
         private void Start()
         {
             InitializeSpawnPoint();
+            
+            // Registrar este punto de spawn con el CreepSpawnManager
+            CreepSpawnManager spawnManager = FindObjectOfType<CreepSpawnManager>();
+            if (spawnManager != null)
+            {
+                spawnManager.spawnPoints.Add(transform);
+            }
+            else
+            {
+                Debug.LogWarning("[CreepSpawnPoint] No se encontró un CreepSpawnManager en la escena");
+            }
         }
         
         private void Update()
@@ -151,17 +171,22 @@ namespace Photon.Pun.Demo.Asteroids
             return null;
         }
         
+        // Dibujar un gizmo en el editor para visualizar el punto de spawn
         private void OnDrawGizmos()
         {
-            if (!showGizmos) return;
-            
-            // Dibujar el área de spawn
-            Gizmos.color = gizmoColor;
-            Gizmos.DrawWireSphere(transform.position, spawnRadius);
-            
-            // Dibujar el punto central
-            Gizmos.color = Color.red;
-            Gizmos.DrawSphere(transform.position, 0.5f);
+            if (showGizmo)
+            {
+                Gizmos.color = gizmoColor;
+                Gizmos.DrawWireSphere(transform.position, gizmoRadius);
+                
+                // Dibujar una cruz para mayor visibilidad
+                Vector3 pos = transform.position;
+                float size = gizmoRadius * 0.5f;
+                
+                Gizmos.DrawLine(new Vector3(pos.x - size, pos.y, pos.z), new Vector3(pos.x + size, pos.y, pos.z));
+                Gizmos.DrawLine(new Vector3(pos.x, pos.y - size, pos.z), new Vector3(pos.x, pos.y + size, pos.z));
+                Gizmos.DrawLine(new Vector3(pos.x, pos.y, pos.z - size), new Vector3(pos.x, pos.y, pos.z + size));
+            }
         }
         
         private void OnDestroy()

@@ -5,7 +5,8 @@ using System.Collections;
 namespace Photon.Pun.Demo.Asteroids
 {
     [RequireComponent(typeof(PhotonView))]
-    public class NeutralCreep : MonoBehaviourPunCallbacks, IDamageable
+    [RequireComponent(typeof(PhotonTransformView))]
+    public class NeutralCreep : MonoBehaviourPunCallbacks, IDamageable, IPunObservable
     {
         [Header("Información Básica")]
         public string creepName = "Creep";
@@ -64,6 +65,9 @@ namespace Photon.Pun.Demo.Asteroids
         private float patrolTimer;
         private bool isPatrolling = true;
         
+        // Componentes de red
+        private PhotonTransformView photonTransformView;
+        
         // Nombres de los parámetros de animación
         private const string ANIM_IS_WALKING = "IsWalking";
         private const string ANIM_IS_ATTACKING = "IsAttacking";
@@ -72,8 +76,19 @@ namespace Photon.Pun.Demo.Asteroids
         
         void Awake()
         {
-            // No necesitamos asignar photonView ya que es una propiedad de solo lectura
-            // y se inicializa automáticamente por MonoBehaviourPunCallbacks
+            // Obtener el PhotonTransformView
+            photonTransformView = GetComponent<PhotonTransformView>();
+            if (photonTransformView == null)
+            {
+                photonTransformView = gameObject.AddComponent<PhotonTransformView>();
+                
+                // Configurar PhotonTransformView
+                photonTransformView.m_SynchronizePosition = true;
+                photonTransformView.m_SynchronizeRotation = true;
+                photonTransformView.m_SynchronizeScale = false;
+                
+                Debug.Log($"[NeutralCreep] Se ha añadido PhotonTransformView automáticamente a {creepName}");
+            }
             
             // Configurar Rigidbody
             Rigidbody rb = GetComponent<Rigidbody>();
@@ -135,6 +150,8 @@ namespace Photon.Pun.Demo.Asteroids
                     healthBar.Initialize(transform, maxHealth, currentHealth);
                 }
             }
+            
+            Debug.Log($"[NeutralCreep] {creepName} inicializado. PhotonView.IsMine: {photonView.IsMine}, ViewID: {photonView.ViewID}");
         }
         
         void Update()
@@ -142,6 +159,12 @@ namespace Photon.Pun.Demo.Asteroids
             if (isDead)
             {
                 HandleDeath();
+                return;
+            }
+            
+            // Solo el dueño del objeto ejecuta la lógica de movimiento
+            if (!photonView.IsMine)
+            {
                 return;
             }
             
@@ -201,6 +224,9 @@ namespace Photon.Pun.Demo.Asteroids
             if (Vector3.Distance(transform.position, patrolTarget) < 0.1f || patrolTimer <= 0)
             {
                 SetNewPatrolTarget();
+                
+                // Sincronizar el nuevo objetivo de patrulla a todos los clientes
+                photonView.RPC("RPC_SetPatrolTarget", RpcTarget.Others, patrolTarget, patrolTimer);
             }
             
             // Mover hacia el objetivo de patrulla
@@ -212,6 +238,15 @@ namespace Photon.Pun.Demo.Asteroids
             
             // Activar animación de caminata
             SetAnimationState(true, false);
+        }
+        
+        [PunRPC]
+        private void RPC_SetPatrolTarget(Vector3 newPatrolTarget, float newPatrolTimer)
+        {
+            // Actualizar el objetivo de patrulla en clientes remotos
+            patrolTarget = newPatrolTarget;
+            patrolTimer = newPatrolTimer;
+            Debug.Log($"[NeutralCreep] Objetivo de patrulla sincronizado: {patrolTarget}, Timer: {patrolTimer}");
         }
         
         private void SetNewPatrolTarget()
@@ -242,6 +277,25 @@ namespace Photon.Pun.Demo.Asteroids
                         currentTarget = hero.transform;
                     }
                 }
+            }
+            
+            // Si encontramos un objetivo, sincronizarlo con los demás clientes
+            if (currentTarget != null)
+            {
+                photonView.RPC("RPC_SetTarget", RpcTarget.Others, currentTarget.GetComponent<PhotonView>().ViewID);
+            }
+        }
+        
+        [PunRPC]
+        private void RPC_SetTarget(int targetViewID)
+        {
+            // Buscar el objetivo por su ViewID
+            PhotonView targetView = PhotonView.Find(targetViewID);
+            if (targetView != null)
+            {
+                currentTarget = targetView.transform;
+                isPatrolling = false;
+                Debug.Log($"[NeutralCreep] Objetivo sincronizado: {targetView.name}, ViewID: {targetViewID}");
             }
         }
         
@@ -302,10 +356,22 @@ namespace Photon.Pun.Demo.Asteroids
                 Debug.Log($"[NeutralCreep] El daño viene del héroe {hero.heroName}");
                 currentTarget = hero.transform;
                 isPatrolling = false; // Desactivar patrulla cuando es atacado
+                
+                // Sincronizar el objetivo con todos los clientes
+                if (photonView.IsMine)
+                {
+                    photonView.RPC("RPC_SetTarget", RpcTarget.Others, hero.photonView.ViewID);
+                }
             }
             else
             {
                 Debug.LogWarning($"[NeutralCreep] El atacante no es un héroe: {attacker?.GetType().Name ?? "null"}");
+            }
+            
+            // Sincronizar la salud con todos los clientes
+            if (photonView.IsMine)
+            {
+                photonView.RPC("RPC_SyncHealth", RpcTarget.Others, currentHealth);
             }
             
             // Verificar muerte
@@ -313,6 +379,20 @@ namespace Photon.Pun.Demo.Asteroids
             {
                 Die(attacker as HeroBase);
             }
+        }
+        
+        [PunRPC]
+        private void RPC_SyncHealth(float newHealth)
+        {
+            currentHealth = newHealth;
+            
+            // Actualizar la barra de vida
+            if (healthBar != null)
+            {
+                healthBar.UpdateHealth(currentHealth);
+            }
+            
+            Debug.Log($"[NeutralCreep] Salud sincronizada: {currentHealth}");
         }
         
         [PunRPC]
@@ -508,6 +588,61 @@ namespace Photon.Pun.Demo.Asteroids
             
             // Reiniciar patrulla
             SetNewPatrolTarget();
+        }
+        
+        // Implementación de IPunObservable
+        public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
+        {
+            if (stream.IsWriting)
+            {
+                // Datos que enviamos
+                stream.SendNext(currentHealth);
+                stream.SendNext(isDead);
+                stream.SendNext(isPatrolling);
+                stream.SendNext(patrolTarget);
+                stream.SendNext(patrolTimer);
+                
+                // Enviar el ID del objetivo si existe
+                if (currentTarget != null)
+                {
+                    PhotonView targetView = currentTarget.GetComponent<PhotonView>();
+                    stream.SendNext(targetView != null ? targetView.ViewID : -1);
+                }
+                else
+                {
+                    stream.SendNext(-1);
+                }
+            }
+            else
+            {
+                // Datos que recibimos
+                currentHealth = (float)stream.ReceiveNext();
+                isDead = (bool)stream.ReceiveNext();
+                isPatrolling = (bool)stream.ReceiveNext();
+                patrolTarget = (Vector3)stream.ReceiveNext();
+                patrolTimer = (float)stream.ReceiveNext();
+                
+                // Recibir y procesar el ID del objetivo
+                int targetViewID = (int)stream.ReceiveNext();
+                if (targetViewID >= 0)
+                {
+                    PhotonView targetView = PhotonView.Find(targetViewID);
+                    if (targetView != null)
+                    {
+                        currentTarget = targetView.transform;
+                    }
+                }
+                else
+                {
+                    currentTarget = null;
+                }
+                
+                // Actualizar barra de vida
+                if (healthBar != null)
+                {
+                    healthBar.UpdateHealth(currentHealth);
+                }
+            }
         }
     }
 } 

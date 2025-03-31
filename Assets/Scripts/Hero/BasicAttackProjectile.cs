@@ -152,6 +152,9 @@ public class BasicAttackProjectile : MonoBehaviourPun, IPunObservable
         // Verificar si golpeamos a un héroe
         HeroBase hitHero = collision.gameObject.GetComponent<HeroBase>();
         
+        // Verificar si golpeamos a una criatura neutral
+        NeutralCreep hitCreep = collision.gameObject.GetComponent<NeutralCreep>();
+        
         // Si golpeamos a un héroe, aplicar daño
         if (hitHero != null)
         {
@@ -162,6 +165,21 @@ public class BasicAttackProjectile : MonoBehaviourPun, IPunObservable
                 // Aplicar daño usando RPC a todos los clientes
                 photonView.RPC("RPC_ApplyDamage", RpcTarget.All, hitHero.photonView.ViewID, damage);
             }
+        }
+        // Si golpeamos a una criatura neutral, aplicar daño
+        else if (hitCreep != null)
+        {
+            Debug.Log($"[BasicAttackProjectile] Golpeó a una criatura neutral: {hitCreep.creepName}");
+            
+            // Obtener el atacante
+            HeroBase attacker = null;
+            if (attackerView != null)
+            {
+                attacker = attackerView.GetComponent<HeroBase>();
+            }
+            
+            // Aplicar daño directamente a la criatura neutral
+            hitCreep.TakeDamage(damage, attacker);
         }
         
         // Notificar a todos los clientes sobre el impacto
@@ -182,6 +200,9 @@ public class BasicAttackProjectile : MonoBehaviourPun, IPunObservable
         // Verificar si golpeamos a un héroe
         HeroBase hitHero = other.gameObject.GetComponent<HeroBase>();
         
+        // Verificar si golpeamos a una criatura neutral
+        NeutralCreep hitCreep = other.gameObject.GetComponent<NeutralCreep>();
+        
         // Si golpeamos a un héroe, aplicar daño
         if (hitHero != null)
         {
@@ -191,6 +212,21 @@ public class BasicAttackProjectile : MonoBehaviourPun, IPunObservable
                 // Aplicar daño usando RPC a todos los clientes
                 photonView.RPC("RPC_ApplyDamage", RpcTarget.All, hitHero.photonView.ViewID, damage);
             }
+        }
+        // Si golpeamos a una criatura neutral, aplicar daño
+        else if (hitCreep != null)
+        {
+            Debug.Log($"[BasicAttackProjectile] Golpeó a una criatura neutral: {hitCreep.creepName}");
+            
+            // Obtener el atacante
+            HeroBase attacker = null;
+            if (attackerView != null)
+            {
+                attacker = attackerView.GetComponent<HeroBase>();
+            }
+            
+            // Aplicar daño directamente a la criatura neutral
+            hitCreep.TakeDamage(damage, attacker);
         }
         
         // Notificar a todos los clientes sobre el impacto
@@ -274,15 +310,30 @@ public class BasicAttackProjectile : MonoBehaviourPun, IPunObservable
         PhotonView targetView = PhotonView.Find(targetViewID);
         if (targetView == null) return;
         
-        // Obtener componente HeroBase
+        // Obtener componente HeroBase o NeutralCreep
         HeroBase targetHero = targetView.GetComponent<HeroBase>();
-        if (targetHero == null) return;
+        NeutralCreep targetCreep = targetView.GetComponent<NeutralCreep>();
         
-        // Aplicar daño usando el ViewID del atacante
-        targetHero.TakeDamage(damageAmount, attackerViewID);
+        // Obtener el atacante
+        PhotonView attackerView = PhotonView.Find(attackerViewID);
+        HeroBase attacker = attackerView?.GetComponent<HeroBase>();
         
-        // Debug log
-        Debug.Log($"[BasicAttackProjectile] Aplicando {damageAmount} de daño al ViewID {targetViewID} desde el atacante {attackerViewID}");
+        if (targetHero != null)
+        {
+            // Aplicar daño usando el ViewID del atacante
+            targetHero.TakeDamage(damageAmount, attackerViewID);
+            
+            // Debug log
+            Debug.Log($"[BasicAttackProjectile] Aplicando {damageAmount} de daño al héroe ViewID {targetViewID} desde el atacante {attackerViewID}");
+        }
+        else if (targetCreep != null)
+        {
+            // Aplicar daño a la criatura neutral
+            targetCreep.TakeDamage(damageAmount, attacker);
+            
+            // Debug log
+            Debug.Log($"[BasicAttackProjectile] Aplicando {damageAmount} de daño a la criatura neutral {targetCreep.creepName} desde el atacante {attackerViewID}");
+        }
     }
     
     #endregion

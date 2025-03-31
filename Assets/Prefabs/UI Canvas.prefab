@@ -4760,6 +4760,65 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!1 &7628747943834718589
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5477010492475435746}
+  - component: {fileID: 4244478347499822321}
+  m_Layer: 0
+  m_Name: KillFeedSoundManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5477010492475435746
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7628747943834718589}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 4491529043215269137}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4244478347499822321
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7628747943834718589}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9ee7ee36c6ee22d4f877718988199117, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  killSound: {fileID: 8300000, guid: cddefc63fd4749449940992ba2e3b65b, type: 3}
+  firstBloodSound: {fileID: 8300000, guid: a895e7bfb194d4a40b4c4c91f011ef47, type: 3}
+  doubleKillSound: {fileID: 0}
+  tripleKillSound: {fileID: 8300000, guid: 71edf8a31ed71fc4dad7605039775929, type: 3}
+  quadraKillSound: {fileID: 8300000, guid: 0f8bb1b64cfb8fa41a17b977c1947e27, type: 3}
+  pentaKillSound: {fileID: 8300000, guid: 96f57783f3404974487c3eaa296054b5, type: 3}
+  killStreakSound: {fileID: 0}
+  dominatingSound: {fileID: 0}
+  unstoppableSound: {fileID: 0}
+  godlikeSound: {fileID: 0}
+  legendarySound: {fileID: 0}
+  killVolume: 0.7
+  multiKillVolume: 0.8
+  firstBloodVolume: 1
+  streakVolume: 0.8
 --- !u!1 &7867449223642943013
 GameObject:
   m_ObjectHideFlags: 0
@@ -5980,14 +6039,51 @@ PrefabInstance:
       propertyPath: killFeedEntryPrefab
       value: 
       objectReference: {fileID: 142339330365443811}
+    - target: {fileID: 5317484462006748591, guid: 86b1bd9fa2f97c845ac1a92b62e9cb4a, type: 3}
+      propertyPath: multiKillTimeWindow
+      value: 5
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
     - targetCorrespondingSourceObject: {fileID: 1079390514568363546, guid: 86b1bd9fa2f97c845ac1a92b62e9cb4a, type: 3}
       insertIndex: -1
       addedObject: {fileID: 3675162976204772032}
-    m_AddedComponents: []
+    - targetCorrespondingSourceObject: {fileID: 1079390514568363546, guid: 86b1bd9fa2f97c845ac1a92b62e9cb4a, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5477010492475435746}
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 2928593473989094316, guid: 86b1bd9fa2f97c845ac1a92b62e9cb4a, type: 3}
+      insertIndex: 1
+      addedObject: {fileID: 4890948724563380991}
   m_SourcePrefab: {fileID: 100100000, guid: 86b1bd9fa2f97c845ac1a92b62e9cb4a, type: 3}
+--- !u!1 &1732665492336961703 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2928593473989094316, guid: 86b1bd9fa2f97c845ac1a92b62e9cb4a, type: 3}
+  m_PrefabInstance: {fileID: 3508266908291416843}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &4890948724563380991
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1732665492336961703}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa584fbee541324448dd18d8409c7a41, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ObservedComponentsFoldoutOpen: 1
+  Group: 0
+  prefixField: -1
+  Synchronization: 3
+  OwnershipTransfer: 0
+  observableSearch: 2
+  ObservedComponents: []
+  sceneViewId: 0
+  InstantiationId: 0
+  isRuntimeInstantiated: 0
 --- !u!4 &4491529043215269137 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1079390514568363546, guid: 86b1bd9fa2f97c845ac1a92b62e9cb4a, type: 3}
