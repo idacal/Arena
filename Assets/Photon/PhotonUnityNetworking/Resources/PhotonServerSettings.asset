@@ -98,6 +98,9 @@ MonoBehaviour:
   - RPC_SyncPlayerKill
   - ResetKillStreak
   - RPC_HandlePlayerKill
+  - RPC_GiveRewards
+  - RPC_SyncDeath
+  - RPC_SyncTransform
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1
