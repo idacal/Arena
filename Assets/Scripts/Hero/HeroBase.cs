@@ -6,6 +6,7 @@ using Photon.Realtime;
 using UnityEngine.UI;
 using System.Collections;
 using System.Linq;
+using TMPro;
 
 namespace Photon.Pun.Demo.Asteroids
 {
@@ -478,7 +479,7 @@ namespace Photon.Pun.Demo.Asteroids
         {
             if (_isDead)
                 return;
-                
+            
             // Evitar daño demasiado frecuente
             if (Time.time - lastDamageTime < damageImmunityTime) return;
             lastDamageTime = Time.time;
@@ -506,7 +507,7 @@ namespace Photon.Pun.Demo.Asteroids
         {
             if (_isDead)
                 return;
-                
+            
             // Solo enviar al Master Client para procesar el daño
             photonView.RPC("RPC_TakeDamage", RpcTarget.MasterClient, amount, attackerViewID, isMagicDamage);
             
@@ -580,6 +581,17 @@ namespace Photon.Pun.Demo.Asteroids
 
             // Reiniciar la racha de asesinatos al morir
             ResetKillStreak();
+
+            // Notificar al KillFeedManager
+            KillFeedManager killFeedManager = FindObjectOfType<KillFeedManager>();
+            if (killFeedManager != null && currentTarget != null)
+            {
+                Debug.Log($"[HeroBase] Notificando muerte al KillFeedManager: {currentTarget.heroName} mató a {heroName}");
+                killFeedManager.HandlePlayerKill(
+                    currentTarget.photonView.Owner.ActorNumber,
+                    photonView.Owner.ActorNumber
+                );
+            }
 
             // Otorgar experiencia al héroe que causó la muerte
             if (currentTarget != null)
