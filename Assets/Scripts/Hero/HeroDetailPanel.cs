@@ -149,14 +149,14 @@ namespace Photon.Pun.Demo.Asteroids
             IntelligenceScalingText.text = $"+{Mathf.RoundToInt(heroData.IntelligenceScaling)}";
             AgilityScalingText.text = $"+{Mathf.RoundToInt(heroData.AgilityScaling)}";
             
-            // Update derived stats
-            HealthText.text = $"Health: {heroData.MaxHealth:F0}";
-            ManaText.text = $"Mana: {heroData.MaxMana:F0}";
-            AttackDamageText.text = $"Damage: {heroData.CurrentAttackDamage:F0}";
-            AttackSpeedText.text = $"Attack Speed: {heroData.CurrentAttackSpeed:F2}";
-            MovementSpeedText.text = $"Movement: {heroData.MovementSpeed:F0}";
-            ArmorText.text = $"Armor: {heroData.CurrentArmor:F1}";
-            MagicResistanceText.text = $"Magic Resist: {heroData.CurrentMagicResistance:F1}";
+            // Update derived stats - mostrar solo los valores numéricos sin texto
+            HealthText.text = $"{heroData.MaxHealth:F0}";
+            ManaText.text = $"{heroData.MaxMana:F0}";
+            AttackDamageText.text = $"{heroData.CurrentAttackDamage:F0}";
+            AttackSpeedText.text = $"{heroData.CurrentAttackSpeed:F2}";
+            MovementSpeedText.text = $"{heroData.MovementSpeed:F0}";
+            ArmorText.text = $"{heroData.CurrentArmor:F1}";
+            MagicResistanceText.text = $"{heroData.CurrentMagicResistance:F1}";
             HealthRegenText.text = $"{heroData.CurrentHealthRegen:F1}";
             ManaRegenText.text = $"{heroData.CurrentManaRegen:F1}";
             

@@ -101,6 +101,7 @@ MonoBehaviour:
   - RPC_GiveRewards
   - RPC_SyncDeath
   - RPC_SyncTransform
+  - RPC_HideObjectImmediately
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

@@ -727,6 +727,7 @@ MonoBehaviour:
   patrolRadius: 5
   minPatrolTime: 3
   maxPatrolTime: 8
+  deathDestroyDelay: 3
   deathEffectPrefab: {fileID: 0}
   deathSound: {fileID: 8300000, guid: 97538b780296fc84c965df122791ad9f, type: 3}
   deathSoundVolume: 1.5
