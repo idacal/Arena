@@ -102,6 +102,9 @@ MonoBehaviour:
   - RPC_SyncDeath
   - RPC_SyncTransform
   - RPC_HideObjectImmediately
+  - RPC_SetVisibilityLayer
+  - RPC_Respawn
+  - RPC_ForceLayer
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1
