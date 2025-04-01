@@ -10,6 +10,7 @@ TagManager:
   - RedTeam
   - SpawnPoint
   - Trees
+  - Bush
   layers:
   - Default
   - TransparentFX
@@ -27,7 +28,7 @@ TagManager:
   - Ability
   - NeutralCreep
   - FogRevealer
-  - 
+  - HiddenInBush
   - 
   - 
   - 

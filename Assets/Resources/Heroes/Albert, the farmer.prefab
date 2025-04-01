@@ -2615,6 +2615,7 @@ GameObject:
   - component: {fileID: -6046582980940072358}
   - component: {fileID: 9221196167736871162}
   - component: {fileID: 3489095124540123679}
+  - component: {fileID: -5210211654331117337}
   m_Layer: 6
   m_Name: Albert, the farmer
   m_TagString: Untagged
@@ -2914,7 +2915,7 @@ MonoBehaviour:
   groundCheckDistance: 1
   groundLayer:
     serializedVersion: 2
-    m_Bits: 8
+    m_Bits: 0
   clickIndicatorPrefab: {fileID: 5770143663549293496, guid: 445dda5bfe94e2d4c85fee74151d7bf7, type: 3}
   debugMode: 0
   navAgent: {fileID: 0}
@@ -2987,6 +2988,19 @@ MonoBehaviour:
   normalCursor: {fileID: 2800000, guid: f3f1c7253d7db1d47872a98919dfbf90, type: 3}
   enemyCursor: {fileID: 2800000, guid: 1d78ea13ed0615c4996735add71cbd43, type: 3}
   cursorHotspot: {x: 16, y: 16}
+--- !u!114 &-5210211654331117337
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8713352010430717119}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b87c7cb49d1cbd48934b34fd2592f16, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  showDebugMessages: 0
 --- !u!1 &9210927903783845167
 GameObject:
   m_ObjectHideFlags: 0

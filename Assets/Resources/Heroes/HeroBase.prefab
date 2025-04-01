@@ -20,6 +20,7 @@ GameObject:
   - component: {fileID: 1813505054255203606}
   - component: {fileID: 3229754241829438205}
   - component: {fileID: -1005495877090459590}
+  - component: {fileID: -59435446857011561}
   m_Layer: 6
   m_Name: HeroBase
   m_TagString: Untagged
@@ -190,6 +191,7 @@ MonoBehaviour:
     HealthRegenPerStrength: 0
     ManaRegenPerIntelligence: 0
     MovementSpeed: 0
+    AttackRange: 0
     RespawnTime: 0
     MaxLevel: 0
     BaseExperience: 0
@@ -229,6 +231,8 @@ MonoBehaviour:
   deathEffectPrefab: {fileID: 0}
   damageSound: {fileID: 0}
   deathSound: {fileID: 0}
+  currentTarget: {fileID: 0}
+  currentKillStreak: 0
   _currentLevel: 1
   baseCreepXP: 25
   baseHeroKillXP: 100
@@ -238,6 +242,15 @@ MonoBehaviour:
   assistXPMultiplier: 0.5
   xpRangeRadius: 1000
   _availableSkillPoints: 1
+  _currentGold: 0
+  StartingGold: 500
+  goldSound: {fileID: 0}
+  bigGoldSound: {fileID: 0}
+  smallGoldSound: {fileID: 0}
+  baseHeroKillGold: 200
+  heroLevelGoldMultiplier: 0.15
+  killStreakGoldMultiplier: 0.1
+  assistGoldMultiplier: 0.4
 --- !u!114 &4335451185115575402
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -333,3 +346,16 @@ MonoBehaviour:
   muzzleFlashPrefab: {fileID: 0}
   attackSound: {fileID: 0}
   meleeAttackEffectPrefab: {fileID: 0}
+--- !u!114 &-59435446857011561
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7797997275947316863}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b87c7cb49d1cbd48934b34fd2592f16, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  showDebugMessages: 0

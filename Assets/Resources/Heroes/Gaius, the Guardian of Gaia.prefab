@@ -21,6 +21,7 @@ GameObject:
   - component: {fileID: -1435623182261474014}
   - component: {fileID: -1933700190472191039}
   - component: {fileID: 6568425859230199104}
+  - component: {fileID: -1336133449625806576}
   m_Layer: 6
   m_Name: Gaius, the Guardian of Gaia
   m_TagString: Untagged
@@ -370,6 +371,19 @@ CapsuleCollider:
   m_Height: 1
   m_Direction: 1
   m_Center: {x: 0, y: 1, z: 0}
+--- !u!114 &-1336133449625806576
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4811671923267530068}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b87c7cb49d1cbd48934b34fd2592f16, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  showDebugMessages: 0
 --- !u!1001 &6540062467344545454
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -57,6 +57,20 @@ namespace Photon.Pun.Demo.Asteroids
             if (cam != null)
             {
                 cam.tag = "MainCamera";
+                
+                // Asegurar que la cámara puede ver la capa HiddenInBush
+                // Primero verificar si la capa existe
+                int hiddenInBushLayer = LayerMask.NameToLayer("HiddenInBush");
+                if (hiddenInBushLayer != -1)
+                {
+                    // Añadir la capa HiddenInBush al Culling Mask (OR binario para preservar otras capas)
+                    cam.cullingMask |= (1 << hiddenInBushLayer);
+                    Debug.Log($"[PhotonMOBACamera] Capa 'HiddenInBush' añadida al Culling Mask de la cámara");
+                }
+                else
+                {
+                    Debug.LogWarning($"[PhotonMOBACamera] Capa 'HiddenInBush' no encontrada. Asegúrate de crearla en Edit > Project Settings > Tags & Layers");
+                }
             }
             
             // Nombre único para depuración

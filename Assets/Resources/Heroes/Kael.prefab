@@ -22,6 +22,7 @@ GameObject:
   - component: {fileID: 7424854189262889703}
   - component: {fileID: 274020403690359013}
   - component: {fileID: -1703467244312435776}
+  - component: {fileID: -7120038691454743322}
   m_Layer: 0
   m_Name: Kael
   m_TagString: Untagged
@@ -265,6 +266,7 @@ MonoBehaviour:
     HealthRegenPerStrength: 0
     ManaRegenPerIntelligence: 0
     MovementSpeed: 0
+    AttackRange: 0
     RespawnTime: 0
     MaxLevel: 0
     BaseExperience: 0
@@ -304,6 +306,8 @@ MonoBehaviour:
   deathEffectPrefab: {fileID: 0}
   damageSound: {fileID: 0}
   deathSound: {fileID: 0}
+  currentTarget: {fileID: 0}
+  currentKillStreak: 0
   _currentLevel: 1
   baseCreepXP: 25
   baseHeroKillXP: 100
@@ -313,6 +317,15 @@ MonoBehaviour:
   assistXPMultiplier: 0.5
   xpRangeRadius: 1000
   _availableSkillPoints: 1
+  _currentGold: 0
+  StartingGold: 500
+  goldSound: {fileID: 0}
+  bigGoldSound: {fileID: 0}
+  smallGoldSound: {fileID: 0}
+  baseHeroKillGold: 200
+  heroLevelGoldMultiplier: 0.15
+  killStreakGoldMultiplier: 0.1
+  assistGoldMultiplier: 0.4
 --- !u!114 &3269517159320140481
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -378,3 +391,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 41ae596455cf3c542881b86b317b1cd9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &-7120038691454743322
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8450020148230160356}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b87c7cb49d1cbd48934b34fd2592f16, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  showDebugMessages: 0
