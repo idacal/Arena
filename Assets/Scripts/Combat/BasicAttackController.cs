@@ -81,7 +81,8 @@ public class BasicAttackController : MonoBehaviourPun
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             RaycastHit hit;
             
-            // Usar la máscara de layer para jugadores y creeps
+            // Usar la máscara de layer para jugadores, jugadores ocultos y creeps
+            // GetPlayerLayerMask ya incluye tanto Player como HiddenInBush
             int targetLayerMask = LayerManager.GetPlayerLayerMask() | LayerManager.GetCreepLayerMask();
             Debug.Log($"Buscando objetivos con layer mask: {targetLayerMask}, mi tag: {gameObject.tag}");
             
@@ -109,7 +110,7 @@ public class BasicAttackController : MonoBehaviourPun
                 
                 if (targetHero != null || targetCreep != null)
                 {
-                    Debug.Log($"Objetivo detectado: {(targetHero != null ? targetHero.heroName : targetCreep.creepName)}, tag: {hit.collider.gameObject.tag}");
+                    Debug.Log($"Objetivo detectado: {(targetHero != null ? targetHero.heroName : targetCreep.creepName)}, tag: {hit.collider.gameObject.tag}, layer: {LayerMask.LayerToName(hit.collider.gameObject.layer)}");
                     // Atacar al objetivo
                     bool attackSuccess = TryAttack(hit.collider.transform);
                     Debug.Log($"Resultado del ataque: {(attackSuccess ? "ÉXITO" : "FALLIDO")}");
@@ -148,21 +149,71 @@ public class BasicAttackController : MonoBehaviourPun
     {
         if (target == null) return false;
         
-        // Verificar si es un héroe enemigo
+        // Verificar si es un héroe enemigo (independientemente de la capa)
         HeroBase targetHero = target.GetComponent<HeroBase>();
         if (targetHero != null)
         {
-            return LayerManager.IsEnemy(gameObject, target);
+            // 1. Verificar si los equipos son enemigos
+            bool isEnemy = LayerManager.IsEnemy(gameObject, target);
+            
+            // 2. Verificar si el objetivo es visible para el atacante
+            bool isVisible = IsTargetVisible(target);
+            
+            // Imprimir información de diagnóstico
+            if (isEnemy && isVisible)
+            {
+                Debug.Log($"Objetivo válido: {target.name}, Tag: {target.tag}, Layer: {LayerMask.LayerToName(target.layer)}, Es visible: Sí");
+            }
+            else if (isEnemy && !isVisible)
+            {
+                Debug.Log($"Objetivo inválido (no visible): {target.name}, Tag: {target.tag}, Layer: {LayerMask.LayerToName(target.layer)}");
+            }
+            else
+            {
+                Debug.Log($"Objetivo inválido (mismo equipo): {target.name}, Tag: {target.tag}, Layer: {LayerMask.LayerToName(target.layer)}");
+            }
+            
+            // Solo es válido si es enemigo Y es visible
+            return isEnemy && isVisible;
         }
         
         // Verificar si es un creep neutral
         NeutralCreep targetCreep = target.GetComponent<NeutralCreep>();
         if (targetCreep != null)
         {
-            return true; // Siempre podemos atacar a creeps neutrales
+            // Verificar si el creep es visible
+            bool isVisible = IsTargetVisible(target);
+            
+            Debug.Log($"Creep neutral detectado: {target.name}, Layer: {LayerMask.LayerToName(target.layer)}, Es visible: {isVisible}");
+            
+            // Solo se puede atacar si es visible
+            return isVisible;
         }
         
         return false;
+    }
+    
+    /// <summary>
+    /// Verifica si un objetivo es visible para el atacante basado en las reglas de capas
+    /// </summary>
+    private bool IsTargetVisible(GameObject target)
+    {
+        // Si el atacante y el objetivo están en la misma capa, siempre son visibles entre sí
+        if (gameObject.layer == target.layer)
+        {
+            return true;
+        }
+        
+        // Caso especial: si el objetivo está en HiddenInBush y el atacante no, entonces no es visible
+        if (target.layer == LayerManager.HiddenInBushLayerID && gameObject.layer != LayerManager.HiddenInBushLayerID)
+        {
+            // Un jugador fuera del arbusto no puede ver a un jugador dentro del arbusto
+            return false;
+        }
+        
+        // En todos los demás casos (por ejemplo, ambos están en Player, o el atacante está en HiddenInBush
+        // pero el objetivo está en Player) son visibles entre sí
+        return true;
     }
     
     /// <summary>

@@ -545,7 +545,7 @@ PrefabInstance:
       addedObject: {fileID: 98414636}
     - targetCorrespondingSourceObject: {fileID: 2121115777601418451, guid: e334e6614ad50f749b0a37528784c614, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 98414638}
+      addedObject: {fileID: 98414640}
   m_SourcePrefab: {fileID: 100100000, guid: e334e6614ad50f749b0a37528784c614, type: 3}
 --- !u!4 &98414634 stripped
 Transform:
@@ -570,8 +570,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   showDebugMessages: 1
---- !u!65 &98414638
-BoxCollider:
+  insideBushAlpha: 0.3
+  forcedLodLevelWhenInside: 2
+  useWireframeWhenInside: 1
+  alphaTransitionSpeed: 5
+--- !u!136 &98414640
+CapsuleCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -588,8 +592,10 @@ BoxCollider:
   m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
+  serializedVersion: 2
+  m_Radius: 0.39
+  m_Height: 1
+  m_Direction: 1
   m_Center: {x: 0, y: 0.5, z: 0}
 --- !u!1 &110017083 stripped
 GameObject:
@@ -3649,7 +3655,7 @@ PrefabInstance:
       addedObject: {fileID: 1192497716}
     - targetCorrespondingSourceObject: {fileID: 1253365200111527898, guid: 8109e9e16ba4cc04b8e0928aea897927, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1192497718}
+      addedObject: {fileID: 1192497720}
   m_SourcePrefab: {fileID: 100100000, guid: 8109e9e16ba4cc04b8e0928aea897927, type: 3}
 --- !u!1 &944544366 stripped
 GameObject:
@@ -3846,8 +3852,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   showDebugMessages: 1
---- !u!65 &1192497718
-BoxCollider:
+  insideBushAlpha: 0.3
+  forcedLodLevelWhenInside: 2
+  useWireframeWhenInside: 1
+  alphaTransitionSpeed: 5
+--- !u!136 &1192497720
+CapsuleCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -3864,8 +3874,10 @@ BoxCollider:
   m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
+  serializedVersion: 2
+  m_Radius: 0.39
+  m_Height: 1
+  m_Direction: 1
   m_Center: {x: 0, y: 0.5, z: 0}
 --- !u!1001 &1193645589
 PrefabInstance:
@@ -3972,7 +3984,7 @@ PrefabInstance:
       addedObject: {fileID: 1193645593}
     - targetCorrespondingSourceObject: {fileID: 2121115777601418451, guid: e334e6614ad50f749b0a37528784c614, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1193645592}
+      addedObject: {fileID: 1193645595}
   m_SourcePrefab: {fileID: 100100000, guid: e334e6614ad50f749b0a37528784c614, type: 3}
 --- !u!4 &1193645590 stripped
 Transform:
@@ -3984,8 +3996,25 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 2121115777601418451, guid: e334e6614ad50f749b0a37528784c614, type: 3}
   m_PrefabInstance: {fileID: 1193645589}
   m_PrefabAsset: {fileID: 0}
---- !u!65 &1193645592
-BoxCollider:
+--- !u!114 &1193645593
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1193645591}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f83edc05b9efdd245ba82fc7b06817e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  showDebugMessages: 1
+  insideBushAlpha: 0.3
+  forcedLodLevelWhenInside: 2
+  useWireframeWhenInside: 1
+  alphaTransitionSpeed: 5
+--- !u!136 &1193645595
+CapsuleCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -4002,22 +4031,11 @@ BoxCollider:
   m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
+  serializedVersion: 2
+  m_Radius: 0.39
+  m_Height: 1
+  m_Direction: 1
   m_Center: {x: 0, y: 0.5, z: 0}
---- !u!114 &1193645593
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1193645591}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f83edc05b9efdd245ba82fc7b06817e9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  showDebugMessages: 1
 --- !u!1 &1250223513
 GameObject:
   m_ObjectHideFlags: 0
@@ -5416,7 +5434,7 @@ PrefabInstance:
       addedObject: {fileID: 1597390022}
     - targetCorrespondingSourceObject: {fileID: 1253365200111527898, guid: 8109e9e16ba4cc04b8e0928aea897927, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1597390024}
+      addedObject: {fileID: 1597390026}
   m_SourcePrefab: {fileID: 100100000, guid: 8109e9e16ba4cc04b8e0928aea897927, type: 3}
 --- !u!4 &1597390020 stripped
 Transform:
@@ -5441,8 +5459,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   showDebugMessages: 1
---- !u!65 &1597390024
-BoxCollider:
+  insideBushAlpha: 0.3
+  forcedLodLevelWhenInside: 2
+  useWireframeWhenInside: 1
+  alphaTransitionSpeed: 5
+--- !u!136 &1597390026
+CapsuleCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -5459,8 +5481,10 @@ BoxCollider:
   m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
+  serializedVersion: 2
+  m_Radius: 0.39
+  m_Height: 1
+  m_Direction: 1
   m_Center: {x: 0, y: 0.5, z: 0}
 --- !u!1 &1673641411 stripped
 GameObject:
@@ -6329,6 +6353,10 @@ PrefabInstance:
       propertyPath: m_FadeMode
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2121115777599416853, guid: e334e6614ad50f749b0a37528784c614, type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 2121115777601418449, guid: e334e6614ad50f749b0a37528784c614, type: 3}
       propertyPath: m_Layer
       value: 12
@@ -6426,7 +6454,7 @@ PrefabInstance:
       addedObject: {fileID: 1931074707}
     - targetCorrespondingSourceObject: {fileID: 2121115777601418451, guid: e334e6614ad50f749b0a37528784c614, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1931074709}
+      addedObject: {fileID: 1931074711}
   m_SourcePrefab: {fileID: 100100000, guid: e334e6614ad50f749b0a37528784c614, type: 3}
 --- !u!1 &1931074706 stripped
 GameObject:
@@ -6446,8 +6474,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   showDebugMessages: 1
---- !u!65 &1931074709
-BoxCollider:
+  insideBushAlpha: 0.3
+  forcedLodLevelWhenInside: 2
+  useWireframeWhenInside: 1
+  alphaTransitionSpeed: 5
+--- !u!136 &1931074711
+CapsuleCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -6464,8 +6496,10 @@ BoxCollider:
   m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
+  serializedVersion: 2
+  m_Radius: 0.39
+  m_Height: 1
+  m_Direction: 1
   m_Center: {x: 0, y: 0.5, z: 0}
 --- !u!1 &1959899195 stripped
 GameObject:

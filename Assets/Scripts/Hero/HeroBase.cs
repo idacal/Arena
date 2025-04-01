@@ -986,6 +986,14 @@ namespace Photon.Pun.Demo.Asteroids
                 animator.SetTrigger("Respawn");
             }
             
+            // IMPORTANTE: Asegurarnos de que el jugador respawnee siempre con la capa Player
+            // incluso si murió dentro de un arbusto
+            if (gameObject.layer != LayerManager.PlayerLayerID)
+            {
+                Debug.Log($"[HeroBase] Corrigiendo capa al respawnear: {LayerMask.LayerToName(gameObject.layer)} -> {LayerManager.LAYER_PLAYER}");
+                LayerManager.SetLayerRecursively(transform, LayerManager.PlayerLayerID);
+            }
+            
             // Detener cualquier movimiento previo y preparar para nuevos movimientos
             var navAgent = GetComponent<UnityEngine.AI.NavMeshAgent>();
             if (navAgent != null && photonView.IsMine)

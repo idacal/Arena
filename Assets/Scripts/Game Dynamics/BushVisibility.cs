@@ -2,24 +2,44 @@ using UnityEngine;
 using System.Collections.Generic;
 using Photon.Pun;
 using Photon.Realtime;
-// using System.Collections; // Ya no se necesita
+using System.Collections; // Para corrutinas y WaitForSeconds
 
 /// <summary>
 /// Script para los arbustos que detectan unidades dentro y notifican para ocultarlas/revelarlas.
 /// El cambio de capa real se hace vía RPC en la entidad misma.
+/// Ahora también gestiona la visibilidad visual del arbusto para el jugador local.
 /// </summary>
-public class BushVisibility : MonoBehaviourPunCallbacks // Sigue siendo PunCallbacks por si se necesita lógica de red aquí en el futuro
+public class BushVisibility : MonoBehaviourPunCallbacks
 {
     [Header("Configuración")]
     [Tooltip("Habilitar mensajes de debug en consola")]
     public bool showDebugMessages = false;
 
+    [Header("Configuración Visual")]
+    [Tooltip("Si es true, ajusta la visibilidad del arbusto para el jugador local que está dentro")]
+    public bool adjustLocalPlayerVisibility = true;
+    
+    [Tooltip("Porcentaje de reducción de renderers cuando el jugador está dentro (ej: 0.5 deshabilita la mitad de los renderers)")]
+    [Range(0.0f, 0.9f)]
+    public float cullingPercentage = 0.7f;
+    
     // Lista de GameObjects (identificados por su PhotonView ID) que están físicamente en el trigger
     private HashSet<int> entitiesInTrigger = new HashSet<int>();
     
     // Diccionario para recordar la capa original de cada unidad (PhotonView ID -> Layer ID)
     private Dictionary<int, int> originalLayers = new Dictionary<int, int>();
-
+    
+    // Contadores para jugadores locales dentro del arbusto
+    private int localPlayersInside = 0;
+    
+    // Referencias a los renderers del arbusto
+    private List<Renderer> bushRenderers = new List<Renderer>();
+    private List<bool> originalRendererStates = new List<bool>();
+    private LODGroup bushLodGroup;
+    
+    // Flag para controlar si la visualización está inicializada
+    private bool visualsInitialized = false;
+    
     void Start()
     {
         // Configurar el tag por si no lo tiene
@@ -52,7 +72,106 @@ public class BushVisibility : MonoBehaviourPunCallbacks // Sigue siendo PunCallb
             return;
         }
         
+        // Inicializar componentes de renderizado si queremos ajustar la visibilidad
+        if (adjustLocalPlayerVisibility)
+        {
+            InitializeVisualComponents();
+        }
+        
         LogMessage($"Arbusto {gameObject.name} inicializado.");
+    }
+    
+    /// <summary>
+    /// Inicializa los componentes visuales del arbusto para poder modificarlos después
+    /// </summary>
+    private void InitializeVisualComponents()
+    {
+        // Buscar el LODGroup para controlar el nivel de detalle
+        bushLodGroup = GetComponentInChildren<LODGroup>();
+        if (bushLodGroup != null)
+        {
+            LogMessage($"LODGroup encontrado. Niveles de LOD: {bushLodGroup.lodCount}");
+        }
+        
+        // Encontrar todos los renderers del arbusto
+        Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+        if (renderers.Length > 0)
+        {
+            // Almacenar referencias a todos los renderers
+            foreach (Renderer renderer in renderers)
+            {
+                bushRenderers.Add(renderer);
+                originalRendererStates.Add(renderer.enabled);
+            }
+            
+            LogMessage($"Encontrados {bushRenderers.Count} renderers en el arbusto.");
+        }
+        else
+        {
+            LogMessage("No se encontraron renderers en el arbusto.");
+        }
+        
+        visualsInitialized = true;
+    }
+    
+    /// <summary>
+    /// Ajusta la visualización del arbusto cuando un jugador local está dentro
+    /// </summary>
+    private void SetLocalPlayerInside(bool isInside)
+    {
+        if (!visualsInitialized || !adjustLocalPlayerVisibility) return;
+        
+        // Actualizar contador de jugadores locales dentro
+        localPlayersInside += isInside ? 1 : -1;
+        localPlayersInside = Mathf.Max(0, localPlayersInside); // Asegurar que no sea negativo
+        
+        if (localPlayersInside > 0)
+        {
+            // Al menos un jugador local está dentro del arbusto
+            LogMessage($"Jugador local dentro del arbusto. Ajustando visualización para mejor visibilidad.");
+            
+            // Desactivar algunos renderers para mejorar la visibilidad
+            int renderersToDisable = Mathf.FloorToInt(bushRenderers.Count * cullingPercentage);
+            
+            for (int i = 0; i < bushRenderers.Count; i++)
+            {
+                if (bushRenderers[i] != null)
+                {
+                    // Deshabilitamos solo un porcentaje de los renderers
+                    // El porcentaje se configura con cullingPercentage
+                    if (i < renderersToDisable)
+                    {
+                        bushRenderers[i].enabled = false;
+                    }
+                }
+            }
+            
+            // Si hay LODGroup, aplicamos un nivel menos detallado
+            if (bushLodGroup != null)
+            {
+                bushLodGroup.ForceLOD(1); // Usar LOD 1 (menos detallado que 0)
+            }
+        }
+        else
+        {
+            // No hay jugadores locales dentro, restaurar visualización normal
+            LogMessage($"No hay jugadores locales dentro del arbusto. Restaurando visualización normal.");
+            
+            // Restaurar estado original de todos los renderers
+            for (int i = 0; i < bushRenderers.Count; i++)
+            {
+                if (bushRenderers[i] != null && i < originalRendererStates.Count)
+                {
+                    bushRenderers[i].enabled = originalRendererStates[i];
+                }
+            }
+            
+            // Restaurar LOD original
+            if (bushLodGroup != null)
+            {
+                bushLodGroup.ForceLOD(-1); // -1 para desactivar el forzado
+            }
+        }
     }
     
     void OnTriggerEnter(Collider other)
@@ -67,10 +186,11 @@ public class BushVisibility : MonoBehaviourPunCallbacks // Sigue siendo PunCallb
 
     void OnTriggerExit(Collider other)
     {
-        // Llamar a método especial de salida (más directo) 
+        // Salida directa con máxima prioridad
+        // Forzamos toda la lógica a ejecutarse en este frame
         HandlePlayerExitBush(other);
     }
-
+    
     /// <summary>
     /// Maneja la salida de un jugador del arbusto de forma más directa
     /// </summary>
@@ -90,17 +210,14 @@ public class BushVisibility : MonoBehaviourPunCallbacks // Sigue siendo PunCallb
             {
                 LogMessage($"🚨 Salida DIRECTA: {entity.name} (ID: {viewID}) salió del arbusto.");
                 
-                // Quitar de la lista
+                // Quitar de la lista INMEDIATAMENTE
                 entitiesInTrigger.Remove(viewID);
                 
-                // Notificar al tracker localmente
-                entityTracker.ExitBush(this);
-                
-                // Determinar la capa original
+                // Determinar la capa original primero para poder procesar RPCs lo antes posible
                 int originalLayer = LayerManager.PlayerLayerID; // Por defecto Player
                 if (originalLayers.TryGetValue(viewID, out int storedLayer))
-                {
-                    originalLayer = storedLayer;
+        {
+            originalLayer = storedLayer;
                     LogMessage($"⭐ Capa original recuperada: {LayerMask.LayerToName(originalLayer)} ({originalLayer})");
                     originalLayers.Remove(viewID);
                 }
@@ -109,13 +226,38 @@ public class BushVisibility : MonoBehaviourPunCallbacks // Sigue siendo PunCallb
                     LogMessage($"⚠️ No se encontró capa original para {entity.name}. Usando Player por defecto.");
                 }
                 
-                // Llamar inmediatamente al RPC para restaurar la capa
+                // PRIMERO: Enviar RPCs para cambio de capa con MÁXIMA PRIORIDAD
+                // Usamos RpcTarget.All en lugar de AllBuffered para mayor velocidad
+                // (Al salir del arbusto queremos priorizar velocidad sobre fiabilidad)
+                entityPhotonView.RPC("RPC_ForceLayer", RpcTarget.All, originalLayer, false);
+                LogMessage($"📤 FORZANDO restauración a capa {LayerMask.LayerToName(originalLayer)} ({originalLayer})");
+                
+                // LUEGO: Notificar al tracker localmente
+                entityTracker.ExitBush(this);
+                
+                // Si es el jugador local, actualizar la visualización del arbusto
+                if (entityPhotonView.IsMine)
+                {
+                    SetLocalPlayerInside(false);
+                }
+                
+                // FINALMENTE: Llamar al RPC normal (con buffer) para garantizar consistencia a largo plazo
                 entityPhotonView.RPC("RPC_SetVisibilityLayer", RpcTarget.AllBuffered, originalLayer);
                 
-                // Para casos críticos, también intentar forzar la capa
-                entityPhotonView.RPC("RPC_ForceLayer", RpcTarget.AllBuffered, originalLayer, false);
-                
-                LogMessage($"📤 FORZANDO restauración a capa {LayerMask.LayerToName(originalLayer)} ({originalLayer})");
+                // Aplicar capa localmente de forma inmediata (técnica brutal pero efectiva)
+                // Esto garantiza que incluso antes de que llegue el RPC, ya esté visible localmente
+                if (entity != null)
+                {
+                    LogMessage($"🔧 Aplicando capa {LayerMask.LayerToName(originalLayer)} localmente de emergencia");
+                    try {
+                        entity.layer = originalLayer;
+                        foreach (Transform child in entity.transform) {
+                            if (child != null) child.gameObject.layer = originalLayer;
+                        }
+                    } catch (System.Exception ex) {
+                        LogMessage($"Error al aplicar capa local: {ex.Message}");
+                    }
+                }
             }
         }
     }
@@ -151,15 +293,21 @@ public class BushVisibility : MonoBehaviourPunCallbacks // Sigue siendo PunCallb
                         LogMessage($"⚠️ La capa original para {entity.name} ya estaba guardada: {LayerMask.LayerToName(originalLayers[viewID])} ({originalLayers[viewID]})");
                     }
 
+                    // Si es el jugador local, actualizar la visualización del arbusto
+                    if (entityPhotonView.IsMine)
+                    {
+                        SetLocalPlayerInside(true);
+                    }
+
                     // Notificar localmente al tracker de la entidad que entró
                     entityTracker.EnterBush(this);
 
                     // Solicitar cambio de capa a HiddenInBush vía RPC
                     RequestLayerChange(entityPhotonView, LayerManager.HiddenInBushLayerID);
                     LogMessage($"🔄 Entidad entrando ahora tiene capa: {LayerMask.LayerToName(entity.layer)} ({entity.layer})");
-                }
-                else
-                {
+        }
+        else
+        {
                     // Ya está en la lista, verificamos si la capa es correcta (HiddenInBush)
                     if (entity.layer != LayerManager.HiddenInBushLayerID)
                     {
@@ -172,51 +320,30 @@ public class BushVisibility : MonoBehaviourPunCallbacks // Sigue siendo PunCallb
             }
         }
     }
-
+    
     /// <summary>
-    /// Aplica un pequeño retraso antes de solicitar el cambio de capa para evitar condiciones de carrera con OnTriggerStay.
+    /// Solicita un cambio de capa a través de un RPC
     /// </summary>
-    private System.Collections.IEnumerator DelayedLayerChange(PhotonView targetView, int layerId, float delay)
+    private void RequestLayerChange(PhotonView targetPhotonView, int newLayerID)
     {
-        yield return new WaitForSeconds(delay);
-        
-        // Verificación adicional: Asegurarse que la entidad ya no está en el trigger
-        if (targetView != null && !entitiesInTrigger.Contains(targetView.ViewID))
+        if (targetPhotonView != null)
         {
-            LogMessage($"🕒 Ejecutando cambio de capa retrasado para {targetView.gameObject.name} a {LayerMask.LayerToName(layerId)} ({layerId})");
-            RequestLayerChange(targetView, layerId);
-        }
-        else if (targetView != null)
-        {
-            LogMessage($"⚠️ Cancelando cambio de capa retrasado porque {targetView.gameObject.name} volvió a entrar al trigger");
+            targetPhotonView.RPC("RPC_SetVisibilityLayer", RpcTarget.AllBuffered, newLayerID);
+            LogMessage($"RPC solicitado: Cambiar capa de {targetPhotonView.name} (ID: {targetPhotonView.ViewID}) a {LayerMask.LayerToName(newLayerID)} ({newLayerID})");
         }
         else
         {
-            LogMessage($"⚠️ Cancelando cambio de capa retrasado porque el objetivo es nulo");
+            LogMessage("⚠️ No se pudo solicitar cambio de capa: PhotonView es null");
         }
     }
-
+    
     /// <summary>
-    /// Solicita a la entidad que cambie su capa a través de un RPC.
-    /// </summary>
-    private void RequestLayerChange(PhotonView targetView, int layerId)
-    {
-        if (targetView != null)
-        {
-             LogMessage($"📤 Solicitando RPC_SetVisibilityLayer en {targetView.gameObject.name} (ID: {targetView.ViewID}) para capa {LayerMask.LayerToName(layerId)} ({layerId})");
-             targetView.RPC("RPC_SetVisibilityLayer", RpcTarget.AllBuffered, layerId);
-        }
-         else
-        {
-            LogMessage("❌ Error: Se intentó solicitar cambio de capa en un PhotonView nulo.");
-        }
-    }
-
-    /// <summary>
-    /// Helper para verificar si un Collider pertenece a una entidad válida (con PhotonView y equipo)
+    /// Verifica si una entidad es válida para cambio de visibilidad
     /// </summary>
     private bool IsValidEntity(Collider other)
     {
+        if (other == null || other.gameObject == null) return false;
+
         // Necesita PhotonView y pertenecer a un equipo
         bool hasPhotonView = other.GetComponent<PhotonView>() != null;
         bool belongsToTeam = other.CompareTag(LayerManager.TAG_RED_TEAM) || other.CompareTag(LayerManager.TAG_BLUE_TEAM);
@@ -224,30 +351,58 @@ public class BushVisibility : MonoBehaviourPunCallbacks // Sigue siendo PunCallb
         return hasPhotonView && belongsToTeam;
     }
     
-    // Ya no se usan HideEntity ni RevealEntity directamente aquí
-    // private void HideEntity(GameObject entity) { ... }
-    // private void RevealEntity(GameObject entity) { ... }
-    
-    // --- Métodos antiguos que ya no aplican con la nueva lógica --- 
-    // private void NotifyEntityEnter(GameObject entity) { ... } 
-    // private void NotifyEntityExit(GameObject entity) { ... }
-
     /// <summary>
-    /// Comprueba si una entidad específica (por su PhotonView ID) está actualmente en el trigger de este arbusto.
-    /// </summary>
-    public bool IsEntityInside(int viewID)
-    {
-        return entitiesInTrigger.Contains(viewID);
-    }
-    
-    /// <summary>
-    /// Método de utilidad para logging condicional
+    /// Muestra mensajes de debug si están habilitados
     /// </summary>
     private void LogMessage(string message)
     {
         if (showDebugMessages)
         {
-            Debug.Log($"[BushVisibility: {gameObject.name}] {message}", this);
+            Debug.Log($"[BushVisibility:{gameObject.name}] {message}");
+        }
+    }
+    
+    void OnDisable()
+    {
+        // Restaurar la visualización normal del arbusto al desactivar el script
+        if (visualsInitialized && adjustLocalPlayerVisibility)
+        {
+            // Restaurar estado original de todos los renderers
+            for (int i = 0; i < bushRenderers.Count; i++)
+            {
+                if (bushRenderers[i] != null && i < originalRendererStates.Count)
+                {
+                    bushRenderers[i].enabled = originalRendererStates[i];
+                }
+            }
+            
+            // Restaurar el LOD original
+            if (bushLodGroup != null)
+            {
+                bushLodGroup.ForceLOD(-1); // Desactivar forzado de LOD
+            }
+        }
+    }
+    
+    void OnDestroy()
+    {
+        // Asegurarse de restaurar la visualización normal del arbusto al destruir el script
+        if (visualsInitialized && adjustLocalPlayerVisibility)
+        {
+            // Restaurar estado original de todos los renderers
+            for (int i = 0; i < bushRenderers.Count; i++)
+            {
+                if (bushRenderers[i] != null && i < originalRendererStates.Count)
+                {
+                    bushRenderers[i].enabled = originalRendererStates[i];
+                }
+            }
+            
+            // Restaurar el LOD original
+            if (bushLodGroup != null)
+            {
+                bushLodGroup.ForceLOD(-1); // Desactivar forzado de LOD
+            }
         }
     }
 }

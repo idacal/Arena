@@ -27,7 +27,7 @@ public class EntityVisibilityTracker : MonoBehaviourPun // Cambiado a MonoBehavi
     public bool showDebugMessages = false;
 
     // Verificación periódica para asegurar capa correcta
-    private float layerCheckInterval = 1.0f; // Verificar cada segundo
+    private float layerCheckInterval = 0.2f; // Reducido de 1.0f a 0.2f para verificar 5 veces por segundo
     private float lastLayerCheckTime = 0f;
 
     void Start()
@@ -101,18 +101,20 @@ public class EntityVisibilityTracker : MonoBehaviourPun // Cambiado a MonoBehavi
             if (photonView.IsMine && isCameraSetup)
             {
                 // Restaurar la máscara original (que no tenía HiddenInBush)
-                // Opcionalmente: quitar solo la capa: playerCamera.cullingMask &= ~(1 << LayerManager.HiddenInBushLayerID);
-                // Restaurar la original es más seguro si otras cosas pudieran modificarla.
                 playerCamera.cullingMask = originalCullingMask;
                 LogMessage($"Salió del arbusto. Cámara local restaurada a máscara original. Máscara: {LayerMaskToString(playerCamera.cullingMask)}");
+                
+                // Verificar INMEDIATAMENTE que la capa sea la correcta al salir
+                // En lugar de esperar al siguiente intervalo
+                VerifyCorrectLayer();
+                
+                // También verificar nuevamente después de un pequeño intervalo 
+                // para evitar posibles condiciones de carrera
+                Invoke("VerifyCorrectLayer", 0.05f);
             }
-            // LogMessage($"{gameObject.name} salió del arbusto: {bush.gameObject.name}"); // Log original
         }
-         else if (IsInBush)
+        else if (IsInBush)
         {
-             // Si salimos de un arbusto pero no era el "CurrentBush", puede ser una transición rápida.
-             // Podríamos querer re-evaluar si todavía estamos en *otro* arbusto.
-             // Por ahora, la lógica de BushVisibility con OnTriggerStay debería manejar esto.
              LogMessage($"Intentó salir del arbusto {bush.gameObject.name} pero no era el actual ({CurrentBush?.gameObject.name}). No se cambia estado ni cámara.");
         }
     }
