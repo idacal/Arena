@@ -219,6 +219,13 @@ namespace Photon.Pun.Demo.Asteroids
                 currentMana = maxMana;
                 _currentGold = StartingGold; // Inicializar oro
                 
+                // IMPORTANTE: Asegurar que el jugador siempre comience con la capa "Player" correcta
+                if (gameObject.layer != LayerManager.PlayerLayerID)
+                {
+                    Debug.LogWarning($"[HeroBase] Capa incorrecta al iniciar: {LayerMask.LayerToName(gameObject.layer)}. Cambiando a {LayerManager.LAYER_PLAYER}");
+                    LayerManager.SetLayerRecursively(transform, LayerManager.PlayerLayerID);
+                }
+                
                 // Inicializar controlador de UI si no existe
                 if (uiController == null && uiCanvasPrefab != null)
                 {
@@ -334,6 +341,18 @@ namespace Photon.Pun.Demo.Asteroids
             // No regenerar salud si está muerto
             if (_isDead)
                 return;
+            
+            // Verificación periódica de la capa del jugador (solo verificamos cada 1 segundo)
+            if (Time.frameCount % 60 == 0)
+            {
+                // Si el jugador está vivo y no está en un arbusto, verificar que su capa sea Player
+                EntityVisibilityTracker tracker = GetComponent<EntityVisibilityTracker>();
+                if (tracker != null && !tracker.IsInBush && gameObject.layer != LayerManager.PlayerLayerID)
+                {
+                    Debug.LogWarning($"[HeroBase] 🔍 Detectada capa incorrecta durante el juego: {LayerMask.LayerToName(gameObject.layer)} pero no estamos en un arbusto. Forzando corrección.");
+                    ForceSynchronizePlayerLayer();
+                }
+            }
             
             // La lógica de control se implementará en clases derivadas
             HandleInput();
@@ -986,12 +1005,53 @@ namespace Photon.Pun.Demo.Asteroids
                 animator.SetTrigger("Respawn");
             }
             
-            // IMPORTANTE: Asegurarnos de que el jugador respawnee siempre con la capa Player
-            // incluso si murió dentro de un arbusto
-            if (gameObject.layer != LayerManager.PlayerLayerID)
+            // IMPORTANTE: SIEMPRE asignar capa Player al respawnear, sin importar dónde murió el jugador
+            // Esto garantiza que el jugador siempre esté visible después del respawn
+            int currentLayer = gameObject.layer;
+            if (currentLayer != LayerManager.PlayerLayerID)
             {
-                Debug.Log($"[HeroBase] Corrigiendo capa al respawnear: {LayerMask.LayerToName(gameObject.layer)} -> {LayerManager.LAYER_PLAYER}");
+                Debug.LogWarning($"[HeroBase] ⚠️ Capa incorrecta al respawnear: {LayerMask.LayerToName(currentLayer)} ({currentLayer}). Corrigiendo a {LayerManager.LAYER_PLAYER} ({LayerManager.PlayerLayerID})");
+                
+                // Aplicar la capa correcta de forma recursiva a este objeto y todos sus hijos
                 LayerManager.SetLayerRecursively(transform, LayerManager.PlayerLayerID);
+                
+                // Forzar la capa Player directamente en el objeto principal y sus hijos principales
+                // para mayor seguridad de que el cambio se aplique
+                gameObject.layer = LayerManager.PlayerLayerID;
+                foreach (Transform child in transform)
+                {
+                    if (child != null)
+                    {
+                        child.gameObject.layer = LayerManager.PlayerLayerID;
+                        foreach (Transform subChild in child)
+                        {
+                            if (subChild != null)
+                                subChild.gameObject.layer = LayerManager.PlayerLayerID;
+                        }
+                    }
+                }
+                
+                // Verificar que el cambio fue efectivo
+                if (gameObject.layer != LayerManager.PlayerLayerID)
+                {
+                    Debug.LogError($"[HeroBase] ❌ ERROR CRÍTICO: No se pudo cambiar la capa al respawnear. Capa actual: {LayerMask.LayerToName(gameObject.layer)}");
+                }
+                else
+                {
+                    Debug.Log($"[HeroBase] ✅ Capa corregida exitosamente a {LayerManager.LAYER_PLAYER}");
+                }
+            }
+            
+            // Si tenemos un EntityVisibilityTracker, asegurarnos de que no esté marcado como "en arbusto"
+            EntityVisibilityTracker tracker = GetComponent<EntityVisibilityTracker>();
+            if (tracker != null)
+            {
+                // Forzar al tracker a reconocer que ya no está en un arbusto
+                Debug.Log("[HeroBase] Notificando a EntityVisibilityTracker que ya no estamos en un arbusto");
+                if (tracker.IsInBush && tracker.CurrentBush != null)
+                {
+                    tracker.ExitBush(tracker.CurrentBush);
+                }
             }
             
             // Detener cualquier movimiento previo y preparar para nuevos movimientos
@@ -1941,6 +2001,65 @@ namespace Photon.Pun.Demo.Asteroids
             }
             
             Debug.Log("===========================================");
+        }
+
+        /// <summary>
+        /// Fuerza la sincronización de la capa "Player" en todos los clientes
+        /// </summary>
+        public void ForceSynchronizePlayerLayer()
+        {
+            if (!photonView.IsMine) return;
+            
+            // Verificar si la capa actual es incorrecta
+            if (gameObject.layer != LayerManager.PlayerLayerID)
+            {
+                Debug.LogWarning($"[HeroBase] Capa incorrecta detectada: {LayerMask.LayerToName(gameObject.layer)}. Forzando sincronización a {LayerManager.LAYER_PLAYER}");
+                
+                // Aplicar localmente primero
+                LayerManager.SetLayerRecursively(transform, LayerManager.PlayerLayerID);
+                
+                // Luego forzar en todos los clientes
+                photonView.RPC("RPC_ForcePlayerLayer", RpcTarget.AllBuffered);
+            }
+        }
+        
+        [PunRPC]
+        private void RPC_ForcePlayerLayer()
+        {
+            // No importa quién lo llame, siempre aplicar la capa Player
+            Debug.Log($"[HeroBase] RPC_ForcePlayerLayer recibido. Capa actual: {LayerMask.LayerToName(gameObject.layer)}");
+            
+            // Aplicar la capa Player recursivamente
+            LayerManager.SetLayerRecursively(transform, LayerManager.PlayerLayerID);
+            
+            // Verificación directa en GameObject y sus hijos principales
+            gameObject.layer = LayerManager.PlayerLayerID;
+            foreach (Transform child in transform)
+            {
+                if (child != null)
+                {
+                    child.gameObject.layer = LayerManager.PlayerLayerID;
+                    // También aplicar a nietos importantes
+                    foreach (Transform subChild in child)
+                    {
+                        if (subChild != null)
+                            subChild.gameObject.layer = LayerManager.PlayerLayerID;
+                    }
+                }
+            }
+            
+            // Si teníamos un tracker de visibilidad, asegurarnos de que no esté marcado como "en arbusto"
+            EntityVisibilityTracker tracker = GetComponent<EntityVisibilityTracker>();
+            if (tracker != null && tracker.IsInBush)
+            {
+                Debug.Log("[HeroBase] RPC_ForcePlayerLayer: Detectado IsInBush=true pero estamos forzando capa Player");
+                if (tracker.CurrentBush != null)
+                {
+                    tracker.ExitBush(tracker.CurrentBush);
+                }
+            }
+            
+            Debug.Log($"[HeroBase] Capa corregida a {LayerManager.LAYER_PLAYER} en RPC_ForcePlayerLayer");
         }
     }
 }

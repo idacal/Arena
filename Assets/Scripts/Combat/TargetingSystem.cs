@@ -384,6 +384,17 @@ public class TargetingSystem : MonoBehaviourPun
             return;
         }
         
+        // Verificar si el objetivo sigue siendo visible según las reglas de arbustos
+        if (!IsTargetVisible(currentTarget.gameObject))
+        {
+            if (debugMessages)
+            {
+                Debug.Log($"[TargetingSystem] Objetivo {currentTarget.name} ya no es visible (posiblemente entró en un arbusto). Limpiando objetivo.");
+            }
+            ClearTarget();
+            return;
+        }
+        
         // Verificar distancia
         float distance = Vector3.Distance(transform.position, currentTarget.position);
         if (distance > targetingRange * 1.5f) // Damos un poco más de margen para no perder objetivos al moverse
@@ -398,13 +409,7 @@ public class TargetingSystem : MonoBehaviourPun
     /// </summary>
     private void UpdateTargetIndicator()
     {
-        // Si no hay indicador, créalo si hay un objetivo
-        if (targetIndicator == null && currentTarget != null)
-        {
-            CreateTargetIndicator();
-        }
-        
-        // Si no hay objetivo o indicador, no hay nada que actualizar
+        // Si no hay objetivo, no hay nada que actualizar
         if (currentTarget == null)
         {
             // Ocultar el indicador si existe pero no hay objetivo
@@ -415,10 +420,22 @@ public class TargetingSystem : MonoBehaviourPun
             return; // Simplemente retornar sin mostrar warning
         }
         
-        // Si llegamos aquí, tenemos objetivo pero podría faltar el indicador
+        // Comprobar si el objetivo es visible según las reglas de arbustos
+        bool isVisible = IsTargetVisible(currentTarget.gameObject);
+        
+        // Si el objetivo NO es visible (está en un arbusto y nosotros no), ocultar el indicador
+        if (!isVisible)
+        {
+            if (targetIndicator != null)
+            {
+                targetIndicator.SetActive(false);
+            }
+            return;
+        }
+        
+        // Si llegamos aquí, tenemos un objetivo visible pero podría faltar el indicador
         if (targetIndicator == null)
         {
-            Debug.LogWarning("[TargetingSystem] targetIndicator es null en UpdateTargetIndicator");
             CreateTargetIndicator();
             if (targetIndicator == null) return; // Si después de crear sigue siendo null, salir
         }
@@ -451,6 +468,30 @@ public class TargetingSystem : MonoBehaviourPun
         {
             Debug.LogError("[TargetingSystem] No se encontró el componente TargetIndicatorController en el indicador");
         }
+    }
+    
+    /// <summary>
+    /// Verifica si un objetivo es visible para este sistema de targeting basado en las reglas de capas
+    /// </summary>
+    private bool IsTargetVisible(GameObject target)
+    {
+        if (target == null) return false;
+        
+        // Si el atacante y el objetivo están en la misma capa, siempre son visibles entre sí
+        if (gameObject.layer == target.layer)
+        {
+            return true;
+        }
+        
+        // Caso especial: si el objetivo está en HiddenInBush y el atacante no, entonces no es visible
+        if (target.layer == LayerManager.HiddenInBushLayerID && gameObject.layer != LayerManager.HiddenInBushLayerID)
+        {
+            // Un jugador fuera del arbusto no puede ver a un jugador dentro del arbusto
+            return false;
+        }
+        
+        // En todos los demás casos son visibles entre sí
+        return true;
     }
     
     /// <summary>
