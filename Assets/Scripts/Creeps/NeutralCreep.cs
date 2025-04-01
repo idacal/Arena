@@ -312,7 +312,6 @@ namespace Photon.Pun.Demo.Asteroids
             // Actualizar el objetivo de patrulla en clientes remotos
             patrolTarget = newPatrolTarget;
             patrolTimer = newPatrolTimer;
-            Debug.Log($"[NeutralCreep] Objetivo de patrulla sincronizado: {patrolTarget}, Timer: {patrolTimer}");
         }
         
         [PunRPC]

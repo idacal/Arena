@@ -2981,6 +2981,7 @@ MonoBehaviour:
     m_Bits: 64
   autoTargetEnemiesInRange: 0
   autoTargetInterval: 0.5
+  debugMessages: 0
   targetIndicatorPrefab: {fileID: 6843215022521881347, guid: 217d657ac27b16f4d95f8f97d298ae44, type: 3}
   indicatorHeight: 2
   allyIndicatorColor: {r: 0, g: 1, b: 0, a: 1}

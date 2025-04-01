@@ -13,11 +13,17 @@ public class VisibilityController : MonoBehaviourPunCallbacks
     [Tooltip("Mostrar mensajes de debug en la consola")]
     public bool showDebugMessages = false;
     
+    [Header("Configuración")]
+    [Tooltip("Intervalo en segundos para actualizar la visibilidad")]
+    public float updateInterval = 0.25f;
+    
     // Propiedades públicas para obtener información desde otros scripts
     public bool IsLocalPlayer { get; private set; }
     
     // Referencias privadas
     private EntityVisibilityTracker visibilityTracker;
+    private float updateTimer = 0f;
+    private bool initialized = false;
     
     void Start()
     {
@@ -37,8 +43,37 @@ public class VisibilityController : MonoBehaviourPunCallbacks
         {
             Debug.LogError("¡La capa 'HiddenInBush' no existe! Crea esta capa en Edit > Project Settings > Tags & Layers");
         }
+        else
+        {
+            Debug.Log($"[VisibilityController] Capa HiddenInBush encontrada con ID: {LayerManager.HiddenInBushLayerID}");
+        }
         
         LogMessage($"VisibilityController inicializado. IsLocalPlayer: {IsLocalPlayer}");
+        
+        // Aplicar visibilidad inicial después de un pequeño retraso
+        Invoke("InitialVisibilityUpdate", 0.5f);
+    }
+    
+    void InitialVisibilityUpdate()
+    {
+        // Aplicar la visibilidad inicial a todas las unidades
+        ApplyVisibilityToAllUnits();
+        initialized = true;
+        Debug.Log("[VisibilityController] Visibilidad inicial aplicada");
+    }
+    
+    void Update()
+    {
+        // Solo funciona para el jugador local
+        if (!IsLocalPlayer || !initialized) return;
+        
+        // Actualizar la visibilidad periódicamente
+        updateTimer -= Time.deltaTime;
+        if (updateTimer <= 0)
+        {
+            ApplyVisibilityToAllUnits();
+            updateTimer = updateInterval;
+        }
     }
     
     /// <summary>
@@ -49,21 +84,26 @@ public class VisibilityController : MonoBehaviourPunCallbacks
         if (targetUnit == null)
             return false;
             
+        // Verificar si estamos en la misma capa (para depuración)
+        LogMessage($"Mi capa: {LayerMask.LayerToName(gameObject.layer)}, Capa objetivo: {LayerMask.LayerToName(targetUnit.layer)}");
+            
         // Regla 1: Si el objetivo es un aliado, siempre es visible
         if (IsAlly(targetUnit))
         {
+            LogMessage($"Veo a {targetUnit.name} porque es un aliado.");
             return true;
         }
         
         // Regla 2: Si el objetivo está en la capa oculta (HiddenInBush)
         if (targetUnit.layer == LayerManager.HiddenInBushLayerID)
         {
-            LogMessage($"Objetivo {targetUnit.name} está en capa HiddenInBush");
+            // Mostrar siempre este mensaje aunque el debug esté desactivado para encontrar problemas
+            Debug.Log($"[VisibilityController] Objetivo {targetUnit.name} está en capa HiddenInBush (ID: {LayerManager.HiddenInBushLayerID})");
             
             // Esta unidad (observador) no está en un arbusto, por lo tanto no puede ver al objetivo
             if (!visibilityTracker.IsInBush)
             {
-                LogMessage($"No puedo ver a {targetUnit.name} porque estoy fuera de arbustos y él dentro.");
+                Debug.Log($"[VisibilityController] No puedo ver a {targetUnit.name} porque estoy fuera de arbustos y él dentro.");
                 return false;
             }
             
@@ -74,19 +114,24 @@ public class VisibilityController : MonoBehaviourPunCallbacks
                 if (targetTracker.CurrentBush == visibilityTracker.CurrentBush && visibilityTracker.CurrentBush != null)
                 {
                     // Están en el mismo arbusto, la unidad es visible
-                    LogMessage($"Veo a {targetUnit.name} porque ambos estamos en el mismo arbusto.");
+                    Debug.Log($"[VisibilityController] Veo a {targetUnit.name} porque ambos estamos en el mismo arbusto: {visibilityTracker.CurrentBush.name}");
                     return true;
                 }
                 else
                 {
                     // Están en arbustos diferentes, la unidad no es visible
-                    LogMessage($"No puedo ver a {targetUnit.name} porque estamos en arbustos diferentes.");
+                    Debug.Log($"[VisibilityController] No puedo ver a {targetUnit.name} porque estamos en arbustos diferentes.");
                     return false;
                 }
+            }
+            else
+            {
+                Debug.LogWarning($"[VisibilityController] El objeto {targetUnit.name} está en capa HiddenInBush pero no tiene EntityVisibilityTracker");
             }
         }
         
         // El objetivo no está en un arbusto o todas las verificaciones pasaron, es visible
+        LogMessage($"Veo a {targetUnit.name} porque no está en un arbusto o pasó todas las verificaciones.");
         return true;
     }
     
@@ -108,10 +153,21 @@ public class VisibilityController : MonoBehaviourPunCallbacks
         // Aplicar la visibilidad a todos los renderers
         foreach (Renderer renderer in renderers)
         {
-            renderer.enabled = shouldBeVisible;
+            if (renderer != null)
+            {
+                renderer.enabled = shouldBeVisible;
+            }
         }
         
-        LogMessage($"Aplicada visibilidad a {targetUnit.name}: visible = {shouldBeVisible}");
+        // Siempre mostrar este mensaje para debug
+        if (targetUnit.layer == LayerManager.HiddenInBushLayerID || !shouldBeVisible)
+        {
+            Debug.Log($"[VisibilityController] Aplicada visibilidad a {targetUnit.name}: visible = {shouldBeVisible}");
+        }
+        else
+        {
+            LogMessage($"Aplicada visibilidad a {targetUnit.name}: visible = {shouldBeVisible}");
+        }
     }
     
     /// <summary>
@@ -120,6 +176,7 @@ public class VisibilityController : MonoBehaviourPunCallbacks
     public void ApplyVisibilityToTeam(string teamTag)
     {
         GameObject[] teamUnits = GameObject.FindGameObjectsWithTag(teamTag);
+        LogMessage($"Encontradas {teamUnits.Length} unidades con tag {teamTag}");
         
         foreach (GameObject unit in teamUnits)
         {
@@ -128,8 +185,6 @@ public class VisibilityController : MonoBehaviourPunCallbacks
                 ApplyVisibilityToUnit(unit);
             }
         }
-        
-        LogMessage($"Aplicada visibilidad a todas las unidades del equipo {teamTag}");
     }
     
     /// <summary>
@@ -137,6 +192,8 @@ public class VisibilityController : MonoBehaviourPunCallbacks
     /// </summary>
     public void ApplyVisibilityToAllUnits()
     {
+        LogMessage("Actualizando visibilidad para todas las unidades...");
+        
         ApplyVisibilityToTeam(LayerManager.TAG_RED_TEAM);
         ApplyVisibilityToTeam(LayerManager.TAG_BLUE_TEAM);
     }

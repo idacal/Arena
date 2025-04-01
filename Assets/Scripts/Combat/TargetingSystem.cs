@@ -11,6 +11,7 @@ public class TargetingSystem : MonoBehaviourPun
     public LayerMask targetableLayers;
     public bool autoTargetEnemiesInRange = false;  // Desactivado por defecto
     public float autoTargetInterval = 0.5f;
+    public bool debugMessages = false;  // Controla los mensajes de debug
     
     [Header("Visualización")]
     public GameObject targetIndicatorPrefab;
@@ -40,34 +41,7 @@ public class TargetingSystem : MonoBehaviourPun
         mobaCamera = FindObjectOfType<PhotonMOBACamera>();
         Debug.Log($"[TargetingSystem] Inicializado para {gameObject.name}, heroBase: {(heroBase != null ? "OK" : "NULL")}, mobaCamera: {(mobaCamera != null ? "OK" : "NULL")}");
         
-        // Crear indicador de objetivo
-        if (targetIndicatorPrefab != null)
-        {
-            targetIndicator = Instantiate(targetIndicatorPrefab, transform.position, Quaternion.identity);
-            targetIndicator.SetActive(false);
-            
-            // Verificar que tiene el componente TargetIndicatorController
-            TargetIndicatorController indicatorController = targetIndicator.GetComponent<TargetIndicatorController>();
-            if (indicatorController == null)
-            {
-                Debug.LogError("[TargetingSystem] El prefab del indicador no tiene el componente TargetIndicatorController");
-                return;
-            }
-            
-            // Verificar que tiene el SpriteRenderer
-            SpriteRenderer spriteRenderer = targetIndicator.GetComponent<SpriteRenderer>();
-            if (spriteRenderer == null)
-            {
-                Debug.LogError("[TargetingSystem] El prefab del indicador no tiene el componente SpriteRenderer");
-                return;
-            }
-            
-            Debug.Log($"[TargetingSystem] Indicador de objetivo creado y configurado correctamente: {targetIndicator.name}");
-        }
-        else
-        {
-            Debug.LogError("[TargetingSystem] No se ha asignado un prefab para el indicador de objetivo en el Inspector!");
-        }
+        // Ya no creamos el indicador de objetivo aquí, ahora usamos CreateTargetIndicator cuando sea necesario
         
         // Configurar cursor normal por defecto
         if (normalCursor != null)
@@ -176,17 +150,29 @@ public class TargetingSystem : MonoBehaviourPun
         if (Physics.Raycast(ray, out hit, Mathf.Infinity, targetableLayers))
         {
             GameObject hitObject = hit.collider.gameObject;
-            Debug.Log($"[TargetingSystem] Mouse sobre objeto: {hitObject.name}, tag: {hitObject.tag}");
+            
+            if (debugMessages)
+            {
+                Debug.Log($"[TargetingSystem] Mouse sobre objeto: {hitObject.name}, tag: {hitObject.tag}");
+            }
             
             // Verificar si el objeto es un enemigo
             if (LayerManager.IsEnemy(gameObject, hitObject))
             {
-                Debug.Log("[TargetingSystem] Cambiando a cursor de enemigo");
+                if (debugMessages)
+                {
+                    Debug.Log("[TargetingSystem] Cambiando a cursor de enemigo");
+                }
+                
                 try
                 {
                     Cursor.SetCursor(enemyCursor, cursorHotspot, CursorMode.Auto);
                     Cursor.visible = true;
-                    Debug.Log("[TargetingSystem] Cursor de enemigo configurado correctamente");
+                    
+                    if (debugMessages)
+                    {
+                        Debug.Log("[TargetingSystem] Cursor de enemigo configurado correctamente");
+                    }
                 }
                 catch (System.Exception e)
                 {
@@ -195,12 +181,20 @@ public class TargetingSystem : MonoBehaviourPun
             }
             else
             {
-                Debug.Log("[TargetingSystem] Cambiando a cursor normal");
+                if (debugMessages)
+                {
+                    Debug.Log("[TargetingSystem] Cambiando a cursor normal");
+                }
+                
                 try
                 {
                     Cursor.SetCursor(normalCursor, cursorHotspot, CursorMode.Auto);
                     Cursor.visible = true;
-                    Debug.Log("[TargetingSystem] Cursor normal configurado correctamente");
+                    
+                    if (debugMessages)
+                    {
+                        Debug.Log("[TargetingSystem] Cursor normal configurado correctamente");
+                    }
                 }
                 catch (System.Exception e)
                 {
@@ -210,12 +204,20 @@ public class TargetingSystem : MonoBehaviourPun
         }
         else
         {
-            Debug.Log("[TargetingSystem] Mouse no sobre ningún objeto, usando cursor normal");
+            if (debugMessages)
+            {
+                Debug.Log("[TargetingSystem] Mouse no sobre ningún objeto, usando cursor normal");
+            }
+            
             try
             {
                 Cursor.SetCursor(normalCursor, cursorHotspot, CursorMode.Auto);
                 Cursor.visible = true;
-                Debug.Log("[TargetingSystem] Cursor normal configurado correctamente");
+                
+                if (debugMessages)
+                {
+                    Debug.Log("[TargetingSystem] Cursor normal configurado correctamente");
+                }
             }
             catch (System.Exception e)
             {
@@ -396,17 +398,29 @@ public class TargetingSystem : MonoBehaviourPun
     /// </summary>
     private void UpdateTargetIndicator()
     {
-        if (targetIndicator == null || currentTarget == null)
+        // Si no hay indicador, créalo si hay un objetivo
+        if (targetIndicator == null && currentTarget != null)
         {
-            if (targetIndicator == null)
+            CreateTargetIndicator();
+        }
+        
+        // Si no hay objetivo o indicador, no hay nada que actualizar
+        if (currentTarget == null)
+        {
+            // Ocultar el indicador si existe pero no hay objetivo
+            if (targetIndicator != null)
             {
-                Debug.LogWarning("[TargetingSystem] targetIndicator es null en UpdateTargetIndicator");
+                targetIndicator.SetActive(false);
             }
-            if (currentTarget == null)
-            {
-                Debug.LogWarning("[TargetingSystem] currentTarget es null en UpdateTargetIndicator");
-            }
-            return;
+            return; // Simplemente retornar sin mostrar warning
+        }
+        
+        // Si llegamos aquí, tenemos objetivo pero podría faltar el indicador
+        if (targetIndicator == null)
+        {
+            Debug.LogWarning("[TargetingSystem] targetIndicator es null en UpdateTargetIndicator");
+            CreateTargetIndicator();
+            if (targetIndicator == null) return; // Si después de crear sigue siendo null, salir
         }
             
         // Actualizar posición (ligeramente elevado del suelo)
@@ -428,7 +442,10 @@ public class TargetingSystem : MonoBehaviourPun
             Color indicatorColor = isAlly ? allyIndicatorColor : enemyIndicatorColor;
             indicatorController.SetColor(indicatorColor);
             
-            Debug.Log($"[TargetingSystem] Indicador de objetivo actualizado: {currentTarget.name}, es aliado: {isAlly}, color: {indicatorColor}");
+            if (debugMessages)
+            {
+                Debug.Log($"[TargetingSystem] Indicador de objetivo actualizado: {currentTarget.name}, es aliado: {isAlly}, color: {indicatorColor}");
+            }
         }
         else
         {
@@ -450,6 +467,42 @@ public class TargetingSystem : MonoBehaviourPun
     public bool IsCurrentTarget(Transform target)
     {
         return currentTarget == target;
+    }
+    
+    /// <summary>
+    /// Crea el indicador de objetivo si no existe
+    /// </summary>
+    private void CreateTargetIndicator()
+    {
+        if (targetIndicatorPrefab == null)
+        {
+            Debug.LogError("[TargetingSystem] No se ha asignado un prefab para el indicador de objetivo en el Inspector!");
+            return;
+        }
+        
+        targetIndicator = Instantiate(targetIndicatorPrefab, transform.position, Quaternion.identity);
+        targetIndicator.SetActive(false);
+        
+        // Verificar que tiene el componente TargetIndicatorController
+        TargetIndicatorController indicatorController = targetIndicator.GetComponent<TargetIndicatorController>();
+        if (indicatorController == null)
+        {
+            Debug.LogError("[TargetingSystem] El prefab del indicador no tiene el componente TargetIndicatorController");
+            return;
+        }
+        
+        // Verificar que tiene el SpriteRenderer
+        SpriteRenderer spriteRenderer = targetIndicator.GetComponent<SpriteRenderer>();
+        if (spriteRenderer == null)
+        {
+            Debug.LogError("[TargetingSystem] El prefab del indicador no tiene el componente SpriteRenderer");
+            return;
+        }
+        
+        if (debugMessages)
+        {
+            Debug.Log($"[TargetingSystem] Indicador de objetivo creado y configurado correctamente: {targetIndicator.name}");
+        }
     }
     
     [PunRPC]

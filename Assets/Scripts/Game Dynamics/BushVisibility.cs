@@ -2,6 +2,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using Photon.Pun;
 using Photon.Realtime;
+using System.Collections;
 
 /// <summary>
 /// Script para los arbustos que ocultan unidades dentro. 
@@ -18,6 +19,9 @@ public class BushVisibility : MonoBehaviourPunCallbacks
     
     // Diccionario para recordar la capa original de cada unidad
     private Dictionary<GameObject, int> originalLayers = new Dictionary<GameObject, int>();
+    
+    // Diccionario para almacenar las corrutinas de salida
+    private Dictionary<GameObject, Coroutine> exitCoroutines = new Dictionary<GameObject, Coroutine>();
     
     void Start()
     {
@@ -93,17 +97,13 @@ public class BushVisibility : MonoBehaviourPunCallbacks
             // Verificar que estaba en la lista
             if (entitiesInBush.Contains(entity))
             {
-                // Notificar al EntityVisibilityTracker de la unidad
-                NotifyEntityExit(entity);
+                // Iniciar una corrutina con tiempo de gracia antes de procesar la salida
+                if (exitCoroutines.ContainsKey(entity))
+                {
+                    StopCoroutine(exitCoroutines[entity]);
+                }
                 
-                // Revelar la unidad restaurando su capa original
-                RevealEntity(entity);
-                
-                // Eliminar de la lista
-                entitiesInBush.Remove(entity);
-                originalLayers.Remove(entity);
-                
-                LogMessage($"Unidad {entity.name} (Equipo: {other.tag}) salió del arbusto.");
+                exitCoroutines[entity] = StartCoroutine(DelayedExit(entity, other));
             }
         }
     }
@@ -193,6 +193,34 @@ public class BushVisibility : MonoBehaviourPunCallbacks
         if (showDebugMessages)
         {
             Debug.Log($"[BushVisibility] {message}", this);
+        }
+    }
+    
+    private IEnumerator DelayedExit(GameObject entity, Collider other)
+    {
+        // Esperar un pequeño tiempo de gracia (0.2 segundos)
+        yield return new WaitForSeconds(0.2f);
+        
+        // Verificar si la entidad aún está en nuestra lista (podría haber vuelto a entrar)
+        if (entitiesInBush.Contains(entity))
+        {
+            // Notificar al EntityVisibilityTracker de la unidad
+            NotifyEntityExit(entity);
+            
+            // Revelar la unidad restaurando su capa original
+            RevealEntity(entity);
+            
+            // Eliminar de la lista
+            entitiesInBush.Remove(entity);
+            originalLayers.Remove(entity);
+            
+            LogMessage($"Unidad {entity.name} (Equipo: {other.tag}) salió del arbusto.");
+        }
+        
+        // Limpiar la referencia a la corrutina
+        if (exitCoroutines.ContainsKey(entity))
+        {
+            exitCoroutines.Remove(entity);
         }
     }
 }
