@@ -60,3 +60,4 @@ public class TextOutlinePulse : MonoBehaviour // Nombre de clase cambiado
          }
     }
 }
+

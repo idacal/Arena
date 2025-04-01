@@ -20,9 +20,6 @@ public class BushVisibility : MonoBehaviourPunCallbacks
     // Diccionario para recordar la capa original de cada unidad
     private Dictionary<GameObject, int> originalLayers = new Dictionary<GameObject, int>();
     
-    // Diccionario para almacenar las corrutinas de salida
-    private Dictionary<GameObject, Coroutine> exitCoroutines = new Dictionary<GameObject, Coroutine>();
-    
     void Start()
     {
         // Configurar el tag por si no lo tiene
@@ -64,11 +61,11 @@ public class BushVisibility : MonoBehaviourPunCallbacks
     void OnTriggerEnter(Collider other)
     {
         // Verificar si el objeto es una unidad válida (pertenece a un equipo)
-        if (other.CompareTag(LayerManager.TAG_RED_TEAM) || other.CompareTag(LayerManager.TAG_BLUE_TEAM))
+        if (IsValidEntity(other))
         {
             GameObject entity = other.gameObject;
             
-            // Añadir a la lista si no está ya
+            // Añadir a la lista y ocultar SOLO si no está ya
             if (!entitiesInBush.Contains(entity))
             {
                 entitiesInBush.Add(entity);
@@ -79,33 +76,88 @@ public class BushVisibility : MonoBehaviourPunCallbacks
                 // Ocultar la unidad cambiando su capa
                 HideEntity(entity);
                 
-                LogMessage($"Unidad {entity.name} (Equipo: {other.tag}) entró al arbusto.");
+                LogMessage($"OnTriggerEnter: Unidad {entity.name} (Equipo: {other.tag}) entró al arbusto.");
+            }
+             else
+            {
+                LogMessage($"OnTriggerEnter: Unidad {entity.name} ya estaba en la lista.");
             }
         }
     }
-    
+
+    /// <summary>
+    /// Llamado cada frame de física mientras una unidad está DENTRO del trigger
+    /// </summary>
+    void OnTriggerStay(Collider other)
+    {
+        // Verificar si es una unidad válida
+        if (IsValidEntity(other))
+        {
+            GameObject entity = other.gameObject;
+
+            // Si por alguna razón la entidad está en el trigger pero no en nuestra lista
+            // (podría pasar en casos raros o al inicio), la añadimos y ocultamos.
+            if (!entitiesInBush.Contains(entity))
+            {
+                 LogMessage($"OnTriggerStay: Unidad {entity.name} detectada en Stay pero no en lista. Añadiendo y ocultando.");
+                 entitiesInBush.Add(entity);
+                 NotifyEntityEnter(entity);
+                 HideEntity(entity);
+            }
+            // Si está en la lista, nos aseguramos de que esté oculta (redundancia segura)
+            // Esto podría evitar casos donde algo externo la revela mientras sigue dentro.
+            else if (entity.layer != LayerManager.HiddenInBushLayerID && originalLayers.ContainsKey(entity)) 
+            {
+                 LogMessage($"OnTriggerStay: Unidad {entity.name} está en lista pero no oculta. Re-ocultando.");
+                 HideEntity(entity); // Asegura que permanezca oculta
+            }
+        }
+    }
+
     /// <summary>
     /// Cuando una unidad sale del arbusto
     /// </summary>
     void OnTriggerExit(Collider other)
     {
-        // Verificar si el objeto es una unidad válida (pertenece a un equipo)
-        if (other.CompareTag(LayerManager.TAG_RED_TEAM) || other.CompareTag(LayerManager.TAG_BLUE_TEAM))
+        // Verificar si el objeto es una unidad válida
+        if (IsValidEntity(other))
         {
             GameObject entity = other.gameObject;
             
-            // Verificar que estaba en la lista
+            // Verificar que estaba en la lista antes de intentar quitarla
             if (entitiesInBush.Contains(entity))
             {
-                // Iniciar una corrutina con tiempo de gracia antes de procesar la salida
-                if (exitCoroutines.ContainsKey(entity))
-                {
-                    StopCoroutine(exitCoroutines[entity]);
-                }
+                // Eliminar de la lista
+                entitiesInBush.Remove(entity);
+
+                // Notificar al EntityVisibilityTracker de la unidad
+                NotifyEntityExit(entity);
                 
-                exitCoroutines[entity] = StartCoroutine(DelayedExit(entity, other));
+                // Revelar la unidad restaurando su capa original
+                RevealEntity(entity); // Revelar inmediatamente al salir
+                
+                // Limpiar el registro de su capa original
+                originalLayers.Remove(entity); 
+                
+                LogMessage($"OnTriggerExit: Unidad {entity.name} (Equipo: {other.tag}) salió del arbusto.");
+            }
+             else
+            {
+                LogMessage($"OnTriggerExit: Unidad {entity.name} salió pero no estaba en la lista.");
             }
         }
+    }
+
+    /// <summary>
+    /// Helper para verificar si un Collider pertenece a una entidad válida
+    /// </summary>
+    private bool IsValidEntity(Collider other)
+    {
+        // Comprobamos los tags de equipo. Añade más tags si tienes otros tipos de unidades.
+        return other.CompareTag(LayerManager.TAG_RED_TEAM) || other.CompareTag(LayerManager.TAG_BLUE_TEAM);
+        // Podrías añadir aquí una comprobación de si tiene un componente específico,
+        // como un 'HealthComponent' o 'PlayerController', para ser más robusto.
+        // Ejemplo: return other.GetComponent<PlayerController>() != null; 
     }
     
     /// <summary>
@@ -117,10 +169,12 @@ public class BushVisibility : MonoBehaviourPunCallbacks
         if (!originalLayers.ContainsKey(entity))
         {
             originalLayers.Add(entity, entity.layer);
+            LogMessage($"Guardada capa original {LayerMask.LayerToName(entity.layer)} para {entity.name}");
         }
         
         // Usar las funciones de utilidad de LayerManager para ocultar la unidad
         LayerManager.HideUnitInBush(entity);
+        LogMessage($"Ocultando {entity.name} en capa {LayerMask.LayerToName(LayerManager.HiddenInBushLayerID)}");
     }
     
     /// <summary>
@@ -134,10 +188,16 @@ public class BushVisibility : MonoBehaviourPunCallbacks
         if (originalLayers.TryGetValue(entity, out int storedLayer))
         {
             originalLayer = storedLayer;
+            LogMessage($"Recuperada capa original {LayerMask.LayerToName(storedLayer)} para {entity.name}");
         }
-        
+         else
+        {
+             LogMessage($"No se encontró capa original para {entity.name}. Usando capa por defecto {LayerMask.LayerToName(originalLayer)}.");
+        }
+
         // Usar las funciones de utilidad de LayerManager para revelar la unidad
         LayerManager.RevealUnitFromBush(entity, originalLayer);
+         LogMessage($"Revelando {entity.name} a capa {LayerMask.LayerToName(originalLayer)}");
     }
     
     /// <summary>
@@ -192,35 +252,7 @@ public class BushVisibility : MonoBehaviourPunCallbacks
     {
         if (showDebugMessages)
         {
-            Debug.Log($"[BushVisibility] {message}", this);
-        }
-    }
-    
-    private IEnumerator DelayedExit(GameObject entity, Collider other)
-    {
-        // Esperar un pequeño tiempo de gracia (0.2 segundos)
-        yield return new WaitForSeconds(0.2f);
-        
-        // Verificar si la entidad aún está en nuestra lista (podría haber vuelto a entrar)
-        if (entitiesInBush.Contains(entity))
-        {
-            // Notificar al EntityVisibilityTracker de la unidad
-            NotifyEntityExit(entity);
-            
-            // Revelar la unidad restaurando su capa original
-            RevealEntity(entity);
-            
-            // Eliminar de la lista
-            entitiesInBush.Remove(entity);
-            originalLayers.Remove(entity);
-            
-            LogMessage($"Unidad {entity.name} (Equipo: {other.tag}) salió del arbusto.");
-        }
-        
-        // Limpiar la referencia a la corrutina
-        if (exitCoroutines.ContainsKey(entity))
-        {
-            exitCoroutines.Remove(entity);
+            Debug.Log($"[BushVisibility: {gameObject.name}] {message}", this);
         }
     }
 }
