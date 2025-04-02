@@ -8358,6 +8358,14 @@ PrefabInstance:
       propertyPath: sceneViewId
       value: 21
       objectReference: {fileID: 0}
+    - target: {fileID: 8881188098550768012, guid: 86b1bd9fa2f97c845ac1a92b62e9cb4a, type: 3}
+      propertyPath: Synchronization
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8881188098550768012, guid: 86b1bd9fa2f97c845ac1a92b62e9cb4a, type: 3}
+      propertyPath: OwnershipTransfer
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
