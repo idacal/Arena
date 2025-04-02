@@ -155,13 +155,12 @@ public class KillFeedManager : MonoBehaviourPunCallbacks
         else
         {
             playerMultiKills[killerName] = 1;
-            HandleKillStreak(killerName, victimName);
             
-            // Mostrar muerte normal si no hay racha
-            if (!playerKillStreaks.ContainsKey(killerName) || playerKillStreaks[killerName] < 5)
-            {
-                CreateKillFeedEntry(killerName, victimName, null, "", entryDuration, false, 0, false);
-            }
+            // Siempre mostrar la muerte normal, independientemente de la racha
+            CreateKillFeedEntry(killerName, victimName, null, "", entryDuration, false, 0, false);
+            
+            // Adicionalmente, mostrar la entrada de racha si corresponde
+            HandleKillStreak(killerName, victimName);
         }
     }
     
