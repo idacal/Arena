@@ -809,12 +809,16 @@ namespace Photon.Pun.Demo.Asteroids
                 return;
             }
 
+            // Calcular valor aleatorio de daño dentro del rango (95% a 100%)
+            float randomFactor = Random.Range(0.95f, 1.0f);
+            float randomizedDamage = amount * randomFactor;
+            
             // Calcular mitigación de daño
             float damageReduction = isMagicDamage ? 
                 100 / (100 + magicResistance) : 
                 100 / (100 + armor);
                 
-            float actualDamage = amount * damageReduction;
+            float actualDamage = randomizedDamage * damageReduction;
             
             // Aplicar daño
             currentHealth -= actualDamage;
@@ -1088,7 +1092,7 @@ namespace Photon.Pun.Demo.Asteroids
             OnManaChanged?.Invoke(currentMana, maxMana);
             OnHeroRespawn?.Invoke(this);
             
-            Debug.Log($"[HeroBase] Héroe respawneado en posición {position} y listo para moverse");
+            
         }
         
         [PunRPC]
@@ -1215,8 +1219,11 @@ namespace Photon.Pun.Demo.Asteroids
         {
             if (showCombatDebug) Debug.Log($"{heroName} realiza ataque cuerpo a cuerpo a {target.heroName}");
             
+            // Calcular daño aleatorio entre el mínimo y máximo
+            float damageAmount = Random.Range(heroData.MinAttackDamage, heroData.MaxAttackDamage);
+            
             // Mandar RPC para sincronizar el daño en todos los clientes
-            photonView.RPC("RPC_ApplyDamage", RpcTarget.All, target.photonView.ViewID, attackDamage);
+            photonView.RPC("RPC_ApplyDamage", RpcTarget.All, target.photonView.ViewID, damageAmount);
         }
         
         // Ataque a distancia
@@ -1226,6 +1233,9 @@ namespace Photon.Pun.Demo.Asteroids
             
             if (basicAttackProjectilePrefab != null)
             {
+                // Calcular daño aleatorio entre el mínimo y máximo
+                float damageAmount = Random.Range(heroData.MinAttackDamage, heroData.MaxAttackDamage);
+                
                 // Posición de origen del proyectil
                 Vector3 spawnPosition = transform.position + transform.forward * 0.5f + Vector3.up * 1.0f;
                 
@@ -1234,7 +1244,7 @@ namespace Photon.Pun.Demo.Asteroids
                 
                 // Instanciar proyectil vía Photon para que sea visible en la red
                 object[] instantiationData = new object[] { 
-                    attackDamage, 
+                    damageAmount, 
                     photonView.ViewID, // ID del atacante
                     target.photonView.ViewID, // ID del objetivo
                     photonView.ViewID // Añadimos el ViewID del atacante para el currentTarget
@@ -1334,8 +1344,12 @@ namespace Photon.Pun.Demo.Asteroids
         // Método local para aplicar el daño (llamado desde RPC)
         public virtual void ApplyDamageLocally(float damageAmount)
         {
+            // Calcular valor aleatorio de daño dentro del rango (95% a 100%)
+            float randomFactor = Random.Range(0.95f, 1.0f);
+            float actualDamage = damageAmount * randomFactor;
+            
             // Reducir salud
-            currentHealth -= damageAmount;
+            currentHealth -= actualDamage;
             
             // Limitar a 0 como mínimo
             currentHealth = Mathf.Max(0f, currentHealth);
@@ -1352,7 +1366,7 @@ namespace Photon.Pun.Demo.Asteroids
                 DieInCombat();
             }
             
-            if (showCombatDebug) Debug.Log($"{heroName} recibe {damageAmount:F1} de daño. Salud restante: {currentHealth:F1}");
+            if (showCombatDebug) Debug.Log($"{heroName} recibe {actualDamage:F1} de daño (variación {randomFactor:P0}). Salud restante: {currentHealth:F1}");
         }
         
         [PunRPC]
@@ -1728,6 +1742,16 @@ namespace Photon.Pun.Demo.Asteroids
         private void UpdateStatsForLevel()
         {
             if (heroData == null) return;
+            
+            // Incrementar atributos base en 2 puntos cada uno al subir de nivel
+            heroData.BaseStrength += 2;
+            heroData.BaseAgility += 2;
+            heroData.BaseIntelligence += 2;
+            
+            Debug.Log($"[HeroBase] {heroName} subió de nivel. Nuevos atributos base: " +
+                      $"Fuerza={heroData.BaseStrength}, " +
+                      $"Agilidad={heroData.BaseAgility}, " +
+                      $"Inteligencia={heroData.BaseIntelligence}");
             
             // Actualizar estadísticas derivadas del nivel
             maxHealth = heroData.MaxHealth;

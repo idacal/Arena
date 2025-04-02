@@ -6,6 +6,14 @@ using System.Text;
 
 namespace Photon.Pun.Demo.Asteroids
 {
+    /// <summary>
+    /// UI para mostrar y gestionar las habilidades del jugador.
+    /// 
+    /// NOTA SOBRE EFECTOS DE PARTÍCULAS:
+    /// - Cada botón LevelUP ahora tiene un componente LevelUpButtonFX que maneja sus efectos visuales
+    /// - Para ver todas las partículas, active "Force Show Particles" en el inspector
+    /// - Puede ajustar el tamaño con "Particle Scale" y el color con "Particle Color"
+    /// </summary>
     public class GameAbilityUI : MonoBehaviour
     {
         [System.Serializable]
@@ -25,6 +33,7 @@ namespace Photon.Pun.Demo.Asteroids
             public Button abilityButton;       // Botón para activar la habilidad
             public Image backgroundImage;      // Imagen de fondo del slot
             public int slotIndex;              // Índice del slot correspondiente
+            public LevelUpButtonFX levelUpFX;  // Componente para efectos visuales del botón
         }
 
         [Header("Prefab Settings")]
@@ -40,6 +49,11 @@ namespace Photon.Pun.Demo.Asteroids
         public bool enableDebugOutput = true;  // Mostrar mensajes de depuración
         public bool createDebugLabels = true;  // Crear etiquetas de depuración visual
         public Color debugTextColor = Color.yellow; // Color para el texto de depuración
+
+        [Header("Particle Effects")]
+        public bool forceShowParticles = false;    // Para pruebas: mostrar partículas independientemente de condiciones
+        public float particleScale = 1.0f;         // Escala de las partículas
+        public Color particleColor = Color.yellow; // Color de las partículas
 
         [Header("References")]
         public HeroAbilityController abilityController;
@@ -113,6 +127,15 @@ namespace Photon.Pun.Demo.Asteroids
             
             // Inicializar slots de UI tras un pequeño delay para asegurar que las habilidades estén cargadas
             Invoke("InitializeAbilitySlots", 0.2f);
+            
+            // Probar explícitamente las partículas después de la inicialización
+            Invoke("TestParticleEffects", 1.0f);
+            
+            // Forzar la activación de partículas si está habilitado en el inspector
+            if (forceShowParticles)
+            {
+                Invoke("ForceActivateAllParticles", 1.5f);
+            }
         }
 
         void Update()
@@ -122,6 +145,12 @@ namespace Photon.Pun.Demo.Asteroids
                 return;
                 
             UpdateAbilityUI();
+            
+            // Debug para verificar partículas cada 2 segundos
+            if (enableDebugOutput && Time.frameCount % 120 == 0)
+            {
+                DebugParticleStatus();
+            }
         }
         
         /// <summary>
@@ -177,6 +206,16 @@ namespace Photon.Pun.Demo.Asteroids
             
             // Organizar los slots
             ArrangeSlots();
+            
+            // Verificar sistemas de partículas para los botones de subir nivel
+            VerifyParticleSystems();
+            
+            // Si está activado mostrar todas las partículas, activarlas después de un breve delay
+            if (forceShowParticles)
+            {
+                Invoke("ForceActivateAllParticles", 0.5f);
+                Debug.Log("[GameAbilityUI] Modo forzado de partículas activado. Mostrando todas las partículas.");
+            }
         }
         
         /// <summary>
@@ -284,6 +323,30 @@ namespace Photon.Pun.Demo.Asteroids
                     // Configurar el listener del botón
                     int slotIndex = uiSlot.slotIndex; // Renombramos la variable para evitar el conflicto
                     button.onClick.AddListener(() => OnLevelUpButtonClicked(slotIndex));
+                    
+                    // Buscar o añadir el componente LevelUpButtonFX
+                    uiSlot.levelUpFX = button.GetComponent<LevelUpButtonFX>();
+                    if (uiSlot.levelUpFX == null)
+                    {
+                        // Añadir el componente directamente al botón
+                        uiSlot.levelUpFX = button.gameObject.AddComponent<LevelUpButtonFX>();
+                        DebugLog($"Añadido componente LevelUpButtonFX al botón {buttonName}");
+                        
+                        // Configurar propiedades iniciales
+                        if (particleColor != Color.clear)
+                        {
+                            uiSlot.levelUpFX.particleColor = particleColor;
+                        }
+                        
+                        if (particleScale != 1.0f)
+                        {
+                            uiSlot.levelUpFX.particleSize = 3.0f * particleScale;
+                        }
+                    }
+                    else
+                    {
+                        DebugLog($"Encontrado componente LevelUpButtonFX existente en botón {buttonName}");
+                    }
                 }
                 else if (buttonName.Contains("AbilityButton"))
                 {
@@ -514,6 +577,14 @@ namespace Photon.Pun.Demo.Asteroids
             {
                 if (slot.slotObject != null)
                 {
+                    // Detener las partículas antes de destruir el objeto
+                    if (slot.levelUpFX != null)
+                    {
+                        // Asegurarse de que el sistema de partículas se detenga completamente
+                        slot.levelUpFX.HideParticles();
+                    }
+                    
+                    // Destruir el GameObject
                     Destroy(slot.slotObject);
                 }
             }
@@ -605,6 +676,64 @@ namespace Photon.Pun.Demo.Asteroids
                     
                     // El botón está deshabilitado si no cumple requisitos de nivel o no hay puntos
                     slot.levelUpButton.interactable = meetsLevelRequirement && canBeUpgraded;
+                    
+                    // Activar o desactivar partículas según si se puede mejorar
+                    if (slot.levelUpFX != null)
+                    {
+                        // Activar partículas si:
+                        // 1. Está forzado desde el inspector, O
+                        // 2. Se cumplen todas las condiciones normales
+                        bool shouldShowParticles = forceShowParticles || 
+                                                 (slot.levelUpButton.gameObject.activeSelf && 
+                                                  meetsLevelRequirement && canBeUpgraded);
+                        
+                        // Obtener estado actual
+                        bool isParticleActive = slot.levelUpFX.gameObject.activeSelf && slot.levelUpFX.particleSystem != null && 
+                                               slot.levelUpFX.particleSystem.gameObject.activeSelf;
+                        
+                        // Debug del estado
+                        if (enableDebugOutput && Time.frameCount % 300 == 0)
+                        {
+                            Debug.Log($"[GameAbilityUI] Habilidad {slot.slotIndex + 1}: " +
+                                    $"DebeMostrar={shouldShowParticles}, " +
+                                    $"Forzado={forceShowParticles}, " +
+                                    $"EstáActivo={isParticleActive}, " +
+                                    $"BotónActivo={slot.levelUpButton.gameObject.activeSelf}, " +
+                                    $"CumpleNivel={meetsLevelRequirement}, " +
+                                    $"PuedeSubir={canBeUpgraded}");
+                        }
+                        
+                        // Cambiar estado si es necesario
+                        if (shouldShowParticles != isParticleActive)
+                        {
+                            // FORZAR activación/desactivación del objeto que contiene las partículas
+                            try
+                            {
+                                if (shouldShowParticles)
+                                {
+                                    // Ajustar color de partículas si es necesario
+                                    if (particleColor != Color.clear)
+                                    {
+                                        slot.levelUpFX.SetParticleColor(particleColor);
+                                    }
+                                    
+                                    // Activar partículas usando el método del componente
+                                    slot.levelUpFX.ShowParticles();
+                                    
+                                    Debug.Log($"[GameAbilityUI] ¡ACTIVADAS partículas para habilidad {slot.slotIndex + 1}!");
+                                }
+                                else
+                                {
+                                    // Desactivar partículas usando el método del componente
+                                    slot.levelUpFX.HideParticles();
+                                }
+                            }
+                            catch (System.Exception e)
+                            {
+                                Debug.LogError($"[GameAbilityUI] Error al manejar partículas: {e.Message}");
+                            }
+                        }
+                    }
                 }
 
                 // Actualizar textos
@@ -747,6 +876,200 @@ namespace Photon.Pun.Demo.Asteroids
             {
                 // Actualizar la UI para reflejar los cambios
                 UpdateAbilityUI();
+            }
+        }
+
+        /// <summary>
+        /// Método para verificar el estado de los sistemas de partículas
+        /// </summary>
+        private void DebugParticleStatus()
+        {
+            if (abilityController == null || heroBase == null)
+                return;
+                
+            int totalParticles = 0;
+            int activeParticles = 0;
+            
+            // Información general sobre puntos de habilidad disponibles
+            DebugLog($"Puntos de habilidad disponibles: {heroBase.AvailableSkillPoints}");
+            
+            foreach (var slot in abilitySlots)
+            {
+                if (slot.levelUpFX != null)
+                {
+                    totalParticles++;
+                    bool isActive = slot.levelUpFX.gameObject.activeSelf;
+                    
+                    if (isActive)
+                    {
+                        activeParticles++;
+                    }
+                    
+                    // Verificar condiciones para mostrar partículas
+                    var ability = abilityController.GetAbilityData(slot.slotIndex);
+                    if (ability != null)
+                    {
+                        bool canUpgrade = ability.CanBeUpgraded;
+                        bool hasPoints = heroBase.AvailableSkillPoints > 0;
+                        bool meetsLevel = heroBase.CurrentLevel >= ability.RequiredLevel;
+                        int currentLevel = ability.GetCurrentLevel();
+                        int maxLevel = ability.MaxLevel;
+                        
+                        DebugLog($"Habilidad {slot.slotIndex + 1}: " +
+                                $"Nivel={currentLevel}/{maxLevel}, " +
+                                $"PuedeSubir={canUpgrade}, " +
+                                $"CumpleNivel={meetsLevel}, " +
+                                $"TieneParticulas={isActive}");
+                    }
+                }
+            }
+            
+            DebugLog($"Estado partículas: {activeParticles}/{totalParticles} activas");
+        }
+
+        /// <summary>
+        /// Verifica y asigna sistemas de partículas para los botones de subir nivel
+        /// </summary>
+        private void VerifyParticleSystems()
+        {
+            foreach (var slot in abilitySlots)
+            {
+                // Si no tiene sistema de partículas asignado, pero tiene botón de nivel
+                if (slot.levelUpFX == null && slot.levelUpButton != null)
+                {
+                    // Buscar componente existente
+                    slot.levelUpFX = slot.levelUpButton.GetComponent<LevelUpButtonFX>();
+                    
+                    // Si no existe, agregar el componente al botón
+                    if (slot.levelUpFX == null)
+                    {
+                        slot.levelUpFX = slot.levelUpButton.gameObject.AddComponent<LevelUpButtonFX>();
+                        DebugLog($"Añadido componente LevelUpButtonFX al botón de habilidad {slot.slotIndex + 1}");
+                    }
+                    else
+                    {
+                        DebugLog($"Encontrado componente LevelUpButtonFX para el botón de habilidad {slot.slotIndex + 1}");
+                    }
+                    
+                    // Configurar color y escala si es necesario
+                    if (particleColor != Color.clear)
+                    {
+                        slot.levelUpFX.particleColor = particleColor;
+                    }
+                    
+                    if (particleScale != 1.0f)
+                    {
+                        slot.levelUpFX.particleSize = 3.0f * particleScale;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Método de prueba para verificar que los sistemas de partículas funcionan correctamente
+        /// </summary>
+        private void TestParticleEffects()
+        {
+            int foundButtons = 0;
+            int buttonWithFX = 0;
+            
+            // Buscar todos los botones LevelUP en la interfaz
+            Button[] allButtons = GetComponentsInChildren<Button>(true);
+            
+            foreach (Button btn in allButtons)
+            {
+                if (btn.name.Contains("LevelUP"))
+                {
+                    foundButtons++;
+                    
+                    // Buscar o añadir el componente LevelUpButtonFX
+                    LevelUpButtonFX fxComponent = btn.GetComponent<LevelUpButtonFX>();
+                    if (fxComponent == null)
+                    {
+                        // Añadir el componente si no existe
+                        fxComponent = btn.gameObject.AddComponent<LevelUpButtonFX>();
+                        Debug.Log($"[GameAbilityUI] Añadido componente LevelUpButtonFX al botón {btn.name}");
+                    }
+                    
+                    buttonWithFX++;
+                    
+                    // Probar activación de partículas
+                    if (forceShowParticles)
+                    {
+                        // Configurar color si es necesario
+                        if (particleColor != Color.clear)
+                        {
+                            fxComponent.particleColor = particleColor;
+                        }
+                        
+                        // Ajustar tamaño
+                        fxComponent.particleSize = 3.0f * particleScale;
+                        
+                        // Mostrar partículas
+                        fxComponent.ShowParticles();
+                        Debug.Log($"[GameAbilityUI] Activadas partículas para el botón {btn.name}");
+                    }
+                }
+            }
+            
+            Debug.Log($"[GameAbilityUI] Test completado: {buttonWithFX}/{foundButtons} botones LevelUP tienen efectos");
+            
+            // Comprobar si no se encontraron botones
+            if (foundButtons == 0)
+            {
+                Debug.LogError("[GameAbilityUI] No se encontraron botones LevelUP en la interfaz");
+            }
+        }
+        
+        /// <summary>
+        /// Obtiene la ruta completa de un GameObject en la jerarquía
+        /// </summary>
+        private string GetGameObjectPath(Transform transform)
+        {
+            string path = transform.name;
+            Transform parent = transform.parent;
+            
+            while (parent != null)
+            {
+                path = parent.name + "/" + path;
+                parent = parent.parent;
+            }
+            
+            return path;
+        }
+
+        /// <summary>
+        /// Activa todas las partículas de los botones de nivel para pruebas visuales
+        /// </summary>
+        public void ForceActivateAllParticles()
+        {
+            Debug.Log("[GameAbilityUI] Forzando activación de TODAS las partículas para pruebas");
+            
+            // Buscar todos los componentes LevelUpButtonFX
+            LevelUpButtonFX[] allFXComponents = GetComponentsInChildren<LevelUpButtonFX>(true);
+            
+            foreach (LevelUpButtonFX fx in allFXComponents)
+            {
+                try
+                {
+                    // Configurar color y tamaño si es necesario
+                    if (particleColor != Color.clear)
+                    {
+                        fx.particleColor = particleColor;
+                    }
+                    
+                    // Ajustar tamaño
+                    fx.particleSize = 3.0f * particleScale;
+                    
+                    // Activar partículas
+                    fx.ShowParticles();
+                    
+                    Debug.Log($"[GameAbilityUI] Partículas activadas FORZADAMENTE en {GetGameObjectPath(fx.transform)}");
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError($"[GameAbilityUI] Error al activar partículas: {e.Message}");
+                }
             }
         }
     }

@@ -86,6 +86,33 @@ namespace Photon.Pun.Demo.Asteroids
                     gameAbilityUI = FindObjectOfType<GameAbilityUI>();
                 }
             }
+            
+            // Mostrar mensaje de ayuda sobre las teclas para subir de nivel habilidades
+            if (debugMode)
+            {
+                Debug.Log("[HeroAbilityController] Controles para subir de nivel habilidades:\n" +
+                         "- ALT+Z: Subir nivel primera habilidad\n" +
+                         "- ALT+X: Subir nivel segunda habilidad\n" +
+                         "- ALT+C: Subir nivel tercera habilidad\n" +
+                         "- ALT+V: Subir nivel cuarta habilidad\n" +
+                         "- ALT+B: Subir nivel quinta habilidad");
+            }
+            
+            // Mostrar mensaje al jugador en el UI
+            ShowLevelUpControlsMessage();
+        }
+        
+        /// <summary>
+        /// Muestra un mensaje informativo sobre los controles de subida de nivel
+        /// </summary>
+        private void ShowLevelUpControlsMessage()
+        {
+            // Solo mostrar mensaje en modo de depuración
+            if (debugMode)
+            {
+                string message = "¡Nuevo! Sube nivel de habilidades con: ALT+Z, ALT+X, ALT+C, ALT+V, ALT+B";
+                Debug.Log($"[HeroAbilityController] {message}");
+            }
         }
         
         void Update()
@@ -103,6 +130,9 @@ namespace Photon.Pun.Demo.Asteroids
             
             // Verificar entradas para habilidades
             CheckAbilityInput();
+            
+            // Verificar entradas para subir de nivel habilidades
+            CheckLevelUpInput();
         }
         
         /// <summary>
@@ -268,16 +298,59 @@ namespace Photon.Pun.Demo.Asteroids
         }
         
         /// <summary>
+        /// Verifica la entrada para subir de nivel las habilidades (ALT + tecla)
+        /// </summary>
+        private void CheckLevelUpInput()
+        {
+            // Verificar si ALT está presionado
+            if (Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt))
+            {
+                // Verificar las combinaciones de teclas para cada habilidad
+                if (Input.GetKeyDown(KeyCode.Z) && abilitySlots.Count > 0)
+                {
+                    // Primera habilidad (ALT+Z)
+                    LevelUpAbility(0);
+                }
+                else if (Input.GetKeyDown(KeyCode.X) && abilitySlots.Count > 1)
+                {
+                    // Segunda habilidad (ALT+X)
+                    LevelUpAbility(1);
+                }
+                else if (Input.GetKeyDown(KeyCode.C) && abilitySlots.Count > 2)
+                {
+                    // Tercera habilidad (ALT+C)
+                    LevelUpAbility(2);
+                }
+                else if (Input.GetKeyDown(KeyCode.V) && abilitySlots.Count > 3)
+                {
+                    // Cuarta habilidad (ALT+V)
+                    LevelUpAbility(3);
+                }
+                else if (Input.GetKeyDown(KeyCode.B) && abilitySlots.Count > 4)
+                {
+                    // Quinta habilidad (ALT+B)
+                    LevelUpAbility(4);
+                }
+            }
+        }
+        
+        /// <summary>
         /// Verifica la entrada para usar habilidades
         /// </summary>
         private void CheckAbilityInput()
         {
-            for (int i = 0; i < abilitySlots.Count; i++)
+            // Solo manejar el input normal si ALT no está presionado para evitar conflictos
+            bool altPressed = Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
+            
+            if (!altPressed)
             {
-                // Verificar si se presionó la tecla correspondiente
-                if (Input.GetKeyDown(abilitySlots[i].hotkey))
+                for (int i = 0; i < abilitySlots.Count; i++)
                 {
-                    UseAbility(i);
+                    // Verificar si se presionó la tecla correspondiente
+                    if (Input.GetKeyDown(abilitySlots[i].hotkey))
+                    {
+                        UseAbility(i);
+                    }
                 }
             }
         }

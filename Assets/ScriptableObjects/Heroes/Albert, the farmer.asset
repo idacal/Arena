@@ -18,16 +18,16 @@ MonoBehaviour:
   IconSprite: {fileID: 21300000, guid: 8ecf2a832293df742aa199869f034164, type: 3}
   AvatarSprite: {fileID: 21300000, guid: 8c427c2194647c94c81be5798c7ff648, type: 3}
   PrefabName: Albert, the farmer
-  BaseStrength: 20
+  BaseStrength: 10
   BaseIntelligence: 20
   BaseAgility: 20
   PrimaryAttribute: Agility
-  HealthPerStrength: 20
-  ManaPerIntelligence: 10
-  ArmorPerAgility: 0.5
+  HealthPerStrength: 10
+  ManaPerIntelligence: 8
+  ArmorPerAgility: 0.2
   AttackDamagePerStrength: 1
   AttackDamagePerIntelligence: 1
-  AttackDamagePerAgility: 5
+  AttackDamagePerAgility: 1
   AttackSpeedPerAgility: 0.01
   MagicResistancePerIntelligence: 0.5
   HealthRegenPerStrength: 0.1

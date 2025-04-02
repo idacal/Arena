@@ -20,12 +20,12 @@ MonoBehaviour:
   PrefabName: Gaius, the Guardian of Gaia
   BaseStrength: 20
   BaseIntelligence: 20
-  BaseAgility: 20
+  BaseAgility: 10
   PrimaryAttribute: Strength
-  HealthPerStrength: 20
-  ManaPerIntelligence: 10
-  ArmorPerAgility: 0.5
-  AttackDamagePerStrength: 5
+  HealthPerStrength: 10
+  ManaPerIntelligence: 8
+  ArmorPerAgility: 0.2
+  AttackDamagePerStrength: 1
   AttackDamagePerIntelligence: 1
   AttackDamagePerAgility: 1
   AttackSpeedPerAgility: 0.01

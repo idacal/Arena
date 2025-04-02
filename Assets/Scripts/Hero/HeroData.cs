@@ -92,6 +92,12 @@ namespace Photon.Pun.Demo.Asteroids
                 }
             }
         }
+        
+        // Propiedades de rango de daño (95% a 100% del daño base)
+        public float MinAttackDamage => CurrentAttackDamage * 0.95f;
+        public float MaxAttackDamage => CurrentAttackDamage;
+        public string AttackDamageRange => $"{Mathf.RoundToInt(MinAttackDamage)} - {Mathf.RoundToInt(MaxAttackDamage)}";
+        
         public float CurrentAttackSpeed => 1f + (CurrentAgility * AttackSpeedPerAgility);
         public float CurrentHealthRegen => CurrentStrength * HealthRegenPerStrength;
         public float CurrentManaRegen => CurrentIntelligence * ManaRegenPerIntelligence;
@@ -159,7 +165,7 @@ namespace Photon.Pun.Demo.Asteroids
                    $"Agility: {CurrentAgility:F1} (+{AgilityScaling:F1})\n" +
                    $"Health: {MaxHealth:F0}\n" +
                    $"Mana: {MaxMana:F0}\n" +
-                   $"Damage: {CurrentAttackDamage:F0}\n" +
+                   $"Damage: {AttackDamageRange}\n" +
                    $"Attack Speed: {CurrentAttackSpeed:F2}\n" +
                    $"Armor: {CurrentArmor:F1}\n" +
                    $"Magic Resistance: {CurrentMagicResistance:F1}\n" +

@@ -436,7 +436,7 @@ namespace Photon.Pun.Demo.Asteroids
 
             // Actualizar estadísticas derivadas con solo valores
             if (attackDamageText != null)
-                attackDamageText.text = $"{heroData.CurrentAttackDamage:F0}";
+                attackDamageText.text = $"{heroData.AttackDamageRange}";
             if (attackSpeedText != null)
                 attackSpeedText.text = $"{heroData.CurrentAttackSpeed:F2}";
             if (moveSpeedText != null)

@@ -18,16 +18,30 @@ MonoBehaviour:
   IconSprite: {fileID: 21300000, guid: 2f82a78136d60494e9fd92d7683b8e81, type: 3}
   AvatarSprite: {fileID: 21300000, guid: 12332ee9875bf0a4aa6d8ccdc029a65f, type: 3}
   PrefabName: Kael
-  Health: 200
-  Mana: 200
-  HeroType: Assassin
-  AttackDamage: 40
-  AttackSpeed: 2
+  BaseStrength: 10
+  BaseIntelligence: 10
+  BaseAgility: 30
+  PrimaryAttribute: Agility
+  HealthPerStrength: 10
+  ManaPerIntelligence: 8
+  ArmorPerAgility: 0.2
+  AttackDamagePerStrength: 1
+  AttackDamagePerIntelligence: 1
+  AttackDamagePerAgility: 1
+  AttackSpeedPerAgility: 0.01
+  MagicResistancePerIntelligence: 0.5
+  HealthRegenPerStrength: 0.1
+  ManaRegenPerIntelligence: 0.05
   MovementSpeed: 350
-  Armor: 15
-  MagicResistance: 20
-  HealthRegenRate: 0.5
-  RespawnTime: 5.0
+  AttackRange: 3
+  RespawnTime: 5
+  MaxLevel: 18
+  BaseExperience: 100
+  ExperienceScaling: 1.5
+  SkillPointsPerLevel: 1
+  StrengthScaling: 2
+  IntelligenceScaling: 2
+  AgilityScaling: 2
   Abilities:
   - {fileID: 11400000, guid: 9af132660b5db33419265c5567003468, type: 2}
   - {fileID: 11400000, guid: 1eba2e076d25fc44db6add39e059ba2f, type: 2}

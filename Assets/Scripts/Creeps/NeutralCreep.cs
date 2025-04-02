@@ -175,7 +175,7 @@ namespace Photon.Pun.Demo.Asteroids
                 }
             }
             
-            Debug.Log($"[NeutralCreep] {creepName} inicializado. PhotonView.IsMine: {photonView.IsMine}, ViewID: {photonView.ViewID}");
+            
         }
         
         void Update()
