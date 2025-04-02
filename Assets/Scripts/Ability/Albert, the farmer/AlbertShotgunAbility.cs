@@ -473,7 +473,7 @@ namespace Photon.Pun.Demo.Asteroids
                     if (photonView.IsMine)
                     {
                         // Usamos nuestra propia llamada RPC, no la base
-                        photonView.RPC("RPC_OnHitEnvironment", RpcTarget.All, hitPoint, hitNormal);
+                        photonView.RPC("RPC_ShotgunHitEnvironment", RpcTarget.All, hitPoint, hitNormal);
                     }
                 }
                 
@@ -516,11 +516,11 @@ namespace Photon.Pun.Demo.Asteroids
         }
         
         [PunRPC]
-        private void RPC_OnHitEnvironment(Vector3 hitPoint, Vector3 hitNormal)
+        private void RPC_ShotgunHitEnvironment(Vector3 hitPoint, Vector3 hitNormal)
         {
             if (showDebugLogs)
             {
-                Debug.Log($"[AlbertShotgunAbility] RPC_OnHitEnvironment recibido en punto {hitPoint}");
+                Debug.Log($"[AlbertShotgunAbility] RPC_ShotgunHitEnvironment recibido en punto {hitPoint}");
             }
             
             // Crear efecto de impacto en la posición y normal del hit

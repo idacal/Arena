@@ -607,18 +607,14 @@ namespace Photon.Pun.Demo.Asteroids
                 }
                 
                 // Configurar la habilidad
-                AbilityBehaviour abilityBehaviour = abilityObj.GetComponent<AbilityBehaviour>();
-                if (abilityBehaviour != null)
+                AbilityBase abilityComponent = abilityObj.GetComponent<AbilityBase>();
+                if (abilityComponent != null)
                 {
-                    abilityBehaviour.Initialize(
-                        heroBase,                // Caster
-                        slot.abilityData,        // Datos de habilidad
-                        info.Sender.ActorNumber  // ID del jugador que la lanzó
-                    );
+                    abilityComponent.Initialize(heroBase);
                 }
                 else
                 {
-                    Debug.LogError($"El prefab de habilidad no tiene un componente AbilityBehaviour: {slot.abilityPrefab.name}");
+                    Debug.LogError($"El prefab de habilidad no tiene un componente AbilityBase: {slot.abilityPrefab.name}");
                 }
             }
             else
@@ -663,14 +659,10 @@ namespace Photon.Pun.Demo.Asteroids
             GameObject abilityObj = PhotonNetwork.Instantiate(prefabPath, position, rotation);
             
             // Configurar la habilidad
-            AbilityBehaviour abilityBehaviour = abilityObj.GetComponent<AbilityBehaviour>();
-            if (abilityBehaviour != null)
+            AbilityBase abilityComponent = abilityObj.GetComponent<AbilityBase>();
+            if (abilityComponent != null)
             {
-                abilityBehaviour.Initialize(
-                    heroBase,        // Caster
-                    abilityData,     // Datos de habilidad
-                    senderActorNumber // ID del jugador que la lanzó
-                );
+                abilityComponent.Initialize(heroBase);
             }
             
             lastAbilityTime = Time.time;

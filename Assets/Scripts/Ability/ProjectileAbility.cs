@@ -219,6 +219,123 @@ namespace Photon.Pun.Demo.Asteroids
             }
         }
         
+        /// <summary>
+        /// Callback de Unity para colisiones físicas (complemento a la detección manual)
+        /// </summary>
+        protected virtual void OnCollisionEnter(Collision collision)
+        {
+            // Solo procesar si tenemos control sobre este proyectil y está en movimiento
+            if (!photonView.IsMine || !isMoving)
+                return;
+                
+            // Verificar si impactamos con un héroe
+            HeroBase hitHero = collision.gameObject.GetComponent<HeroBase>();
+            
+            // Si es un héroe y no es el lanzador, procesar impacto
+            if (hitHero != null && (!caster || hitHero != caster))
+            {
+                // Evitar impactos múltiples con el mismo objetivo
+                int targetId = hitHero.photonView.ViewID;
+                if (!hitTargets.Contains(targetId))
+                {
+                    // Marcar como impactado
+                    hitTargets.Add(targetId);
+                    
+                    // Procesar el impacto
+                    ProcessImpact(hitHero);
+                    
+                    // Destruir si no atraviesa objetivos
+                    if (!penetratesTargets)
+                    {
+                        isMoving = false;
+                        DestroyAbility();
+                    }
+                    else
+                    {
+                        // Incrementar contador de penetraciones
+                        penetrationCount++;
+                        
+                        // Si alcanzamos el límite, destruir
+                        if (penetrationCount >= maxPenetrations)
+                        {
+                            isMoving = false;
+                            DestroyAbility();
+                        }
+                    }
+                }
+            }
+            // Si impactamos con algo que no es un héroe
+            else if (hitHero == null)
+            {
+                // Crear efecto de impacto en el punto de contacto
+                if (collision.contacts.Length > 0)
+                {
+                    Vector3 hitPoint = collision.contacts[0].point;
+                    Vector3 hitNormal = collision.contacts[0].normal;
+                    
+                    // Crear el efecto localmente
+                    if (impactEffectPrefab != null)
+                    {
+                        Instantiate(impactEffectPrefab, hitPoint, Quaternion.LookRotation(hitNormal));
+                    }
+                    
+                    // Informar colisión mediante RPC
+                    photonView.RPC("RPC_OnHitEnvironment", RpcTarget.All, hitPoint, hitNormal);
+                }
+                
+                // Detener movimiento y destruir
+                isMoving = false;
+                DestroyAbility();
+            }
+        }
+        
+        /// <summary>
+        /// Callback de Unity para triggers (complemento a la detección manual)
+        /// </summary>
+        protected virtual void OnTriggerEnter(Collider other)
+        {
+            // Solo procesar si tenemos control sobre este proyectil y está en movimiento
+            if (!photonView.IsMine || !isMoving)
+                return;
+                
+            // Verificar si impactamos con un héroe
+            HeroBase hitHero = other.GetComponent<HeroBase>();
+            
+            // Si es un héroe y no es el lanzador, procesar impacto
+            if (hitHero != null && (!caster || hitHero != caster))
+            {
+                // Evitar impactos múltiples con el mismo objetivo
+                int targetId = hitHero.photonView.ViewID;
+                if (!hitTargets.Contains(targetId))
+                {
+                    // Marcar como impactado
+                    hitTargets.Add(targetId);
+                    
+                    // Procesar el impacto
+                    ProcessImpact(hitHero);
+                    
+                    // Destruir si no atraviesa objetivos
+                    if (!penetratesTargets)
+                    {
+                        isMoving = false;
+                        DestroyAbility();
+                    }
+                    else
+                    {
+                        // Incrementar contador de penetraciones
+                        penetrationCount++;
+                        
+                        // Si alcanzamos el límite, destruir
+                        if (penetrationCount >= maxPenetrations)
+                        {
+                            isMoving = false;
+                            DestroyAbility();
+                        }
+                    }
+                }
+            }
+        }
+        
         // Añade estos métodos RPC para sincronización en red
         
         [PunRPC]
@@ -243,6 +360,9 @@ namespace Photon.Pun.Demo.Asteroids
             // Activar efectos visuales
             ActivateVisualEffects();
             
+            // Reproducir sonido de la habilidad
+            PlayAbilitySound();
+            
             projectileInitialized = true;
             isMoving = true;
         }
@@ -256,8 +376,42 @@ namespace Photon.Pun.Demo.Asteroids
                 Instantiate(impactEffectPrefab, hitPoint, Quaternion.LookRotation(hitNormal));
             }
             
+            // Reproducir sonido de impacto
+            PlayImpactSound();
+            
             // Detener el movimiento
             isMoving = false;
+        }
+        
+        /// <summary>
+        /// Override de DestroyAbility para manejar partículas correctamente
+        /// </summary>
+        protected override void DestroyAbility()
+        {
+            // Detener el movimiento
+            isMoving = false;
+            
+            // Si tiene rigidbody, detener
+            if (projectileRigidbody != null)
+            {
+                projectileRigidbody.velocity = Vector3.zero;
+                projectileRigidbody.isKinematic = true;
+            }
+            
+            // Detener partículas antes de destruir
+            if (flyingParticles != null)
+            {
+                // Desacoplar sistema de partículas para que termine su animación
+                flyingParticles.transform.SetParent(null);
+                flyingParticles.Stop();
+                
+                // Destruir sistema de partículas después de que termine
+                var mainModule = flyingParticles.main;
+                Destroy(flyingParticles.gameObject, mainModule.duration + mainModule.startLifetime.constantMax);
+            }
+            
+            // Continuar con la destrucción normal
+            base.DestroyAbility();
         }
     }
 }
