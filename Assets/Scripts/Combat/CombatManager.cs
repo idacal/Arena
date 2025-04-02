@@ -95,11 +95,38 @@ public class CombatManager : MonoBehaviourPunCallbacks
             playerDeaths[deadPlayerActorNumber] = 1;
         }
         
+        // Obtener el actor que causó la muerte
+        int killerActorNumber = -1;
+        if (deadHero.currentTarget != null && deadHero.currentTarget.photonView != null)
+        {
+            killerActorNumber = deadHero.currentTarget.photonView.Owner.ActorNumber;
+            
+            // Actualizar las estadísticas de asesinatos del killer
+            if (playerKills.ContainsKey(killerActorNumber))
+            {
+                playerKills[killerActorNumber]++;
+            }
+            else
+            {
+                playerKills[killerActorNumber] = 1;
+            }
+            
+            Debug.Log($"[CombatManager] Notificando kill: {killerActorNumber} mató a {deadPlayerActorNumber}");
+            // Notificar el kill
+            OnPlayerKill?.Invoke(killerActorNumber, deadPlayerActorNumber);
+        }
+        
         // Notificar muerte en general
         OnPlayerDeath?.Invoke(deadPlayerActorNumber);
         
         // Sincronizar estadísticas
         photonView.RPC("RPC_SyncDeathStats", RpcTarget.All, deadPlayerActorNumber);
+        
+        // Si hay un killer, sincronizar también las estadísticas de kills
+        if (killerActorNumber >= 0)
+        {
+            photonView.RPC("RPC_SyncKillStats", RpcTarget.All, killerActorNumber, deadPlayerActorNumber);
+        }
     }
     
     private void HandleHealthChanged(float currentHealth, float maxHealth)
@@ -122,6 +149,23 @@ public class CombatManager : MonoBehaviourPunCallbacks
         
         // Notificar a los listeners
         OnPlayerDeath?.Invoke(victimActorNumber);
+    }
+    
+    [PunRPC]
+    private void RPC_SyncKillStats(int killerActorNumber, int victimActorNumber)
+    {
+        // Actualizar estadísticas locales de kills
+        if (playerKills.ContainsKey(killerActorNumber))
+        {
+            playerKills[killerActorNumber]++;
+        }
+        else
+        {
+            playerKills[killerActorNumber] = 1;
+        }
+        
+        // Notificar a los listeners
+        OnPlayerKill?.Invoke(killerActorNumber, victimActorNumber);
     }
     
     // Métodos públicos

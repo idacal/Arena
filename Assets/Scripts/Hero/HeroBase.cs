@@ -601,15 +601,19 @@ namespace Photon.Pun.Demo.Asteroids
             // Reiniciar la racha de asesinatos al morir
             ResetKillStreak();
 
-            // Notificar al KillFeedManager
-            KillFeedManager killFeedManager = FindObjectOfType<KillFeedManager>();
-            if (killFeedManager != null && currentTarget != null)
+            // El CombatManager se encargará de esto a través del evento OnHeroDeath
+            // Pero como fallback, también notificamos directamente al KillFeedManager
+            if (currentTarget != null)
             {
-                Debug.Log($"[HeroBase] Notificando muerte al KillFeedManager: {currentTarget.heroName} mató a {heroName}");
-                killFeedManager.HandlePlayerKill(
-                    currentTarget.photonView.Owner.ActorNumber,
-                    photonView.Owner.ActorNumber
-                );
+                KillFeedManager killFeedManager = FindObjectOfType<KillFeedManager>();
+                if (killFeedManager != null)
+                {
+                    Debug.Log($"[HeroBase] Notificando muerte al KillFeedManager: {currentTarget.heroName} mató a {heroName}");
+                    killFeedManager.HandlePlayerKill(
+                        currentTarget.photonView.Owner.ActorNumber,
+                        photonView.Owner.ActorNumber
+                    );
+                }
             }
 
             // Otorgar experiencia al héroe que causó la muerte

@@ -4,6 +4,7 @@ using TMPro;
 using System.Collections.Generic;
 using Photon.Pun;
 using Photon.Pun.Demo.Asteroids;
+using System.Collections;
 
 public class KillFeedManager : MonoBehaviourPunCallbacks
 {
@@ -46,6 +47,53 @@ public class KillFeedManager : MonoBehaviourPunCallbacks
         {
             Debug.LogError("[KillFeedManager] No se ha asignado el prefab de entrada del kill feed!");
         }
+        
+        // Intentar suscribirse al evento OnPlayerKill del CombatManager
+        TryRegisterToCombatManager();
+    }
+    
+    private void TryRegisterToCombatManager()
+    {
+        if (CombatManager.Instance != null)
+        {
+            CombatManager.Instance.OnPlayerKill += OnPlayerKillEvent;
+            Debug.Log("[KillFeedManager] Registrado exitosamente en CombatManager");
+        }
+        else
+        {
+            Debug.LogWarning("[KillFeedManager] No se encontró CombatManager.Instance. Intentando de nuevo en 1 segundo...");
+            StartCoroutine(RetryRegisterToCombatManager());
+        }
+    }
+    
+    private IEnumerator RetryRegisterToCombatManager()
+    {
+        // Esperar un poco y volver a intentar
+        yield return new WaitForSeconds(1f);
+        
+        if (CombatManager.Instance != null)
+        {
+            CombatManager.Instance.OnPlayerKill += OnPlayerKillEvent;
+            Debug.Log("[KillFeedManager] Registrado exitosamente en CombatManager (segundo intento)");
+        }
+        else
+        {
+            Debug.LogWarning("[KillFeedManager] Todavía no se encuentra CombatManager.Instance. El KillFeed seguirá funcionando solo a través de llamadas directas.");
+        }
+    }
+    
+    private void OnDestroy()
+    {
+        // Desuscribirse del evento OnPlayerKill
+        if (CombatManager.Instance != null)
+        {
+            CombatManager.Instance.OnPlayerKill -= OnPlayerKillEvent;
+        }
+    }
+    
+    private void OnPlayerKillEvent(int killerActorNumber, int victimActorNumber)
+    {
+        HandlePlayerKill(killerActorNumber, victimActorNumber);
     }
     
     public void HandlePlayerKill(int killerActorNumber, int victimActorNumber)
@@ -54,14 +102,27 @@ public class KillFeedManager : MonoBehaviourPunCallbacks
         
         if (!PhotonNetwork.IsConnected) return;
         
+        // Solo el MasterClient debe sincronizar el evento para todos
+        // O si somos llamados directamente desde HeroBase (compatibilidad hacia atrás)
+        if (PhotonNetwork.IsMasterClient || CombatManager.Instance == null)
+        {
+            photonView.RPC("RPC_HandlePlayerKill", RpcTarget.All, killerActorNumber, victimActorNumber);
+        }
+    }
+    
+    [PunRPC]
+    private void RPC_HandlePlayerKill(int killerActorNumber, int victimActorNumber)
+    {
+        Debug.Log($"[KillFeedManager:RPC] Manejando muerte: {killerActorNumber} mató a {victimActorNumber}");
+        
         string killerName = GetPlayerName(killerActorNumber);
         string victimName = GetPlayerName(victimActorNumber);
         
-        Debug.Log($"[KillFeedManager] Nombres: {killerName} mató a {victimName}");
+        Debug.Log($"[KillFeedManager:RPC] Nombres: {killerName} mató a {victimName}");
         
         if (string.IsNullOrEmpty(killerName) || string.IsNullOrEmpty(victimName))
         {
-            Debug.LogError("[KillFeedManager] No se pudieron obtener los nombres de los jugadores");
+            Debug.LogError("[KillFeedManager:RPC] No se pudieron obtener los nombres de los jugadores");
             return;
         }
         
@@ -97,7 +158,7 @@ public class KillFeedManager : MonoBehaviourPunCallbacks
             HandleKillStreak(killerName, victimName);
             
             // Mostrar muerte normal si no hay racha
-            if (playerKillStreaks[killerName] < 5)
+            if (!playerKillStreaks.ContainsKey(killerName) || playerKillStreaks[killerName] < 5)
             {
                 CreateKillFeedEntry(killerName, victimName, null, "", entryDuration, false, 0, false);
             }
