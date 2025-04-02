@@ -26,6 +26,7 @@ namespace Photon.Pun.Demo.Asteroids
         private float currentRadius;                // Radio actual
         private float lastDamageTime = 0f;          // Último momento en que se aplicó daño
         private Dictionary<int, float> lastHitTimes = new Dictionary<int, float>(); // Para rastrear intervalos por objetivo
+        private bool soundPlayed = false;           // Flag para controlar si ya se reprodujo el sonido
         
         protected override void OnAbilityInitialized()
         {
@@ -54,11 +55,25 @@ namespace Photon.Pun.Demo.Asteroids
                 
                 particleEffect.Play();
             }
+            
+            // Reproducir sonido al inicializar
+            if (photonView.IsMine && !soundPlayed && abilitySound != null)
+            {
+                PlayAbilitySound();
+                soundPlayed = true;
+            }
         }
         
         // Método para actualización, llamarlo desde Update en las clases derivadas
         protected virtual void Update()
         {
+            // Asegurar que reproducimos el sonido si no se hizo en OnAbilityInitialized
+            if (photonView.IsMine && !soundPlayed && abilitySound != null)
+            {
+                PlayAbilitySound();
+                soundPlayed = true;
+            }
+            
             // Actualizar radio si está creciendo
             if (useGrowingRadius)
             {

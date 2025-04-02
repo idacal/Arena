@@ -27,7 +27,13 @@ namespace Photon.Pun.Demo.Asteroids
             if (photonView.IsMine)
             {
                 CreateScarecrowVisual();
-                // Ya no es necesario llamar a PlayScarecrowSound() aquí, la clase base se encarga
+                
+                // Reproducir sonido explícitamente
+                if (abilitySound != null)
+                {
+                    PlayAbilitySound();
+                    Debug.Log("[ScarecrowAbility] Reproduciendo sonido del espantapájaros");
+                }
                 
                 // Programar destrucción del espantapájaros al finalizar la habilidad
                 Invoke("OnAbilityEnd", lifetime);

@@ -107,6 +107,7 @@ MonoBehaviour:
   - RPC_ForceLayer
   - RPC_ForcePlayerLayer
   - RPC_PlaySound
+  - RPC_ShotgunHitEnvironment
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1
