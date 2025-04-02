@@ -106,6 +106,7 @@ MonoBehaviour:
   - RPC_Respawn
   - RPC_ForceLayer
   - RPC_ForcePlayerLayer
+  - RPC_PlaySound
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

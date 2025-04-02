@@ -152,7 +152,7 @@ namespace Photon.Pun.Demo.Asteroids
             // Update derived stats - mostrar solo los valores numéricos sin texto
             HealthText.text = $"{heroData.MaxHealth:F0}";
             ManaText.text = $"{heroData.MaxMana:F0}";
-            AttackDamageText.text = $"{heroData.CurrentAttackDamage:F0}";
+            AttackDamageText.text = $"{heroData.AttackDamageRange}";
             AttackSpeedText.text = $"{heroData.CurrentAttackSpeed:F2}";
             MovementSpeedText.text = $"{heroData.MovementSpeed:F0}";
             ArmorText.text = $"{heroData.CurrentArmor:F1}";

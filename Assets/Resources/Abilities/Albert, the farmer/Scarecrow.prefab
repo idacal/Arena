@@ -53,7 +53,6 @@ MonoBehaviour:
   OwnershipTransfer: 1
   observableSearch: 2
   ObservedComponents:
-  - {fileID: 3178725358393507073}
   - {fileID: 7570399139993718538}
   sceneViewId: 0
   InstantiationId: 0
@@ -76,6 +75,10 @@ MonoBehaviour:
   isMagicDamage: 1
   effectDuration: 0
   impactEffectPrefab: {fileID: 0}
+  abilitySound: {fileID: 8300000, guid: 3039c121e0cbe7941be5466ceac9add4, type: 3}
+  impactSound: {fileID: 0}
+  volumeMultiplier: 1
+  spatialBlend: 1
   radius: 5
   useGrowingRadius: 0
   growthSpeed: 1

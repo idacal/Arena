@@ -15,7 +15,12 @@ public class BombZonePrefabSetup : MonoBehaviour
     public GameObject singleBombPrefab;  // Prefab para una bomba individual
     public int bombCount = 8;
     public float bombScale = 0.3f;
+    
+    [Header("Default Bomb Appearance")]
+    [Tooltip("Solo se usa cuando no hay un prefab de bomba asignado")]
     public Color bombColor = Color.yellow;
+    
+    [Tooltip("Solo se usa cuando no hay un prefab de bomba asignado")]
     public Material bombMaterial;
     
     private PulsingAOEVisualEffect areaEffect;
@@ -118,6 +123,13 @@ public class BombZonePrefabSetup : MonoBehaviour
             else
             {
                 bomb = CreateBasicBomb();
+                
+                // Aplicar material por defecto solo para bombas básicas creadas por código
+                var renderer = bomb.GetComponent<Renderer>();
+                if (renderer != null && bombMaterial != null)
+                {
+                    renderer.sharedMaterial = bombMaterial;
+                }
             }
             
             // Posicionar la bomba aleatoriamente dentro del área
@@ -126,13 +138,6 @@ public class BombZonePrefabSetup : MonoBehaviour
             bomb.transform.localPosition = new Vector3(randomPoint.x, 0.1f, randomPoint.y);
             bomb.transform.localRotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
             bomb.transform.localScale = Vector3.one * bombScale;
-            
-            // Aplicar material
-            var renderer = bomb.GetComponent<Renderer>();
-            if (renderer != null && bombMaterial != null)
-            {
-                renderer.sharedMaterial = bombMaterial;
-            }
             
             bombVisuals[i] = bomb;
             

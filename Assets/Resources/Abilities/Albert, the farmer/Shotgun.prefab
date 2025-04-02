@@ -103,7 +103,6 @@ MonoBehaviour:
   OwnershipTransfer: 0
   observableSearch: 2
   ObservedComponents:
-  - {fileID: 4780892956646926868}
   - {fileID: -4131816744423090720}
   sceneViewId: 0
   InstantiationId: 0
@@ -126,6 +125,10 @@ MonoBehaviour:
   isMagicDamage: 1
   effectDuration: 0
   impactEffectPrefab: {fileID: 1682472042141082285, guid: 3d7fce3c45c4ad84f8fe09b2087cc3f7, type: 3}
+  abilitySound: {fileID: 8300000, guid: f41fe660473a9c8408b45f6b148f63c3, type: 3}
+  impactSound: {fileID: 0}
+  volumeMultiplier: 1
+  spatialBlend: 1
   speed: 50
   useGravity: 0
   gravityMultiplier: 1
@@ -179,7 +182,6 @@ MonoBehaviour:
   projectileColor: {r: 1, g: 0, b: 0, a: 1}
   projectilePrefab: {fileID: 2638751705936780157, guid: e44498276946a704181004acd2b6f055, type: 3}
   muzzleFlashPrefab: {fileID: 2750655131838023065, guid: 12cb9461aa2ed6941b6632e23299a364, type: 3}
-  shotgunSound: {fileID: 0}
   showDebugLogs: 0
 --- !u!114 &-4131816744423090720
 MonoBehaviour:

@@ -14,6 +14,7 @@ namespace Photon.Pun.Demo.Asteroids
         public GameObject scarecrowPrefab;
         
         [Header("Visual Settings")]
+        [Tooltip("Color del área de efecto, no afecta a las bombas individuales")]
         public Color areaColor = new Color(1f, 0.7f, 0f, 0.3f);
         
         private GameObject scarecrowInstance;
@@ -26,6 +27,10 @@ namespace Photon.Pun.Demo.Asteroids
             if (photonView.IsMine)
             {
                 CreateScarecrowVisual();
+                // Ya no es necesario llamar a PlayScarecrowSound() aquí, la clase base se encarga
+                
+                // Programar destrucción del espantapájaros al finalizar la habilidad
+                Invoke("OnAbilityEnd", lifetime);
             }
         }
         
@@ -68,16 +73,20 @@ namespace Photon.Pun.Demo.Asteroids
                 // Destruir el scarecrow usando PhotonNetwork
                 PhotonNetwork.Destroy(scarecrowInstance);
                 scarecrowInstance = null;
+                
+                Debug.Log("[ScarecrowAbility] Espantapájaros destruido correctamente.");
             }
         }
         
-        protected void OnDestroy()
+        protected override void DestroyAbility()
         {
-            if (photonView.IsMine && scarecrowInstance != null)
+            if (photonView.IsMine)
             {
-                // Asegurarnos de limpiar el scarecrow al destruir la habilidad
-                PhotonNetwork.Destroy(scarecrowInstance);
-                scarecrowInstance = null;
+                // Primero destruir el espantapájaros
+                OnAbilityEnd();
+                
+                // Luego llamar a la implementación base para destruir la habilidad
+                base.DestroyAbility();
             }
         }
         
@@ -91,6 +100,11 @@ namespace Photon.Pun.Demo.Asteroids
             {
                 PhotonNetwork.Destroy(gameObject);
             }
+        }
+        
+        protected new void Update()
+        {
+            base.Update(); // Llamar al Update de AOEAbility
         }
         
         protected void OnTriggerEnter(Collider other)
@@ -125,6 +139,12 @@ namespace Photon.Pun.Demo.Asteroids
                 if (target != null)
                 {
                     ApplyFearEffect(target);
+                    
+                    // Ya tenemos acceso a este método heredado de AbilityBase
+                    if (impactSound != null)
+                    {
+                        PlayImpactSound();
+                    }
                 }
             }
         }

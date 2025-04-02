@@ -6,7 +6,7 @@ namespace Photon.Pun.Demo.Asteroids
     /// <summary>
     /// Implementación de una habilidad de efecto en área (AOE)
     /// </summary>
-    public class AOEAbility : AbilityBehaviour
+    public class AOEAbility : AbilityBase
     {
         [Header("AOE Settings")]
         public float radius = 5f;                  // Radio del efecto de área
@@ -56,7 +56,8 @@ namespace Photon.Pun.Demo.Asteroids
             }
         }
         
-        protected override void AbilityUpdate()
+        // Método para actualización, llamarlo desde Update en las clases derivadas
+        protected virtual void Update()
         {
             // Actualizar radio si está creciendo
             if (useGrowingRadius)
@@ -94,7 +95,7 @@ namespace Photon.Pun.Demo.Asteroids
         /// </summary>
         private void UpdateVisuals()
         {
-            // Escalar efecto visual con el radio
+            // Escalar el efecto visual si está configurado para hacerlo
             if (aoeVisualEffect != null && scaleVisualWithRadius)
             {
                 aoeVisualEffect.transform.localScale = new Vector3(
@@ -104,8 +105,8 @@ namespace Photon.Pun.Demo.Asteroids
                 );
             }
             
-            // Actualizar sistema de partículas
-            if (particleEffect != null && useGrowingRadius)
+            // Actualizar área de emisión de partículas
+            if (particleEffect != null)
             {
                 var shapeModule = particleEffect.shape;
                 if (shapeModule.enabled && shapeModule.shapeType == ParticleSystemShapeType.Circle)
@@ -116,54 +117,56 @@ namespace Photon.Pun.Demo.Asteroids
         }
         
         /// <summary>
-        /// Verifica objetivos dentro del área de efecto
+        /// Comprueba qué objetivos están en el área de efecto y aplica el efecto correspondiente
         /// </summary>
-        private void CheckTargetsInArea()
+        protected virtual void CheckTargetsInArea()
         {
-            // Si no somos el owner, no procesamos lógica de impactos
-            if (photonView && !photonView.IsMine)
-                return;
-                
-            // Verificar si es momento de aplicar daño (para efectos continuos)
-            bool applyDamage = (damageInterval <= 0) || 
-                                (Time.time >= lastDamageTime + damageInterval);
+            if (!photonView.IsMine) return;
             
-            if (!applyDamage)
-                return;
-                
-            lastDamageTime = Time.time;
-            
-            // Buscar héroes en el área de efecto
-            Collider[] hitColliders = Physics.OverlapSphere(transform.position, currentRadius, targetLayers);
-            
-            foreach (Collider collider in hitColliders)
+            // Si ha pasado suficiente tiempo desde el último daño
+            if (Time.time >= lastDamageTime + damageInterval || damageInterval <= 0)
             {
-                // Verificar si es un héroe
-                HeroBase hitHero = collider.GetComponent<HeroBase>();
+                // Buscar todos los colliders en el área
+                Collider[] hitColliders = Physics.OverlapSphere(transform.position, currentRadius, targetLayers);
                 
-                if (hitHero != null && (affectsAllies || IsEnemy(hitHero)))
+                // Procesar cada collider
+                foreach (var hitCollider in hitColliders)
                 {
-                    // Verificar si ya pasó el intervalo para este objetivo específico
-                    int targetId = hitHero.photonView.ViewID;
-                    float lastHitTime = 0f;
-                    lastHitTimes.TryGetValue(targetId, out lastHitTime);
-                    
-                    if (Time.time >= lastHitTime + damageInterval)
+                    // Verificar si es un héroe
+                    HeroBase targetHero = hitCollider.GetComponent<HeroBase>();
+                    if (targetHero != null && (!targetHero.photonView.IsMine || targetHero != caster))
                     {
-                        // Actualizar tiempo del último impacto para este objetivo
-                        lastHitTimes[targetId] = Time.time;
-                        
-                        // Procesar impacto
-                        ProcessImpact(hitHero);
+                        // Verificar si debemos afectar a este objetivo (aliado/enemigo)
+                        if ((affectsAllies || IsEnemy(targetHero)))
+                        {
+                            // Verificar intervalo por objetivo
+                            int targetId = targetHero.photonView.ViewID;
+                            float lastHitTime = 0f;
+                            
+                            if (lastHitTimes.TryGetValue(targetId, out lastHitTime))
+                            {
+                                if (Time.time < lastHitTime + damageInterval)
+                                    continue; // Saltarse este objetivo, aún no toca dañarlo
+                            }
+                            
+                            // Actualizar tiempo del último impacto para este objetivo
+                            lastHitTimes[targetId] = Time.time;
+                            
+                            // Procesar impacto
+                            ProcessImpact(targetHero);
+                        }
                     }
                 }
+                
+                // Actualizar tiempo del último daño general
+                lastDamageTime = Time.time;
             }
         }
         
         /// <summary>
-        /// Determina si un héroe es enemigo o aliado
+        /// Comprueba si un héroe es enemigo del lanzador
         /// </summary>
-        private bool IsEnemy(HeroBase targetHero)
+        protected bool IsEnemy(HeroBase targetHero)
         {
             // Si no tenemos referencia al lanzador, asumir que es enemigo
             if (caster == null)
@@ -193,6 +196,12 @@ namespace Photon.Pun.Demo.Asteroids
             
             // Importante: NO destruimos la habilidad al impactar, ya que un AOE afecta a múltiples objetivos
             // La destrucción se maneja por tiempo de vida
+        }
+        
+        // Método para aplicar efectos adicionales específicos
+        protected virtual void ApplyEffects(HeroBase target)
+        {
+            // Implementar en clases derivadas
         }
         
         // Visualización en el editor

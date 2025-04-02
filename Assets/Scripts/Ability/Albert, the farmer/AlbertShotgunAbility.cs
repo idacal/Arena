@@ -26,7 +26,6 @@ namespace Photon.Pun.Demo.Asteroids
         [Header("Prefabs and Effects")]
         public GameObject projectilePrefab;      // Prefab del proyectil
         public GameObject muzzleFlashPrefab;     // Prefab del fogonazo
-        public AudioClip shotgunSound;           // Sonido de disparo
         
         [Header("Debug Settings")]
         public bool showDebugLogs = false;       // Activar logs de debug
@@ -105,10 +104,10 @@ namespace Photon.Pun.Demo.Asteroids
         /// <summary>
         /// Actualización específica para la habilidad
         /// </summary>
-        protected override void AbilityUpdate()
+        protected override void Update()
         {
             // Llamar al update base para movimiento y colisiones
-            base.AbilityUpdate();
+            base.Update();
             
             // Opcional: Añadir efectos visuales adicionales durante el vuelo
             if (isMoving && !hasHit)
@@ -291,27 +290,6 @@ namespace Photon.Pun.Demo.Asteroids
         }
         
         /// <summary>
-        /// Reproduce el sonido de disparo
-        /// </summary>
-        private void PlayShotgunSound()
-        {
-            if (shotgunSound != null)
-            {
-                // Usar AudioSource existente o crear uno temporal
-                AudioSource audioSource = GetComponent<AudioSource>();
-                if (audioSource == null)
-                {
-                    audioSource = gameObject.AddComponent<AudioSource>();
-                    audioSource.spatialBlend = 1.0f;  // 3D sound
-                    audioSource.minDistance = 2.0f;
-                    audioSource.maxDistance = 20.0f;
-                }
-                
-                audioSource.PlayOneShot(shotgunSound);
-            }
-        }
-        
-        /// <summary>
         /// Crea un efecto visual en el punto de impacto
         /// </summary>
         private void CreateImpactEffect(Vector3 position)
@@ -338,14 +316,6 @@ namespace Photon.Pun.Demo.Asteroids
             
             // Destruir después de tiempo
             Destroy(impactObj, 0.5f);
-        }
-        
-        /// <summary>
-        /// Reproduce sonido de impacto
-        /// </summary>
-        private void PlayImpactSound()
-        {
-            // Implementar si se añade un sonido específico para el impacto
         }
         
         /// <summary>
@@ -642,7 +612,9 @@ namespace Photon.Pun.Demo.Asteroids
             
             // Crear efectos de disparo
             CreateMuzzleFlash();
-            PlayShotgunSound();
+            
+            // Ahora usamos el sistema de sonidos de AbilityBase
+            PlayAbilitySound();
             
             // Asegurarse de que el trail esté funcionando
             if (trailEffect != null)
@@ -655,14 +627,14 @@ namespace Photon.Pun.Demo.Asteroids
             if (flyingParticles != null)
             {
                 flyingParticles.gameObject.SetActive(true);
-                flyingParticles.Play();
+                if (!flyingParticles.isPlaying)
+                {
+                    flyingParticles.Play();
+                }
             }
             
             // Marcar como inicializado y en movimiento
             isMoving = true;
-            
-            // También verificar el movimiento lento en los clientes remotos
-            Invoke("EnsureSlowMovement", 0.1f);
         }
         
         [PunRPC]

@@ -14,11 +14,14 @@ namespace Photon.Pun.Demo.Asteroids
         public float bombDetonationRadius = 1f;
         
         [Header("Visual Settings")]
+        [Tooltip("Color del área de efecto, no afecta a las bombas individuales")]
         public Color areaColor = new Color(1f, 0.9f, 0.2f, 0.3f);
         public bool usePulseEffect = true;
         
         [Header("Prefab References")]
         public GameObject bombZonePrefab;
+        [Tooltip("Prefab para las bombas individuales. Si se asigna, usará su propio material y color")]
+        public GameObject bombPrefab;
         
         private GameObject bombZoneInstance;
         private List<BombEffect> activeBombs = new List<BombEffect>();
@@ -65,6 +68,13 @@ namespace Photon.Pun.Demo.Asteroids
                     setup.areaRadius = radius;
                     setup.bombCount = bombCount;
                     setup.areaColor = areaColor;
+                    
+                    // Asignar el prefab de bomba si está definido
+                    if (bombPrefab != null)
+                    {
+                        setup.singleBombPrefab = bombPrefab;
+                    }
+                    
                     setup.SetupAreaEffect();
                     setup.SetupBombVisuals();
                     
