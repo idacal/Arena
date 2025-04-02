@@ -570,8 +570,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   showDebugMessages: 1
-  adjustLocalPlayerVisibility: 1
-  cullingPercentage: 0.7
 --- !u!136 &98414640
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -1341,8 +1339,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   showDebugMessages: 1
-  adjustLocalPlayerVisibility: 1
-  cullingPercentage: 0.7
 --- !u!1 &218385660
 GameObject:
   m_ObjectHideFlags: 0
@@ -4536,8 +4532,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   showDebugMessages: 1
-  adjustLocalPlayerVisibility: 1
-  cullingPercentage: 0.7
 --- !u!136 &1192497720
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -4691,8 +4685,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   showDebugMessages: 1
-  adjustLocalPlayerVisibility: 1
-  cullingPercentage: 0.7
 --- !u!136 &1193645595
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -6333,8 +6325,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   showDebugMessages: 1
-  adjustLocalPlayerVisibility: 1
-  cullingPercentage: 0.7
 --- !u!136 &1597390026
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -7555,8 +7545,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   showDebugMessages: 1
-  adjustLocalPlayerVisibility: 1
-  cullingPercentage: 0.7
 --- !u!136 &1931074711
 CapsuleCollider:
   m_ObjectHideFlags: 0
