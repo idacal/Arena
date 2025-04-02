@@ -1,5 +1,49 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &694474488436511172
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1837247436887717567}
+  - component: {fileID: 5116498116942942763}
+  m_Layer: 0
+  m_Name: DOTweenInitializer
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1837247436887717567
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 694474488436511172}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1079390514568363546}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5116498116942942763
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 694474488436511172}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 645333d52fd8f4244ae81d4a329dc605, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &2928593473989094316
 GameObject:
   m_ObjectHideFlags: 0
@@ -10,6 +54,8 @@ GameObject:
   m_Component:
   - component: {fileID: 1079390514568363546}
   - component: {fileID: 5317484462006748591}
+  - component: {fileID: 8881188098550768012}
+  - component: {fileID: 7616963968749786669}
   m_Layer: 0
   m_Name: KillFeedManager
   m_TagString: Untagged
@@ -29,7 +75,9 @@ Transform:
   m_LocalPosition: {x: 960, y: 540, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 7719947529842651271}
+  - {fileID: 1837247436887717567}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &5317484462006748591
@@ -47,9 +95,112 @@ MonoBehaviour:
   killFeedEntryPrefab: {fileID: 5869093645751820565, guid: 91ab7a5aaa0573544b4718039d25ad89, type: 3}
   killFeedContainer: {fileID: 158636797347157389, guid: 3c81725680dae224e91dff3f72184baa, type: 3}
   entryDuration: 5
+  multiKillTimeWindow: 3
   firstBloodIcon: {fileID: 21300000, guid: 574235fe1b6c6e847bfff2d55efab9c3, type: 3}
   doubleKillIcon: {fileID: 21300000, guid: d76955a54a8b17648969a428d77b2f05, type: 3}
   tripleKillIcon: {fileID: 21300000, guid: 6323cc8f104082b40ad7ebfce4a1c720, type: 3}
   quadraKillIcon: {fileID: 21300000, guid: cd30661a87252bd48aab19156cb1e811, type: 3}
   pentaKillIcon: {fileID: 21300000, guid: 5eb47f935a2dc8f49b22c6393d65ae99, type: 3}
-  killIcon: {fileID: 21300000, guid: 4cb22bd008649d94b92392c28d6a7855, type: 3}
+  killStreakIcon: {fileID: 0}
+  dominatingIcon: {fileID: 0}
+  unstoppableIcon: {fileID: 0}
+  godlikeIcon: {fileID: 0}
+  legendaryIcon: {fileID: 0}
+--- !u!114 &8881188098550768012
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2928593473989094316}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa584fbee541324448dd18d8409c7a41, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ObservedComponentsFoldoutOpen: 1
+  Group: 0
+  prefixField: -1
+  Synchronization: 3
+  OwnershipTransfer: 1
+  observableSearch: 0
+  ObservedComponents:
+  - {fileID: 7616963968749786669}
+  sceneViewId: 0
+  InstantiationId: 0
+  isRuntimeInstantiated: 0
+--- !u!114 &7616963968749786669
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2928593473989094316}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 627855c7f81362d41938ffe0b1475957, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_SynchronizePosition: 1
+  m_SynchronizeRotation: 1
+  m_SynchronizeScale: 0
+  m_UseLocal: 1
+--- !u!1 &5692060303038843672
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7719947529842651271}
+  - component: {fileID: 2145940996753016468}
+  m_Layer: 0
+  m_Name: KillFeedSoundManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7719947529842651271
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5692060303038843672}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1079390514568363546}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2145940996753016468
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5692060303038843672}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9ee7ee36c6ee22d4f877718988199117, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  killSound: {fileID: 8300000, guid: cddefc63fd4749449940992ba2e3b65b, type: 3}
+  firstBloodSound: {fileID: 8300000, guid: a895e7bfb194d4a40b4c4c91f011ef47, type: 3}
+  doubleKillSound: {fileID: 0}
+  tripleKillSound: {fileID: 8300000, guid: 71edf8a31ed71fc4dad7605039775929, type: 3}
+  quadraKillSound: {fileID: 8300000, guid: 0f8bb1b64cfb8fa41a17b977c1947e27, type: 3}
+  pentaKillSound: {fileID: 8300000, guid: 96f57783f3404974487c3eaa296054b5, type: 3}
+  killStreakSound: {fileID: 0}
+  dominatingSound: {fileID: 0}
+  unstoppableSound: {fileID: 0}
+  godlikeSound: {fileID: 0}
+  legendarySound: {fileID: 0}
+  killVolume: 0.7
+  multiKillVolume: 0.8
+  firstBloodVolume: 1
+  streakVolume: 0.8
