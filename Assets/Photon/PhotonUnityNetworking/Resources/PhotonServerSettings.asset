@@ -111,6 +111,7 @@ MonoBehaviour:
   - RPC_PlayFearSound
   - RPC_ApplyScreenDarkening
   - RPC_SyncTargetPosition
+  - RPC_RotateScarecrow
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

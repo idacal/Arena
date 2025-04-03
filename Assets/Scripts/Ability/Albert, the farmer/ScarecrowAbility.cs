@@ -255,8 +255,9 @@ namespace Photon.Pun.Demo.Asteroids
                 return;
             }
             
-            // Crear la instancia
-            scarecrowInstance = Instantiate(scarecrowPrefab, transform.position, transform.rotation);
+            // Crear la instancia con rotación inicial de 180 grados en Y para que mire hacia delante
+            Quaternion initialRotation = Quaternion.Euler(0, 180, 0);
+            scarecrowInstance = Instantiate(scarecrowPrefab, transform.position, initialRotation);
             scarecrowInstance.transform.SetParent(transform);
             scarecrowInstance.transform.localPosition = Vector3.zero;
             
@@ -267,7 +268,195 @@ namespace Photon.Pun.Demo.Asteroids
                 health.Initialize(scarecrowHealth);
             }
             
-            Debug.Log("[ScarecrowAbility] Espantapájaros creado correctamente");
+            // Iniciar la animación de aparición con giro 360
+            StartCoroutine(PerformInitialSpinAnimation(scarecrowInstance.transform));
+            
+            Debug.Log("[ScarecrowAbility] Espantapájaros creado correctamente con rotación inicial de 180 grados");
+        }
+        
+        /// <summary>
+        /// Realiza una animación de giro de 360 grados al inicio del espantapájaros
+        /// </summary>
+        private System.Collections.IEnumerator PerformInitialSpinAnimation(Transform scarecrowTransform)
+        {
+            if (scarecrowTransform == null) yield break;
+            
+            // Guardar la rotación final deseada (rotación actual)
+            Quaternion originalRotation = scarecrowTransform.rotation;
+            
+            // Crear la rotación inicial inclinada (30 grados en X para inclinarse hacia adelante)
+            Quaternion startingRotation = originalRotation * Quaternion.Euler(30f, 0, 0);
+            
+            // Aplicar la rotación inicial inclinada
+            scarecrowTransform.rotation = startingRotation;
+            
+            // Duración de la animación
+            float spinDuration = 1.5f;
+            float elapsed = 0f;
+            
+            // Rotación a completar en Y (360 grados)
+            float targetYRotation = 360f;
+            
+            // Inclinación inicial
+            float initialTiltX = 30f;
+            
+            // Valor para la curva de animación (hacer que empiece y termine lento)
+            AnimationCurve speedCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
+            
+            // Realizar el giro
+            while (elapsed < spinDuration)
+            {
+                // Calcular progreso normalizado (0-1)
+                float normalizedTime = elapsed / spinDuration;
+                
+                // Aplicar curva de animación para suavizar el movimiento
+                float curvedTime = speedCurve.Evaluate(normalizedTime);
+                
+                // Calcular ángulo de giro en Y actual (0 a 360)
+                float currentYRotation = curvedTime * targetYRotation;
+                
+                // Calcular inclinación en X actual (comenzando en 30 y terminando en 0)
+                float currentTiltX = initialTiltX * (1 - curvedTime);
+                
+                // Crear rotación actual
+                Quaternion currentRotation = originalRotation * Quaternion.Euler(currentTiltX, currentYRotation, 0);
+                
+                // Aplicar rotación
+                scarecrowTransform.rotation = currentRotation;
+                
+                // Actualizar tiempo
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+            
+            // Asegurar que termina exactamente en la rotación original
+            scarecrowTransform.rotation = originalRotation;
+            
+            // Pequeño efecto de "asentamiento" al final
+            StartCoroutine(SettlingEffect(scarecrowTransform, originalRotation));
+            
+            Debug.Log("[ScarecrowAbility] Animación inicial de giro completada");
+        }
+        
+        /// <summary>
+        /// Pequeño efecto de "asentamiento" después del giro inicial
+        /// </summary>
+        private System.Collections.IEnumerator SettlingEffect(Transform target, Quaternion baseRotation)
+        {
+            // Series de pequeñas inclinaciones que se van reduciendo
+            float[] tiltAngles = new float[] { 5f, -3f, 2f, -1f, 0 };
+            float tiltDuration = 0.1f;
+            
+            foreach (float tiltAngle in tiltAngles)
+            {
+                // Calcular rotación objetivo con la inclinación
+                Quaternion targetRotation = baseRotation * Quaternion.Euler(tiltAngle, 0, 0);
+                
+                // Tiempo para esta inclinación
+                float elapsed = 0;
+                
+                // Rotación inicial para este paso
+                Quaternion startRotation = target.rotation;
+                
+                // Interpolar hacia la rotación objetivo
+                while (elapsed < tiltDuration)
+                {
+                    float t = elapsed / tiltDuration;
+                    target.rotation = Quaternion.Slerp(startRotation, targetRotation, t);
+                    elapsed += Time.deltaTime;
+                    yield return null;
+                }
+                
+                // Asegurar que llega a la rotación objetivo
+                target.rotation = targetRotation;
+            }
+            
+            // Asegurar que termina en la rotación base
+            target.rotation = baseRotation;
+        }
+        
+        /// <summary>
+        /// Hace que el espantapájaros gire hacia el enemigo con una animación suave
+        /// </summary>
+        private void RotateScarecrowTowardsEnemy(HeroBase enemy)
+        {
+            if (scarecrowInstance == null || enemy == null) return;
+            
+            // Calcular dirección hacia el enemigo (solo en el plano horizontal)
+            Vector3 targetPosition = enemy.transform.position;
+            Vector3 direction = targetPosition - scarecrowInstance.transform.position;
+            direction.y = 0; // Mantener la rotación en el plano horizontal
+            
+            if (direction.magnitude < 0.1f) return; // Evitar rotaciones con direcciones muy pequeñas
+            
+            // Crear rotación mirando hacia el enemigo
+            Quaternion targetRotation = Quaternion.LookRotation(direction);
+            
+            // Crear efecto de inclinación hacia adelante (asustando)
+            Quaternion forwardTilt = Quaternion.Euler(15f, 0, 0); // 15 grados de inclinación en X
+            targetRotation *= forwardTilt; // Combinar rotaciones
+            
+            // Iniciar la corrutina para rotación suave
+            StartCoroutine(SmoothRotateTowards(scarecrowInstance.transform, targetRotation, 0.3f));
+            
+            Debug.Log($"[ScarecrowAbility] Girando espantapájaros hacia {enemy.name}");
+        }
+        
+        /// <summary>
+        /// Corrutina para rotar suavemente hacia una rotación objetivo
+        /// </summary>
+        private System.Collections.IEnumerator SmoothRotateTowards(Transform objectToRotate, Quaternion targetRotation, float duration)
+        {
+            Quaternion startRotation = objectToRotate.rotation;
+            float elapsed = 0f;
+            
+            while (elapsed < duration)
+            {
+                // Interpolar suavemente entre rotación inicial y objetivo
+                objectToRotate.rotation = Quaternion.Slerp(startRotation, targetRotation, elapsed / duration);
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+            
+            // Asegurar rotación final exacta
+            objectToRotate.rotation = targetRotation;
+            
+            // Añadir pequeño efecto de "rebote" al final
+            StartCoroutine(SlightBouncingEffect(objectToRotate));
+        }
+        
+        /// <summary>
+        /// Crea un pequeño efecto de rebote después de la rotación
+        /// </summary>
+        private System.Collections.IEnumerator SlightBouncingEffect(Transform target)
+        {
+            Quaternion originalRotation = target.rotation;
+            Quaternion slightlyMore = originalRotation * Quaternion.Euler(5f, 0, 0); // 5 grados más de inclinación
+            
+            // Ir un poco más allá
+            float overshootTime = 0.1f;
+            float elapsed = 0f;
+            
+            while (elapsed < overshootTime)
+            {
+                target.rotation = Quaternion.Slerp(originalRotation, slightlyMore, elapsed / overshootTime);
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+            
+            // Volver a la posición original
+            elapsed = 0f;
+            float returnTime = 0.2f;
+            
+            while (elapsed < returnTime)
+            {
+                target.rotation = Quaternion.Slerp(slightlyMore, originalRotation, elapsed / returnTime);
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+            
+            // Asegurar rotación final
+            target.rotation = originalRotation;
         }
         
         public void OnAbilityEnd()
@@ -351,7 +540,6 @@ namespace Photon.Pun.Demo.Asteroids
             }
         }
         
-        // Método público para ser llamado por el detector de trigger
         public void OnEnemyEnterArea(HeroBase hero)
         {
             if (!photonView.IsMine) return;
@@ -364,6 +552,9 @@ namespace Photon.Pun.Demo.Asteroids
             {
                 return; // Es del mismo equipo, ignorar
             }
+            
+            // Hacer que el espantapájaros gire hacia el enemigo
+            RotateScarecrowTowardsEnemy(hero);
             
             int targetId = hero.photonView.ViewID;
             
@@ -397,23 +588,49 @@ namespace Photon.Pun.Demo.Asteroids
         [PunRPC]
         private void RPC_ApplyFearEffect(int targetViewID)
         {
+            // Buscar el objetivo por su ViewID
             PhotonView targetView = PhotonView.Find(targetViewID);
-            if (targetView == null) return;
+            if (targetView == null)
+            {
+                Debug.LogWarning($"[ScarecrowAbility] No se encontró el objetivo con ViewID {targetViewID}");
+                return;
+            }
             
+            // Obtener el componente HeroBase
             HeroBase target = targetView.GetComponent<HeroBase>();
-            if (target == null) return;
+            if (target == null)
+            {
+                Debug.LogWarning($"[ScarecrowAbility] El objeto con ViewID {targetViewID} no tiene un componente HeroBase");
+                return;
+            }
             
-            // Aplicar efecto de miedo
+            // Intentar girar el espantapájaros hacia el enemigo con RPC
+            if (photonView.IsMine && scarecrowInstance != null)
+            {
+                // Solo sincronizar la rotación en clientes remotos
+                photonView.RPC("RPC_RotateScarecrow", RpcTarget.Others, targetViewID);
+            }
+            
+            // Aplicar el efecto de miedo
             ApplyFearEffect(target);
-            
-            // Reproducir sonido (ahora controlado para evitar duplicación)
-            PlayFearSoundForEveryone();
             
             // Animar el espantapájaros
             AnimateScarecrow();
             
-            // Crear efecto visual en el área cuando se activa
-            CreateActivationEffect();
+            // Crear efecto de onda expansiva
+            CreateExpandingWaveEffect(transform.position);
+            
+            // Reproducir sonido de miedo (controlado para evitar duplicación)
+            PlayFearSoundForEveryone();
+        }
+        
+        /// <summary>
+        /// Método sobrecargado para crear un efecto de onda expansiva con el radio predeterminado
+        /// </summary>
+        private void CreateExpandingWaveEffect(Vector3 center)
+        {
+            // Usar el radio de esta habilidad como radio máximo para la onda
+            StartCoroutine(CreateExpandingWaveEffect(center, radius));
         }
         
         /// <summary>
@@ -462,6 +679,23 @@ namespace Photon.Pun.Demo.Asteroids
         private void RPC_PlayFearSound()
         {
             PlayFearSoundLocally();
+        }
+        
+        [PunRPC]
+        private void RPC_RotateScarecrow(int targetViewID)
+        {
+            // Solo para clientes remotos
+            if (photonView.IsMine) return;
+            
+            // Buscar el objetivo
+            PhotonView targetView = PhotonView.Find(targetViewID);
+            if (targetView == null) return;
+            
+            HeroBase target = targetView.GetComponent<HeroBase>();
+            if (target == null) return;
+            
+            // Rotar espantapájaros hacia el objetivo
+            RotateScarecrowTowardsEnemy(target);
         }
         
         private void AnimateScarecrow()
