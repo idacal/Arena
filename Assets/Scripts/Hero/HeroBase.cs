@@ -10,8 +10,17 @@ using TMPro;
 
 namespace Photon.Pun.Demo.Asteroids
 {
+    // Definición de interfaz UnitBase para ser utilizada por los sistemas de experiencia
+    public interface UnitBase
+    {
+        // Propiedades básicas que cualquier unidad debe tener
+        string name { get; }
+        int level { get; }
+        bool IsDead { get; }
+    }
+    
     [RequireComponent(typeof(PhotonView))]
-    public class HeroBase : MonoBehaviourPunCallbacks, IPunObservable, IFearable
+    public class HeroBase : MonoBehaviourPunCallbacks, IPunObservable, IFearable, UnitBase
     {
         [Header("Hero Identity")]
         public int heroId = -1;          // ID del héroe, debe coincidir con HeroData
@@ -124,12 +133,18 @@ namespace Photon.Pun.Demo.Asteroids
         public AudioClip goldSound; // Sonido básico de oro
         public AudioClip bigGoldSound; // Sonido para cantidades grandes (>= 100)
         public AudioClip smallGoldSound; // Sonido para cantidades pequeñas (< 20)
+        public AudioClip levelUpSound; // Sonido para subir de nivel
         
         [Header("Gold Rewards")]
         [SerializeField] private float baseHeroKillGold = 200f;    // Oro base por matar un héroe
         [SerializeField] private float heroLevelGoldMultiplier = 0.15f; // Multiplicador de oro por nivel del héroe asesinado
         [SerializeField] private float killStreakGoldMultiplier = 0.1f; // Multiplicador de oro por racha de asesinatos
         [SerializeField] private float assistGoldMultiplier = 0.4f;     // Multiplicador de oro para asistencias
+        
+        [Header("Level Up Effect")]
+        public GameObject levelUpEffectPrefab; // Prefab del efecto visual de subir de nivel
+        public Color levelUpEffectColor = new Color(1f, 0.8f, 0.2f); // Color dorado por defecto
+        public float levelUpEffectDuration = 3f; // Duración del efecto en segundos
         
         public enum AttackType
         {
@@ -152,6 +167,10 @@ namespace Photon.Pun.Demo.Asteroids
         // Propiedad pública para acceder al estado de muerte
         public bool IsDead => _isDead;
 
+        // Implementación de las propiedades de la interfaz UnitBase
+        string UnitBase.name { get => heroName; }
+        int UnitBase.level { get => CurrentLevel; }
+        
         #region UNITY CALLBACKS
         
         protected virtual void Awake()
@@ -337,10 +356,25 @@ namespace Photon.Pun.Demo.Asteroids
         {
             if (!photonView.IsMine)
                 return;
-            
+
             // No regenerar salud si está muerto
             if (_isDead)
                 return;
+            
+            // Si estamos en el editor o modo de desarrollo, permitir pruebas con teclas
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
+            // Presionar L para subir de nivel (prueba del efecto visual y sonido)
+            if (Input.GetKeyDown(KeyCode.L))
+            {
+                // Obtener la experiencia necesaria para el siguiente nivel
+                float experienceNeeded = GetExperienceForNextLevel();
+                
+                // Añadir esa cantidad de experiencia para forzar la subida de nivel
+                GainExperience(experienceNeeded);
+                
+                Debug.Log($"[HeroBase] Forzando subida de nivel con tecla L para {heroName}");
+            }
+            #endif
             
             // Verificación periódica de la capa del jugador (solo verificamos cada 1 segundo)
             if (Time.frameCount % 60 == 0)
@@ -369,11 +403,17 @@ namespace Photon.Pun.Demo.Asteroids
                     uiController.UpdateHealthBar(currentHealth, maxHealth);
                 }
             }
-            
+
             // Actualizar cooldown de ataque
             if (attackCooldown > 0)
             {
                 attackCooldown -= Time.deltaTime;
+            }
+            
+            // Actualizar racha de kills
+            if (currentKillStreak > 0 && Time.time - lastKillTime > killStreakTimeout)
+            {
+                ResetKillStreak();
             }
         }
         
@@ -1697,8 +1737,11 @@ namespace Photon.Pun.Demo.Asteroids
             // Verificar si subimos de nivel
             while (_currentExperience >= experienceNeeded && CurrentLevel < heroData.MaxLevel)
             {
-                Debug.Log($"[HeroBase] Subiendo de nivel de {CurrentLevel} a {CurrentLevel + 1}");
-                _currentExperience = 0; // Reiniciar la experiencia a 0 al subir de nivel
+                // Calcular experiencia sobrante para el siguiente nivel
+                float excessExperience = _currentExperience - experienceNeeded;
+                
+                Debug.Log($"[HeroBase] Subiendo de nivel de {CurrentLevel} a {CurrentLevel + 1} con {excessExperience} XP sobrante");
+                
                 CurrentLevel++;
                 _currentLevel = CurrentLevel;
                 
@@ -1708,16 +1751,25 @@ namespace Photon.Pun.Demo.Asteroids
                 // Actualizar stats basados en el nuevo nivel
                 UpdateStatsForLevel();
                 
+                // Reproducir sonido de subida de nivel
+                PlayLevelUpSound();
+                
+                // Mostrar efecto visual de subida de nivel
+                ShowLevelUpEffect();
+                
                 // Notificar la subida de nivel
                 OnLevelUp?.Invoke(CurrentLevel);
                 
                 // Calcular la experiencia necesaria para el siguiente nivel
                 experienceNeeded = GetExperienceForNextLevel();
                 
-                Debug.Log($"[HeroBase] Nuevo nivel: {CurrentLevel}, XP necesaria para siguiente nivel: {experienceNeeded}");
+                // Actualizar la experiencia actual con el excedente
+                _currentExperience = excessExperience;
                 
-                // Notificar la actualización de la UI con la nueva experiencia (0)
-                OnExperienceGained?.Invoke(0, 0, experienceNeeded);
+                Debug.Log($"[HeroBase] Nuevo nivel: {CurrentLevel}, XP necesaria para siguiente nivel: {experienceNeeded}, XP actual: {_currentExperience}");
+                
+                // Notificar la actualización de la UI con la nueva experiencia (incluyendo el excedente)
+                OnExperienceGained?.Invoke(0, _currentExperience, experienceNeeded);
             }
             
             // Si estamos al máximo nivel, mantener la experiencia al máximo
@@ -2088,6 +2140,382 @@ namespace Photon.Pun.Demo.Asteroids
             }
             
             Debug.Log($"[HeroBase] Capa corregida a {LayerManager.LAYER_PLAYER} en RPC_ForcePlayerLayer");
+        }
+        
+        /// <summary>
+        /// Reproduce el sonido de subida de nivel
+        /// </summary>
+        private void PlayLevelUpSound()
+        {
+            if (audioSource != null && levelUpSound != null)
+            {
+                // Asegurar que el volumen esté alto y que se escuche sin importar la distancia
+                float originalSpatialBlend = audioSource.spatialBlend;
+                float originalVolume = audioSource.volume;
+                
+                // Configurar para reproducción clara
+                audioSource.spatialBlend = 0f; // 0 = 2D (no espacial)
+                audioSource.volume = 1.0f;
+                audioSource.pitch = 1.0f;
+                
+                // Reproducir sonido
+                audioSource.PlayOneShot(levelUpSound);
+                
+                // Programar la restauración de los valores originales
+                StartCoroutine(RestoreAudioSourceSettings(originalSpatialBlend, originalVolume));
+                
+                Debug.Log($"[HeroBase] Reproduciendo sonido de subida de nivel");
+                
+                // También notificar a otros clientes para que reproduzcan el sonido
+                photonView.RPC("RPC_PlayLevelUpSound", RpcTarget.Others);
+            }
+            else
+            {
+                Debug.LogWarning($"[HeroBase] No se pudo reproducir el sonido de nivel: audioSource={audioSource != null}, levelUpSound={levelUpSound != null}");
+            }
+        }
+        
+        /// <summary>
+        /// Restaura la configuración original del AudioSource después de reproducir un sonido especial
+        /// </summary>
+        private IEnumerator RestoreAudioSourceSettings(float originalSpatialBlend, float originalVolume)
+        {
+            yield return new WaitForSeconds(1.0f);
+            
+            if (audioSource != null)
+            {
+                audioSource.spatialBlend = originalSpatialBlend;
+                audioSource.volume = originalVolume;
+            }
+        }
+        
+        /// <summary>
+        /// RPC para reproducir el sonido de subida de nivel en otros clientes
+        /// </summary>
+        [PunRPC]
+        private void RPC_PlayLevelUpSound()
+        {
+            if (audioSource != null && levelUpSound != null && !photonView.IsMine)
+            {
+                audioSource.spatialBlend = 0f;
+                audioSource.volume = 1.0f;
+                audioSource.pitch = 1.0f;
+                audioSource.PlayOneShot(levelUpSound);
+            }
+        }
+        
+        /// <summary>
+        /// Muestra un efecto visual cuando el héroe sube de nivel
+        /// </summary>
+        private void ShowLevelUpEffect()
+        {
+            // Si tenemos un prefab de efecto de nivel, instanciarlo
+            if (levelUpEffectPrefab != null)
+            {
+                // Instanciar el prefab en la posición del héroe
+                GameObject effect = Instantiate(levelUpEffectPrefab, transform.position + Vector3.up, Quaternion.identity);
+                
+                // Configurar el efecto para que siga al héroe si es necesario
+                effect.transform.SetParent(transform);
+                
+                // Ajustar color de las partículas si es posible
+                ParticleSystem[] particleSystems = effect.GetComponentsInChildren<ParticleSystem>();
+                foreach (ParticleSystem ps in particleSystems)
+                {
+                    var main = ps.main;
+                    main.startColor = levelUpEffectColor;
+                }
+                
+                // Destruir después de la duración configurada
+                Destroy(effect, levelUpEffectDuration);
+                
+                Debug.Log($"[HeroBase] Mostrando efecto visual de subida de nivel para {heroName}");
+                
+                // Sincronizar con todos los clientes
+                photonView.RPC("RPC_ShowLevelUpEffect", RpcTarget.Others);
+            }
+            else
+            {
+                // Si no tenemos prefab, crear un efecto básico de partículas en tiempo de ejecución
+                CreateDynamicLevelUpEffect();
+            }
+        }
+        
+        /// <summary>
+        /// Crea un efecto dinámico de partículas si no hay prefab asignado
+        /// </summary>
+        private void CreateDynamicLevelUpEffect()
+        {
+            // Crear objeto para el sistema de partículas
+            GameObject effectObj = new GameObject("LevelUpEffect");
+            effectObj.transform.position = transform.position + Vector3.up;
+            effectObj.transform.SetParent(transform);
+            
+            // Añadir sistema de partículas
+            ParticleSystem ps = effectObj.AddComponent<ParticleSystem>();
+            
+            // Configurar el sistema de partículas
+            var main = ps.main;
+            main.startColor = levelUpEffectColor;
+            main.startSize = 0.3f;
+            main.startSpeed = 5f;
+            main.maxParticles = 100;
+            main.duration = 0.5f;
+            main.loop = false;
+            
+            // Emisión en forma de explosión circular
+            var emission = ps.emission;
+            emission.rateOverTime = 0;
+            emission.SetBursts(new ParticleSystem.Burst[] { 
+                new ParticleSystem.Burst(0f, 50)
+            });
+            
+            // Forma de emisión en esfera
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Sphere;
+            shape.radius = 0.5f;
+            
+            // Tamaño a lo largo del tiempo
+            var sizeOverLifetime = ps.sizeOverLifetime;
+            sizeOverLifetime.enabled = true;
+            AnimationCurve sizeCurve = new AnimationCurve(
+                new Keyframe(0f, 0.5f),
+                new Keyframe(0.5f, 1f),
+                new Keyframe(1f, 0f)
+            );
+            sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f, sizeCurve);
+            
+            // Color a lo largo del tiempo para desvanecimiento
+            var colorOverLifetime = ps.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            Gradient grad = new Gradient();
+            grad.SetKeys(
+                new GradientColorKey[] { 
+                    new GradientColorKey(levelUpEffectColor, 0f),
+                    new GradientColorKey(levelUpEffectColor, 0.8f) 
+                },
+                new GradientAlphaKey[] { 
+                    new GradientAlphaKey(1f, 0f),
+                    new GradientAlphaKey(1f, 0.5f),
+                    new GradientAlphaKey(0f, 1f) 
+                }
+            );
+            colorOverLifetime.color = grad;
+            
+            // Renderizador de partículas
+            var renderer = ps.GetComponent<ParticleSystemRenderer>();
+            renderer.material = new Material(Shader.Find("Particles/Standard Unlit"));
+            
+            // Velocidad orbital para efecto de rotación
+            var velocityOverLifetime = ps.velocityOverLifetime;
+            velocityOverLifetime.enabled = true;
+            velocityOverLifetime.orbitalY = 1f;
+            
+            // Reproducir el efecto
+            ps.Play();
+            
+            // Destruir después de completar
+            Destroy(effectObj, 3f);
+        }
+        
+        /// <summary>
+        /// RPC para mostrar el efecto de subida de nivel en otros clientes
+        /// </summary>
+        [PunRPC]
+        private void RPC_ShowLevelUpEffect()
+        {
+            if (!photonView.IsMine)
+            {
+                // Crear un efecto dinámico en clientes remotos
+                CreateDynamicLevelUpEffect();
+            }
+        }
+
+        /// <summary>
+        /// Añade experiencia al héroe y maneja la subida de nivel
+        /// </summary>
+        public void AddExperience(float amount)
+        {
+            Debug.Log($"[HeroBase] Intentando ganar {amount} XP. IsMine: {photonView?.IsMine}, Hero: {heroName}");
+            
+            if (!photonView.IsMine || amount <= 0)
+            {
+                Debug.Log($"[HeroBase] No se otorga XP: IsMine={photonView?.IsMine}, amount={amount}");
+                return;
+            }
+            
+            float experienceNeeded = GetExperienceForNextLevel();
+            _currentExperience += amount;
+            
+            Debug.Log($"[HeroBase] XP actual: {_currentExperience}, XP necesaria: {experienceNeeded}");
+            
+            // Notificar ganancia de experiencia
+            OnExperienceGained?.Invoke(amount, _currentExperience, experienceNeeded);
+            
+            // Verificar si subimos de nivel
+            while (_currentExperience >= experienceNeeded && CurrentLevel < heroData.MaxLevel)
+            {
+                // Calcular experiencia sobrante para el siguiente nivel
+                float excessExperience = _currentExperience - experienceNeeded;
+                
+                Debug.Log($"[HeroBase] Subiendo de nivel de {CurrentLevel} a {CurrentLevel + 1} con {excessExperience} XP sobrante");
+                
+                CurrentLevel++;
+                _currentLevel = CurrentLevel;
+                
+                // Otorgar puntos de habilidad
+                AddSkillPoint(heroData.SkillPointsPerLevel);
+                
+                // Actualizar stats basados en el nuevo nivel
+                UpdateStatsForLevel();
+                
+                // Reproducir sonido de subida de nivel
+                PlayLevelUpSound();
+                
+                // Mostrar efecto visual de subida de nivel
+                ShowLevelUpEffect();
+                
+                // Notificar la subida de nivel
+                OnLevelUp?.Invoke(CurrentLevel);
+                
+                // Calcular la experiencia necesaria para el siguiente nivel
+                experienceNeeded = GetExperienceForNextLevel();
+                
+                // Actualizar la experiencia actual con el excedente
+                _currentExperience = excessExperience;
+                
+                Debug.Log($"[HeroBase] Nuevo nivel: {CurrentLevel}, XP necesaria para siguiente nivel: {experienceNeeded}, XP actual: {_currentExperience}");
+                
+                // Notificar la actualización de la UI con la nueva experiencia (incluyendo el excedente)
+                OnExperienceGained?.Invoke(0, _currentExperience, experienceNeeded);
+            }
+            
+            // Si estamos al máximo nivel, mantener la experiencia al máximo
+            if (CurrentLevel >= heroData.MaxLevel)
+            {
+                _currentExperience = experienceNeeded;
+                Debug.Log($"[HeroBase] Alcanzado nivel máximo ({CurrentLevel})");
+            }
+        }
+
+        /// <summary>
+        /// Otorga experiencia al héroe cuando un objetivo muere.
+        /// </summary>
+        public void GainExperience(HeroBase killer, UnitBase dyingObject, float assistMultiplier = 1.0f)
+        {
+            Debug.Log($"[HeroBase] Intentando otorgar experiencia a {heroName}. IsMine: {photonView?.IsMine}");
+
+            if (!photonView.IsMine) return;
+
+            float experienceGain = 0;
+            float experienceNeeded = GetExperienceForNextLevel();
+
+            experienceGain = CalculateExperienceGain(killer, dyingObject, assistMultiplier);
+
+            if (experienceGain <= 0)
+            {
+                Debug.Log($"[HeroBase] No se otorga XP: experienceGain={experienceGain}");
+                return;
+            }
+
+            _currentExperience += experienceGain;
+
+            Debug.Log($"[HeroBase] XP ganada: {experienceGain}, XP actual: {_currentExperience}, XP necesaria: {experienceNeeded}");
+
+            // Notificar ganancia de experiencia
+            OnExperienceGained?.Invoke(experienceGain, _currentExperience, experienceNeeded);
+
+            // Verificar si subimos de nivel
+            while (_currentExperience >= experienceNeeded && CurrentLevel < heroData.MaxLevel)
+            {
+                // Calcular experiencia sobrante para el siguiente nivel
+                float excessExperience = _currentExperience - experienceNeeded;
+                
+                Debug.Log($"[HeroBase] Subiendo de nivel de {CurrentLevel} a {CurrentLevel + 1} con {excessExperience} XP sobrante");
+                
+                CurrentLevel++;
+                _currentLevel = CurrentLevel;
+
+                // Otorgar puntos de habilidad
+                AddSkillPoint(heroData.SkillPointsPerLevel);
+
+                // Actualizar stats basados en el nuevo nivel
+                UpdateStatsForLevel();
+                
+                // Reproducir sonido de subida de nivel
+                PlayLevelUpSound();
+                
+                // Mostrar efecto visual de subida de nivel
+                ShowLevelUpEffect();
+
+                // Notificar la subida de nivel
+                OnLevelUp?.Invoke(CurrentLevel);
+
+                // Calcular la experiencia necesaria para el siguiente nivel
+                experienceNeeded = GetExperienceForNextLevel();
+                
+                // Actualizar la experiencia actual con el excedente
+                _currentExperience = excessExperience;
+                
+                Debug.Log($"[HeroBase] Nuevo nivel: {CurrentLevel}, XP necesaria para siguiente nivel: {experienceNeeded}, XP actual: {_currentExperience}");
+                
+                // Notificar la actualización de la UI con la nueva experiencia (incluyendo el excedente)
+                OnExperienceGained?.Invoke(0, _currentExperience, experienceNeeded);
+            }
+
+            // Si estamos al máximo nivel, mantener la experiencia al máximo
+            if (CurrentLevel >= heroData.MaxLevel)
+            {
+                _currentExperience = experienceNeeded;
+                Debug.Log($"[HeroBase] Alcanzado nivel máximo ({CurrentLevel})");
+            }
+        }
+
+        /// <summary>
+        /// Calcula la cantidad de experiencia que se obtiene por matar a una unidad
+        /// </summary>
+        /// <param name="killer">El héroe que realizó el asesinato</param>
+        /// <param name="dyingObject">La unidad que murió</param>
+        /// <param name="assistMultiplier">Multiplicador para asistencias (1.0 para asesinato, menor para asistencia)</param>
+        /// <returns>La cantidad de experiencia a otorgar</returns>
+        private float CalculateExperienceGain(HeroBase killer, UnitBase dyingObject, float assistMultiplier = 1.0f)
+        {
+            if (dyingObject == null)
+            {
+                Debug.LogWarning($"[HeroBase] CalculateExperienceGain: dyingObject es null");
+                return 0;
+            }
+            
+            Debug.Log($"[HeroBase] Calculando XP por matar a {dyingObject.GetType().Name}");
+            
+            float baseXP = 0;
+            
+            // Determinar la XP base según el tipo de unidad
+            if (dyingObject is HeroBase dyingHero)
+            {
+                // XP base para héroe + bonus por nivel
+                baseXP = baseHeroKillXP + (baseHeroKillXP * dyingHero.CurrentLevel * heroLevelXPMultiplier);
+                Debug.Log($"[HeroBase] XP base por matar un héroe: {baseXP} (nivel {dyingHero.CurrentLevel})");
+            }
+            else if (dyingObject is NeutralCreep dyingCreep)
+            {
+                // XP del creep
+                baseXP = dyingCreep.experienceReward;
+                Debug.Log($"[HeroBase] XP base por matar un creep: {baseXP}");
+            }
+            else
+            {
+                // Si es otro tipo de unidad (como Torre), usar la experiencia base para torres
+                baseXP = baseTowerXP;
+                Debug.Log($"[HeroBase] XP base por destruir otra unidad: {baseXP}");
+            }
+            
+            // Aplicar modificador de asistencia si corresponde
+            float modifiedXP = baseXP * assistMultiplier;
+            
+            Debug.Log($"[HeroBase] XP final (después de multiplicadores): {modifiedXP}");
+            
+            return modifiedXP;
         }
     }
 }

@@ -249,10 +249,14 @@ MonoBehaviour:
   goldSound: {fileID: 0}
   bigGoldSound: {fileID: 0}
   smallGoldSound: {fileID: 0}
+  levelUpSound: {fileID: 0}
   baseHeroKillGold: 200
   heroLevelGoldMultiplier: 0.15
   killStreakGoldMultiplier: 0.1
   assistGoldMultiplier: 0.4
+  levelUpEffectPrefab: {fileID: 0}
+  levelUpEffectColor: {r: 1, g: 0.92, b: 0.016, a: 1}
+  levelUpEffectDuration: 2
 --- !u!114 &5826635703823206055
 MonoBehaviour:
   m_ObjectHideFlags: 0

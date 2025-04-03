@@ -112,6 +112,9 @@ MonoBehaviour:
   - RPC_ApplyScreenDarkening
   - RPC_SyncTargetPosition
   - RPC_RotateScarecrow
+  - RPC_PlayLevelUpSound
+  - RPC_ShowLevelUpEffect
+  - RPC_SyncTeam
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

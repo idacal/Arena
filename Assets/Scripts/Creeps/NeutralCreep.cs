@@ -6,7 +6,7 @@ namespace Photon.Pun.Demo.Asteroids
 {
     [RequireComponent(typeof(PhotonView))]
     [RequireComponent(typeof(PhotonTransformView))]
-    public class NeutralCreep : MonoBehaviourPunCallbacks, IDamageable, IPunObservable
+    public class NeutralCreep : MonoBehaviourPunCallbacks, IDamageable, IPunObservable, UnitBase
     {
         [Header("Información Básica")]
         public string creepName = "Creep";
@@ -76,6 +76,11 @@ namespace Photon.Pun.Demo.Asteroids
         
         // Variables para sincronización de posición
         private Vector3 lastSyncPosition = Vector3.zero;
+        
+        // Implementación de las propiedades de la interfaz UnitBase
+        string UnitBase.name { get => creepName; }
+        int UnitBase.level { get => level; }
+        bool UnitBase.IsDead { get => isDead; }
         
         void Awake()
         {

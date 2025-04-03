@@ -597,7 +597,7 @@ namespace Photon.Pun.Demo.Asteroids
             }
             
             // Obtener el componente HeroBase
-            HeroBase target = targetView.GetComponent<HeroBase>();
+                HeroBase target = targetView.GetComponent<HeroBase>();
             if (target == null)
             {
                 Debug.LogWarning($"[ScarecrowAbility] El objeto con ViewID {targetViewID} no tiene un componente HeroBase");
@@ -612,7 +612,7 @@ namespace Photon.Pun.Demo.Asteroids
             }
             
             // Aplicar el efecto de miedo
-            ApplyFearEffect(target);
+                    ApplyFearEffect(target);
             
             // Animar el espantapájaros
             AnimateScarecrow();
