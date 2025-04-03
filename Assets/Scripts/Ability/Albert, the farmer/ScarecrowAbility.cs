@@ -66,7 +66,7 @@ namespace Photon.Pun.Demo.Asteroids
             CreateAreaEffect();
             
             // Crear el espantapájaros si no existe
-            CreateScarecrowVisual();
+                CreateScarecrowVisual();
             
             // Sincronizar las visualizaciones a todos los clientes
             if (photonView.IsMine)
@@ -368,15 +368,15 @@ namespace Photon.Pun.Demo.Asteroids
             int targetId = hero.photonView.ViewID;
             
             // Controlar el tiempo entre aplicaciones del miedo
-            float lastHitTime = 0f;
-            lastFearTimes.TryGetValue(targetId, out lastHitTime);
-            
-            if (Time.time >= lastHitTime + fearDuration)
-            {
-                lastFearTimes[targetId] = Time.time;
+                    float lastHitTime = 0f;
+                    lastFearTimes.TryGetValue(targetId, out lastHitTime);
+                    
+                    if (Time.time >= lastHitTime + fearDuration)
+                    {
+                        lastFearTimes[targetId] = Time.time;
                 
                 // Aplicar el efecto de miedo
-                photonView.RPC("RPC_ApplyFearEffect", RpcTarget.All, targetId);
+                        photonView.RPC("RPC_ApplyFearEffect", RpcTarget.All, targetId);
                 Debug.Log($"[ScarecrowAbility] Aplicando miedo a {hero.name} (ID: {targetId})");
                 
                 // Programar la destrucción del espantapájaros después de un pequeño retraso

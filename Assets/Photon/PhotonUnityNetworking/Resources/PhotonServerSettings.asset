@@ -110,6 +110,7 @@ MonoBehaviour:
   - RPC_ShotgunHitEnvironment
   - RPC_PlayFearSound
   - RPC_ApplyScreenDarkening
+  - RPC_SyncTargetPosition
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

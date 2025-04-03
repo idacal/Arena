@@ -95,8 +95,8 @@ namespace Photon.Pun.Demo.Asteroids
         protected virtual void UpdateMovement()
         {
             // Si tenemos Rigidbody, usamos física para el movimiento
-            if (projectileRigidbody != null && !projectileRigidbody.isKinematic)
-            {
+    if (projectileRigidbody != null && !projectileRigidbody.isKinematic)
+    {
                 // Para proyectiles con gravedad, ajustar la dirección incluyendo gravedad
                 if (useGravity)
                 {
@@ -112,8 +112,8 @@ namespace Photon.Pun.Demo.Asteroids
                 else
                 {
                     // Para proyectiles sin gravedad, mantener velocidad constante
-                    projectileRigidbody.velocity = currentDirection * speed;
-                }
+        projectileRigidbody.velocity = currentDirection * speed;
+    }
             }
             else
             {
@@ -175,50 +175,50 @@ namespace Photon.Pun.Demo.Asteroids
                 else if (hitHero == null)
                 {
                     // Crear efecto de impacto
-                    if (impactEffectPrefab != null)
-                    {
+    if (impactEffectPrefab != null)
+    {
                         Instantiate(impactEffectPrefab, hit.point, Quaternion.LookRotation(hit.normal));
-                    }
-                    
+    }
+    
                     // Informar a todos los clientes sobre el impacto con el entorno
                     photonView.RPC("RPC_OnHitEnvironment", RpcTarget.All, hit.point, hit.normal);
                     
                     // Detener movimiento y destruir
-                    isMoving = false;
+    isMoving = false;
                     DestroyAbility();
                 }
             }
-        }
-        
+}
+
         /// <summary>
         /// Método para activar efectos visuales
         /// </summary>
         protected virtual void ActivateVisualEffects()
+{
+    // Activar modelo si existe
+    if (projectileModel != null)
+    {
+        projectileModel.SetActive(true);
+    }
+    
+    // Activar trail si existe
+    if (trailEffect != null)
+    {
+        trailEffect.enabled = true;
+        trailEffect.Clear(); // Limpiar cualquier punto previo
+    }
+    
+    // Activar partículas si existen
+    if (flyingParticles != null)
+    {
+        flyingParticles.gameObject.SetActive(true);
+        if (!flyingParticles.isPlaying)
         {
-            // Activar modelo si existe
-            if (projectileModel != null)
-            {
-                projectileModel.SetActive(true);
-            }
-            
-            // Activar trail si existe
-            if (trailEffect != null)
-            {
-                trailEffect.enabled = true;
-                trailEffect.Clear(); // Limpiar cualquier punto previo
-            }
-            
-            // Activar partículas si existen
-            if (flyingParticles != null)
-            {
-                flyingParticles.gameObject.SetActive(true);
-                if (!flyingParticles.isPlaying)
-                {
-                    flyingParticles.Play();
-                }
-            }
+            flyingParticles.Play();
         }
-        
+    }
+}
+       
         /// <summary>
         /// Callback de Unity para colisiones físicas (complemento a la detección manual)
         /// </summary>
@@ -242,8 +242,8 @@ namespace Photon.Pun.Demo.Asteroids
                     hitTargets.Add(targetId);
                     
                     // Procesar el impacto
-                    ProcessImpact(hitHero);
-                    
+                ProcessImpact(hitHero);
+                
                     // Destruir si no atraviesa objetivos
                     if (!penetratesTargets)
                     {
@@ -252,14 +252,14 @@ namespace Photon.Pun.Demo.Asteroids
                     }
                     else
                     {
-                        // Incrementar contador de penetraciones
-                        penetrationCount++;
-                        
+                // Incrementar contador de penetraciones
+                penetrationCount++;
+                
                         // Si alcanzamos el límite, destruir
                         if (penetrationCount >= maxPenetrations)
-                        {
+                {
                             isMoving = false;
-                            DestroyAbility();
+                    DestroyAbility();
                         }
                     }
                 }
@@ -312,8 +312,8 @@ namespace Photon.Pun.Demo.Asteroids
                     hitTargets.Add(targetId);
                     
                     // Procesar el impacto
-                    ProcessImpact(hitHero);
-                    
+                ProcessImpact(hitHero);
+                
                     // Destruir si no atraviesa objetivos
                     if (!penetratesTargets)
                     {
@@ -322,14 +322,14 @@ namespace Photon.Pun.Demo.Asteroids
                     }
                     else
                     {
-                        // Incrementar contador de penetraciones
-                        penetrationCount++;
-                        
+                // Incrementar contador de penetraciones
+                penetrationCount++;
+                
                         // Si alcanzamos el límite, destruir
                         if (penetrationCount >= maxPenetrations)
-                        {
+                {
                             isMoving = false;
-                            DestroyAbility();
+                    DestroyAbility();
                         }
                     }
                 }

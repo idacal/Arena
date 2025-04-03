@@ -76,6 +76,10 @@ MonoBehaviour:
   isMagicDamage: 1
   effectDuration: 0
   impactEffectPrefab: {fileID: 0}
+  abilitySound: {fileID: 0}
+  impactSound: {fileID: 0}
+  volumeMultiplier: 1
+  spatialBlend: 1
   radius: 1
   useGrowingRadius: 0
   growthSpeed: 1
