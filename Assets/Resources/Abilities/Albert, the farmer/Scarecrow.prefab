@@ -74,7 +74,7 @@ MonoBehaviour:
   effectDuration: 0
   impactEffectPrefab: {fileID: 0}
   abilitySound: {fileID: 8300000, guid: 3039c121e0cbe7941be5466ceac9add4, type: 3}
-  impactSound: {fileID: 0}
+  impactSound: {fileID: 8300000, guid: a1258a5d2bf3bec4ea240bc72771baa3, type: 3}
   volumeMultiplier: 1
   spatialBlend: 1
   radius: 5
@@ -89,8 +89,8 @@ MonoBehaviour:
   aoeVisualEffect: {fileID: 0}
   scaleVisualWithRadius: 1
   particleEffect: {fileID: 0}
-  fearDuration: 2
+  fearDuration: 3
   scarecrowHealth: 100
   scarecrowPrefab: {fileID: 28731641800631256, guid: 5e28f2fe2ed3d4244943253f87d5d71b, type: 3}
-  allyAreaColor: {r: 1, g: 0.7, b: 0, a: 0.3}
+  allyAreaColor: {r: 0, g: 0.0064702034, b: 0.8156863, a: 0.3}
   enemyAreaColor: {r: 1, g: 0.3, b: 0.3, a: 0.3}

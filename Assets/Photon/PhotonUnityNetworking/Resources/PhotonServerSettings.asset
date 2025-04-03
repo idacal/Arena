@@ -108,6 +108,8 @@ MonoBehaviour:
   - RPC_ForcePlayerLayer
   - RPC_PlaySound
   - RPC_ShotgunHitEnvironment
+  - RPC_PlayFearSound
+  - RPC_ApplyScreenDarkening
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

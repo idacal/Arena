@@ -9732,6 +9732,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   lobbyMusic: {fileID: 8300000, guid: 1fd8ca428e696b74199c68392d81fb99, type: 3}
   gameplayMusic: {fileID: 8300000, guid: 58396bf53afcc7f47b20548d096f668b, type: 3}
+  defaultVolume: 0.256
+  volumeSlider: {fileID: 0}
+  volumePanel: {fileID: 0}
 --- !u!4 &1764620808
 Transform:
   m_ObjectHideFlags: 0

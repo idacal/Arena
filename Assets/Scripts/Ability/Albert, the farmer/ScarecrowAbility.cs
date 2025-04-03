@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 using Photon.Pun;
+using UnityEngine.UI;
 
 namespace Photon.Pun.Demo.Asteroids
 {
@@ -395,15 +396,69 @@ namespace Photon.Pun.Demo.Asteroids
             // Aplicar efecto de miedo
             ApplyFearEffect(target);
             
-            // Reproducir sonido de impacto
-            if (impactSound != null)
-            {
-                PlayImpactSound();
-                Debug.Log("[ScarecrowAbility] Reproduciendo sonido de miedo");
-            }
+            // Reproducir sonido de miedo FORZADAMENTE para todos
+            PlayFearSoundForEveryone();
             
             // Animar el espantapájaros
             AnimateScarecrow();
+            
+            // Crear efecto visual en el área cuando se activa
+            CreateActivationEffect();
+        }
+        
+        /// <summary>
+        /// Reproduce el sonido de miedo garantizando que se escuche en todos los clientes
+        /// </summary>
+        private void PlayFearSoundForEveryone()
+        {
+            // 1. Reproducir localmente primero (inmediato)
+            if (impactSound != null) 
+            {
+                // Crear AudioSource temporal para reproducción garantizada
+                GameObject audioObj = new GameObject("FearSoundTemp");
+                audioObj.transform.position = transform.position;
+                
+                AudioSource tempAudio = audioObj.AddComponent<AudioSource>();
+                tempAudio.clip = impactSound;
+                tempAudio.volume = 1.0f;  // Volumen máximo para asegurar que se escuche
+                tempAudio.spatialBlend = 0.5f;  // Mezcla entre 2D y 3D para mejor audibilidad
+                tempAudio.minDistance = 10f;    // Aumentar distancia mínima
+                tempAudio.maxDistance = 50f;    // Aumentar distancia máxima
+                tempAudio.rolloffMode = AudioRolloffMode.Linear; // Atenuación lineal, más clara
+                tempAudio.Play();
+                
+                // Destruir después de reproducir
+                Destroy(audioObj, impactSound.length + 0.1f);
+                
+                Debug.Log("[ScarecrowAbility] ¡Reproduciendo sonido de miedo con AudioSource dedicado!");
+            }
+            
+            // 2. Asegurar que se reproduzca en todos los clientes a través de RPC
+            photonView.RPC("RPC_PlayFearSound", RpcTarget.Others);
+        }
+        
+        [PunRPC]
+        private void RPC_PlayFearSound()
+        {
+            if (impactSound != null)
+            {
+                // Mismo enfoque de AudioSource temporal para los clientes remotos
+                GameObject audioObj = new GameObject("FearSoundTemp");
+                audioObj.transform.position = transform.position;
+                
+                AudioSource tempAudio = audioObj.AddComponent<AudioSource>();
+                tempAudio.clip = impactSound;
+                tempAudio.volume = 1.0f;
+                tempAudio.spatialBlend = 0.5f;
+                tempAudio.minDistance = 10f;
+                tempAudio.maxDistance = 50f;
+                tempAudio.rolloffMode = AudioRolloffMode.Linear;
+                tempAudio.Play();
+                
+                Destroy(audioObj, impactSound.length + 0.1f);
+                
+                Debug.Log("[ScarecrowAbility] Cliente remoto: Reproduciendo sonido de miedo");
+            }
         }
         
         private void AnimateScarecrow()
@@ -465,30 +520,101 @@ namespace Photon.Pun.Demo.Asteroids
             IFearable fearable = target.GetComponent<IFearable>();
             if (fearable != null)
             {
+                // Aplicar el estado de miedo personalizado con comportamiento errático
+                ApplyErraticFearMovement(target);
+                
                 // Aplicar el estado de miedo
                 fearable.ApplyFear(fearDuration);
                 Debug.Log($"[ScarecrowAbility] Aplicando miedo a {target.name} durante {fearDuration} segundos");
                 
                 // Crear efecto visual de miedo
                 CreateFearVisualEffect(target.transform);
+                
+                // Aplicar oscurecimiento de pantalla al jugador afectado
+                photonView.RPC("RPC_ApplyScreenDarkening", target.photonView.Owner, fearDuration);
+                
                 return;
             }
             
             // Alternativa: usar el controlador de movimiento para simular miedo
-            // (Esta parte es un fallback por si acaso)
             HeroMovementController moveController = target.GetComponent<HeroMovementController>();
             if (moveController != null)
             {
-                // Calcular dirección de huida (alejarse del espantapájaros)
-                Vector3 fleeDirection = (target.transform.position - transform.position).normalized;
-                Vector3 fleePosition = target.transform.position + fleeDirection * 10f;
-                
-                // Aplicar efecto de huida
-                moveController.SetDestination(fleePosition);
-                moveController.ApplyStun(0.5f);
+                // Aplicar movimiento errático de miedo
+                ApplyErraticFearMovement(target);
                 
                 // Crear efecto visual
                 CreateFearVisualEffect(target.transform);
+                
+                // Aplicar oscurecimiento de pantalla al jugador afectado
+                photonView.RPC("RPC_ApplyScreenDarkening", target.photonView.Owner, fearDuration);
+            }
+        }
+        
+        /// <summary>
+        /// Aplica un movimiento errático al jugador con miedo
+        /// </summary>
+        private void ApplyErraticFearMovement(HeroBase target)
+        {
+            // Solo ejecutar en el cliente que es dueño del objeto
+            if (!target.photonView.IsMine) return;
+            
+            HeroMovementController moveController = target.GetComponent<HeroMovementController>();
+            if (moveController == null) return;
+            
+            // Iniciar el comportamiento errático
+            target.StartCoroutine(ErraticMovementCoroutine(moveController, fearDuration));
+        }
+        
+        /// <summary>
+        /// Coroutine para movimiento errático de miedo
+        /// </summary>
+        private System.Collections.IEnumerator ErraticMovementCoroutine(HeroMovementController moveController, float duration)
+        {
+            // Guardar la posición inicial
+            Vector3 initialPosition = moveController.transform.position;
+            float elapsedTime = 0;
+            
+            // Usar la velocidad del héroe con un incremento para el efecto de miedo
+            HeroBase heroBase = moveController.GetComponent<HeroBase>();
+            float moveSpeed = (heroBase != null) ? heroBase.moveSpeed * 1.3f : 5f; // 30% más rápido
+            
+            // Bucle durante la duración del efecto
+            while (elapsedTime < duration)
+            {
+                // Genera una nueva dirección aleatoria cada 0.4-0.7 segundos
+                float changeTime = Random.Range(0.4f, 0.7f);
+                Vector3 randomDirection = Random.insideUnitSphere;
+                randomDirection.y = 0; // Mantener en plano horizontal
+                randomDirection.Normalize();
+                
+                // Radio máximo para el movimiento errático (3 unidades)
+                float maxRadius = 3f;
+                Vector3 boundedDirection = randomDirection * maxRadius;
+                
+                // Posición objetivo dentro del radio máximo desde la posición inicial
+                Vector3 targetPosition = initialPosition + boundedDirection;
+                
+                // Aplicar movimiento durante este segmento
+                float segmentTime = 0;
+                while (segmentTime < changeTime && elapsedTime < duration)
+                {
+                    // Mover hacia la dirección actual (rotación)
+                    moveController.transform.rotation = Quaternion.Slerp(
+                        moveController.transform.rotation,
+                        Quaternion.LookRotation(randomDirection),
+                        Time.deltaTime * 5f);
+                    
+                    // Mover con velocidad más rápida pero errática (posición)
+                    moveController.transform.position = Vector3.MoveTowards(
+                        moveController.transform.position,
+                        targetPosition,
+                        moveSpeed * Time.deltaTime);
+                    
+                    segmentTime += Time.deltaTime;
+                    elapsedTime += Time.deltaTime;
+                    yield return null;
+                }
             }
         }
         
@@ -546,6 +672,250 @@ namespace Photon.Pun.Demo.Asteroids
             Destroy(fearEffect, fearDuration);
             
             Debug.Log($"[ScarecrowAbility] Creado efecto visual de miedo sobre {targetTransform.name}");
+        }
+        
+        /// <summary>
+        /// Crea un efecto visual cuando el espantapájaros se activa
+        /// </summary>
+        private void CreateActivationEffect()
+        {
+            // Buscar el objeto de área
+            Transform areaObj = transform.Find("AreaEffect");
+            if (areaObj == null) return;
+            
+            // 1. Cambiar color del área a negro (efecto oscuro)
+            LineRenderer lineRenderer = areaObj.GetComponent<LineRenderer>();
+            if (lineRenderer != null)
+            {
+                // Guardar colores originales para restaurar
+                Color originalStartColor = lineRenderer.startColor;
+                Color originalEndColor = lineRenderer.endColor;
+                
+                // Cambiar a color negro/púrpura oscuro
+                Color darkColor = new Color(0.2f, 0, 0.3f, 0.8f); // Púrpura oscuro
+                lineRenderer.startColor = darkColor;
+                lineRenderer.endColor = darkColor;
+                
+                // Restaurar después de un tiempo
+                StartCoroutine(RestoreColorAfterDelay(lineRenderer, originalStartColor, originalEndColor, 0.5f));
+            }
+            
+            // Buscar el cilindro del área
+            Transform areaShadow = areaObj.Find("AreaShadow");
+            if (areaShadow != null && areaShadow.GetComponent<Renderer>() != null)
+            {
+                Renderer shadowRenderer = areaShadow.GetComponent<Renderer>();
+                Color originalColor = shadowRenderer.material.color;
+                
+                // Cambiar a color oscuro
+                Color darkAreaColor = new Color(0.1f, 0, 0.2f, 0.6f);
+                shadowRenderer.material.color = darkAreaColor;
+                
+                // Restaurar después de un tiempo
+                StartCoroutine(RestoreRendererColorAfterDelay(shadowRenderer, originalColor, 0.5f));
+            }
+            
+            // 2. Crear un efecto de onda expansiva
+            StartCoroutine(CreateExpandingWaveEffect(areaObj.position, radius));
+            
+            // 3. Crear sistema de partículas para el efecto
+            CreateActivationParticles(areaObj.position);
+        }
+        
+        /// <summary>
+        /// Crea un efecto de onda expansiva
+        /// </summary>
+        private System.Collections.IEnumerator CreateExpandingWaveEffect(Vector3 center, float maxRadius)
+        {
+            // Crear objeto para la onda
+            GameObject waveObj = new GameObject("ScarecrowWave");
+            waveObj.transform.position = center;
+            waveObj.transform.SetParent(transform); // Importante: hacer hijo para que se destruya con el padre
+            
+            // Añadir LineRenderer para la onda
+            LineRenderer waveRenderer = waveObj.AddComponent<LineRenderer>();
+            waveRenderer.useWorldSpace = false;
+            waveRenderer.loop = true;
+            waveRenderer.positionCount = 60;
+            waveRenderer.startWidth = 0.1f;
+            waveRenderer.endWidth = 0.05f;
+            
+            // Color de la onda (púrpura brillante)
+            Color waveColor = new Color(0.7f, 0.2f, 1f, 0.8f); 
+            waveRenderer.startColor = waveColor;
+            waveRenderer.endColor = new Color(waveColor.r, waveColor.g, waveColor.b, 0);
+            
+            // Material para la onda
+            Material waveMaterial = CreateSafeMaterial("Particles/Additive");
+            waveRenderer.material = waveMaterial;
+            
+            // Animación de expansión
+            float duration = 0.5f;
+            float elapsedTime = 0;
+            
+            while (elapsedTime < duration)
+            {
+                float t = elapsedTime / duration;
+                float currentRadius = maxRadius * t;
+                
+                // Actualizar puntos del círculo
+                float deltaTheta = (2f * Mathf.PI) / (waveRenderer.positionCount);
+                float theta = 0f;
+                
+                for (int i = 0; i < waveRenderer.positionCount; i++)
+                {
+                    float x = currentRadius * Mathf.Cos(theta);
+                    float z = currentRadius * Mathf.Sin(theta);
+                    Vector3 pos = new Vector3(x, 0.05f, z);
+                    waveRenderer.SetPosition(i, pos);
+                    theta += deltaTheta;
+                }
+                
+                // Actualizar alpha basado en progreso
+                Color fadeColor = waveColor;
+                fadeColor.a = waveColor.a * (1 - t);
+                waveRenderer.startColor = fadeColor;
+                
+                elapsedTime += Time.deltaTime;
+                yield return null;
+            }
+            
+            // Asegurar que se destruya el objeto
+            Destroy(waveObj);
+            
+            Debug.Log("[ScarecrowAbility] Efecto de onda expansiva completado y destruido");
+        }
+        
+        /// <summary>
+        /// Crea partículas para el efecto de activación
+        /// </summary>
+        private void CreateActivationParticles(Vector3 center)
+        {
+            // Crear objeto para partículas
+            GameObject particlesObj = new GameObject("ActivationParticles");
+            particlesObj.transform.position = center;
+            
+            // Añadir sistema de partículas
+            ParticleSystem particles = particlesObj.AddComponent<ParticleSystem>();
+            
+            // Configurar sistema de partículas
+            var main = particles.main;
+            main.startSpeed = 2f;
+            main.startSize = 0.3f;
+            main.startLifetime = 1f;
+            main.maxParticles = 100;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            
+            // Color de partículas: morado oscuro a claro
+            var colorOverLifetime = particles.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            
+            Gradient gradient = new Gradient();
+            gradient.SetKeys(
+                new GradientColorKey[] { 
+                    new GradientColorKey(new Color(0.7f, 0.2f, 1f), 0.0f),
+                    new GradientColorKey(new Color(0.9f, 0.5f, 1f), 1.0f) 
+                },
+                new GradientAlphaKey[] { 
+                    new GradientAlphaKey(1.0f, 0.0f),
+                    new GradientAlphaKey(0.0f, 1.0f) 
+                }
+            );
+            colorOverLifetime.color = gradient;
+            
+            // Emisión en forma de cono
+            var shape = particles.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Cone;
+            shape.angle = 15f;
+            shape.radius = 0.1f;
+            shape.rotation = new Vector3(90f, 0f, 0f); // Apuntar hacia arriba
+            
+            // Emisión inicial
+            var emission = particles.emission;
+            emission.enabled = true;
+            emission.rateOverTime = 0;
+            emission.SetBursts(new ParticleSystem.Burst[] { 
+                new ParticleSystem.Burst(0.0f, 50) 
+            });
+            
+            // Destruir después de completar
+            Destroy(particlesObj, 2f);
+        }
+        
+        /// <summary>
+        /// Restaura los colores originales después de un retraso
+        /// </summary>
+        private System.Collections.IEnumerator RestoreColorAfterDelay(LineRenderer lineRenderer, Color originalStart, Color originalEnd, float delay)
+        {
+            yield return new WaitForSeconds(delay);
+            
+            if (lineRenderer != null)
+            {
+                lineRenderer.startColor = originalStart;
+                lineRenderer.endColor = originalEnd;
+            }
+        }
+        
+        /// <summary>
+        /// Restaura el color original de un renderer después de un retraso
+        /// </summary>
+        private System.Collections.IEnumerator RestoreRendererColorAfterDelay(Renderer renderer, Color originalColor, float delay)
+        {
+            yield return new WaitForSeconds(delay);
+            
+            if (renderer != null)
+            {
+                renderer.material.color = originalColor;
+            }
+        }
+
+        [PunRPC]
+        private void RPC_ApplyScreenDarkening(float duration)
+        {
+            // Este RPC solo debe ejecutarse en el cliente afectado
+            if (!photonView.IsMine) return;
+            
+            // Crear objeto para el efecto de oscuridad
+            GameObject darkeningScreen = new GameObject("FearDarkeningScreen");
+            darkeningScreen.transform.SetParent(null); // No tener padre para que no se destruya con la habilidad
+            
+            // Hacer que persista entre escenas y no se destruya fácilmente
+            DontDestroyOnLoad(darkeningScreen);
+            
+            // Crear un canvas para mostrar el efecto en pantalla
+            Canvas canvas = darkeningScreen.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 999; // Asegurar que está por encima de todo
+            
+            // Añadir escalador para manejar diferentes resoluciones
+            CanvasScaler scaler = darkeningScreen.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920, 1080);
+            
+            // Crear la imagen negra
+            GameObject imageObj = new GameObject("DarkImage");
+            imageObj.transform.SetParent(canvas.transform, false);
+            
+            // Configurar la imagen para cubrir toda la pantalla
+            RectTransform rect = imageObj.AddComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            
+            // Añadir componente de imagen con color negro semi-transparente
+            Image image = imageObj.AddComponent<Image>();
+            image.color = new Color(0.05f, 0, 0.1f, 0.5f); // Negro/violeta oscuro semi-transparente
+            
+            // Añadir efecto vignette (oscuridad en bordes)
+            image.material = new Material(Shader.Find("UI/Default"));
+            
+            // Añadir comportamiento para que la oscuridad se desvanezca
+            FearDarkeningEffect darkeningEffect = darkeningScreen.AddComponent<FearDarkeningEffect>();
+            darkeningEffect.Initialize(image, duration);
+            
+            Debug.Log("[ScarecrowAbility] Aplicando efecto de oscurecimiento de pantalla al jugador");
         }
     }
     
@@ -606,6 +976,62 @@ namespace Photon.Pun.Demo.Asteroids
                 // Delegar al componente principal
                 ownerAbility.OnEnemyEnterArea(hero);
             }
+        }
+    }
+
+    /// <summary>
+    /// Efecto de oscurecimiento de pantalla que se desvanece con el tiempo
+    /// </summary>
+    public class FearDarkeningEffect : MonoBehaviour
+    {
+        private Image darkeningImage;
+        private float duration;
+        private float startTime;
+        private Color initialColor;
+        private float pulsationSpeed = 2f;
+        
+        public void Initialize(Image image, float effectDuration)
+        {
+            darkeningImage = image;
+            duration = effectDuration;
+            startTime = Time.time;
+            initialColor = image.color;
+        }
+        
+        void Update()
+        {
+            if (darkeningImage == null)
+            {
+                Destroy(gameObject);
+                return;
+            }
+            
+            // Calcular tiempo transcurrido
+            float elapsedTime = Time.time - startTime;
+            
+            if (elapsedTime >= duration)
+            {
+                // Destruir efecto cuando termina
+                Destroy(gameObject);
+                return;
+            }
+            
+            // Calcular intensidad basada en el tiempo transcurrido
+            float normalizedTime = elapsedTime / duration;
+            
+            // Añadir efecto de pulsación para que sea más dinámico
+            float pulseFactor = Mathf.Sin(elapsedTime * pulsationSpeed) * 0.1f + 0.9f;
+            
+            // Calcular alpha basado en el tiempo restante (se desvanece gradualmente)
+            float alpha = initialColor.a * (1f - normalizedTime) * pulseFactor;
+            
+            // Actualizar color de la imagen
+            darkeningImage.color = new Color(
+                initialColor.r,
+                initialColor.g,
+                initialColor.b,
+                alpha
+            );
         }
     }
 }
