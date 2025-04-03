@@ -147,6 +147,16 @@ namespace Photon.Pun.Demo.Asteroids
             triggerCollider.radius = radius;
             triggerCollider.isTrigger = true;
             
+            // IMPORTANTE: Configurar la capa del collider para que ignore los raycast
+            // Intentar usar una capa existente como "Ignore Raycast" (capa 2)
+            areaEffectObj.layer = 2; // Capa "Ignore Raycast" por defecto en Unity
+            
+            // Alternativamente, si el juego usa un sistema de capas personalizado
+            // buscar una capa similar o consultar al desarrollador para usar la adecuada
+            // int ignoreRaycastLayer = LayerMask.NameToLayer("IgnoreRaycast");
+            // if (ignoreRaycastLayer != -1)
+            //     areaEffectObj.layer = ignoreRaycastLayer;
+            
             // Necesitamos un Rigidbody para que el trigger funcione correctamente
             Rigidbody rb = areaEffectObj.AddComponent<Rigidbody>();
             rb.isKinematic = true;      // No afectado por física
@@ -156,7 +166,7 @@ namespace Photon.Pun.Demo.Asteroids
             ScarecrowAreaTrigger areaTrigger = areaEffectObj.AddComponent<ScarecrowAreaTrigger>();
             areaTrigger.Initialize(this);
             
-            Debug.Log($"[ScarecrowAbility] Área de efecto creada correctamente con color {(IsAlly() ? "aliado" : "enemigo")}");
+            Debug.Log($"[ScarecrowAbility] Área de efecto creada correctamente con color {(IsAlly() ? "aliado" : "enemigo")} y configurada para ignorar raycast");
         }
         
         /// <summary>
@@ -396,7 +406,7 @@ namespace Photon.Pun.Demo.Asteroids
             // Aplicar efecto de miedo
             ApplyFearEffect(target);
             
-            // Reproducir sonido de miedo FORZADAMENTE para todos
+            // Reproducir sonido (ahora controlado para evitar duplicación)
             PlayFearSoundForEveryone();
             
             // Animar el espantapájaros
@@ -411,38 +421,24 @@ namespace Photon.Pun.Demo.Asteroids
         /// </summary>
         private void PlayFearSoundForEveryone()
         {
-            // 1. Reproducir localmente primero (inmediato)
-            if (impactSound != null) 
-            {
-                // Crear AudioSource temporal para reproducción garantizada
-                GameObject audioObj = new GameObject("FearSoundTemp");
-                audioObj.transform.position = transform.position;
-                
-                AudioSource tempAudio = audioObj.AddComponent<AudioSource>();
-                tempAudio.clip = impactSound;
-                tempAudio.volume = 1.0f;  // Volumen máximo para asegurar que se escuche
-                tempAudio.spatialBlend = 0.5f;  // Mezcla entre 2D y 3D para mejor audibilidad
-                tempAudio.minDistance = 10f;    // Aumentar distancia mínima
-                tempAudio.maxDistance = 50f;    // Aumentar distancia máxima
-                tempAudio.rolloffMode = AudioRolloffMode.Linear; // Atenuación lineal, más clara
-                tempAudio.Play();
-                
-                // Destruir después de reproducir
-                Destroy(audioObj, impactSound.length + 0.1f);
-                
-                Debug.Log("[ScarecrowAbility] ¡Reproduciendo sonido de miedo con AudioSource dedicado!");
-            }
+            // Solo el dueño del espantapájaros maneja la reproducción del sonido
+            if (!photonView.IsMine) return;
             
-            // 2. Asegurar que se reproduzca en todos los clientes a través de RPC
+            Debug.Log("[ScarecrowAbility] Intentando reproducir sonido de miedo");
+            
+            // 1. Reproducir localmente
+            PlayFearSoundLocally();
+            
+            // 2. Enviar a otros clientes
             photonView.RPC("RPC_PlayFearSound", RpcTarget.Others);
         }
         
-        [PunRPC]
-        private void RPC_PlayFearSound()
+        // Método para reproducir el sonido localmente
+        private void PlayFearSoundLocally()
         {
-            if (impactSound != null)
+            if (impactSound != null) 
             {
-                // Mismo enfoque de AudioSource temporal para los clientes remotos
+                // Crear AudioSource temporal para reproducción garantizada
                 GameObject audioObj = new GameObject("FearSoundTemp");
                 audioObj.transform.position = transform.position;
                 
@@ -455,10 +451,17 @@ namespace Photon.Pun.Demo.Asteroids
                 tempAudio.rolloffMode = AudioRolloffMode.Linear;
                 tempAudio.Play();
                 
+                // Destruir después de reproducir
                 Destroy(audioObj, impactSound.length + 0.1f);
                 
-                Debug.Log("[ScarecrowAbility] Cliente remoto: Reproduciendo sonido de miedo");
+                Debug.Log("[ScarecrowAbility] Reproduciendo sonido de miedo localmente");
             }
+        }
+        
+        [PunRPC]
+        private void RPC_PlayFearSound()
+        {
+            PlayFearSoundLocally();
         }
         
         private void AnimateScarecrow()
@@ -876,22 +879,46 @@ namespace Photon.Pun.Demo.Asteroids
             // Este RPC solo debe ejecutarse en el cliente afectado
             if (!photonView.IsMine) return;
             
+            Debug.Log("[ScarecrowAbility] Iniciando efecto de oscurecimiento de pantalla");
+            
+            // Encontrar la cámara principal
+            Camera mainCamera = Camera.main;
+            if (mainCamera == null)
+            {
+                Debug.LogError("[ScarecrowAbility] No se encontró la cámara principal para el efecto de oscurecimiento");
+                return;
+            }
+            
+            // Comprobar si hay un PhotonMOBACamera en la cámara
+            PhotonMOBACamera mobaCamera = mainCamera.GetComponent<PhotonMOBACamera>();
+            if (mobaCamera != null)
+            {
+                Debug.Log("[ScarecrowAbility] Cámara MOBA encontrada: " + mobaCamera.name);
+            }
+            
             // Crear objeto para el efecto de oscuridad
             GameObject darkeningScreen = new GameObject("FearDarkeningScreen");
-            darkeningScreen.transform.SetParent(null); // No tener padre para que no se destruya con la habilidad
             
             // Hacer que persista entre escenas y no se destruya fácilmente
             DontDestroyOnLoad(darkeningScreen);
             
             // Crear un canvas para mostrar el efecto en pantalla
             Canvas canvas = darkeningScreen.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            
+            // CAMBIO IMPORTANTE: Usar ScreenSpaceCamera en lugar de ScreenSpaceOverlay
+            canvas.renderMode = RenderMode.ScreenSpaceCamera;
+            canvas.worldCamera = mainCamera;
+            canvas.planeDistance = 1; // Muy cercano a la cámara
             canvas.sortingOrder = 999; // Asegurar que está por encima de todo
             
             // Añadir escalador para manejar diferentes resoluciones
             CanvasScaler scaler = darkeningScreen.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920, 1080);
+            
+            // Añadir raycaster para que los eventos pasen a través
+            GraphicRaycaster raycaster = darkeningScreen.AddComponent<GraphicRaycaster>();
+            raycaster.blockingObjects = GraphicRaycaster.BlockingObjects.None;
             
             // Crear la imagen negra
             GameObject imageObj = new GameObject("DarkImage");
@@ -907,15 +934,13 @@ namespace Photon.Pun.Demo.Asteroids
             // Añadir componente de imagen con color negro semi-transparente
             Image image = imageObj.AddComponent<Image>();
             image.color = new Color(0.05f, 0, 0.1f, 0.5f); // Negro/violeta oscuro semi-transparente
-            
-            // Añadir efecto vignette (oscuridad en bordes)
-            image.material = new Material(Shader.Find("UI/Default"));
+            image.raycastTarget = false; // Permitir clics a través de la imagen
             
             // Añadir comportamiento para que la oscuridad se desvanezca
             FearDarkeningEffect darkeningEffect = darkeningScreen.AddComponent<FearDarkeningEffect>();
             darkeningEffect.Initialize(image, duration);
             
-            Debug.Log("[ScarecrowAbility] Aplicando efecto de oscurecimiento de pantalla al jugador");
+            Debug.Log("[ScarecrowAbility] Efecto de oscurecimiento aplicado correctamente");
         }
     }
     
