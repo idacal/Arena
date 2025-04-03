@@ -8,6 +8,9 @@ public class AOEVisualEffect : MonoBehaviour
     public float radius = 5f;
     public float heightOffset = 0.05f;
     public Material customMaterial;
+    
+    [Tooltip("Si es false, el color no se actualizará después de la inicialización")]
+    public bool updateColorOnRefresh = true;
 
     protected MeshRenderer meshRenderer;
     protected MeshFilter meshFilter;
@@ -124,6 +127,12 @@ public class AOEVisualEffect : MonoBehaviour
         }
 
         CreateCircleMesh(); // Actualizar el tamaño si el radio ha cambiado
+
+        // Actualizar color solo si la bandera está activada
+        if (updateColorOnRefresh && materialInstance != null)
+        {
+            materialInstance.color = areaColor;
+        }
     }
 
     protected virtual void OnValidate()

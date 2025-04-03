@@ -38,46 +38,45 @@ public class ScarecrowPrefabSetup : MonoBehaviour
     
     public void SetupAreaEffect()
     {
-        if (isSettingUp) return;
-        
-        // Crear o obtener el efecto de área
-        Transform existingArea = transform.Find("AreaEffect");
-        GameObject areaObj;
-        
-        if (existingArea != null)
+        bool isFirstSetup = false;
+        // Si no existe el efecto, crearlo
+        if (areaEffect == null)
         {
-            areaObj = existingArea.gameObject;
-            areaEffect = areaObj.GetComponent<PulsingAOEVisualEffect>();
-            if (areaEffect == null)
-            {
-                areaEffect = areaObj.AddComponent<PulsingAOEVisualEffect>();
-            }
+            isFirstSetup = true;
+            GameObject areaEffectObj = new GameObject("Area Effect");
+            areaEffectObj.transform.SetParent(transform);
+            areaEffectObj.transform.localPosition = Vector3.zero;
+            areaEffectObj.transform.localRotation = Quaternion.identity;
+            areaEffect = areaEffectObj.AddComponent<PulsingAOEVisualEffect>();
+            
+            // Solo establecer el color en la primera configuración
+            areaEffect.areaColor = areaColor;
+        }
+
+        // Actualizar las propiedades que no afectan al color
+        areaEffect.radius = areaRadius;
+        areaEffect.heightOffset = 0.1f;
+        
+        // No actualizar el color si ya existe, respetando así la configuración del editor
+        if (isFirstSetup)
+        {
+            areaEffect.UpdateVisuals();
         }
         else
         {
-            areaObj = new GameObject("AreaEffect");
-            areaObj.transform.SetParent(transform);
-            areaObj.transform.localPosition = Vector3.zero;
-            areaEffect = areaObj.AddComponent<PulsingAOEVisualEffect>();
+            // Llamar a UpdateVisuals solo si es necesario actualizar el radio
+            if (areaEffect.radius != areaRadius)
+            {
+                areaEffect.UpdateVisuals();
+            }
         }
         
-        if (areaEffect != null)
+        #if UNITY_EDITOR
+        if (!Application.isPlaying)
         {
-            areaEffect.areaColor = areaColor;
-            areaEffect.radius = areaRadius;
-            areaEffect.pulseSpeed = 2f;
-            areaEffect.pulseMinAlpha = 0.2f;
-            areaEffect.pulseMaxAlpha = 0.8f;
-            areaEffect.heightOffset = 0.05f;
-            areaEffect.customMaterial = areaMaterial;
-            
-            #if UNITY_EDITOR
-            if (!Application.isPlaying)
-            {
-                EditorUtility.SetDirty(areaEffect);
-            }
-            #endif
+            UnityEditor.EditorUtility.SetDirty(areaEffect);
         }
+        #endif
     }
     
     private Material CreateSafeMaterial(Color color)

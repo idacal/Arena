@@ -10,7 +10,6 @@ GameObject:
   m_Component:
   - component: {fileID: 3401863885204574577}
   - component: {fileID: 8802916286348184501}
-  - component: {fileID: 3681004878597071414}
   m_Layer: 0
   m_Name: Scarecrow
   m_TagString: Untagged
@@ -27,7 +26,7 @@ Transform:
   m_GameObject: {fileID: 28731641800631256}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -8.896527, y: 0, z: -13.108725}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -48,25 +47,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHealth: 100
---- !u!114 &3681004878597071414
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 28731641800631256}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3985b2f97a890da41a4feb55ebaf7242, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  areaColor: {r: 0.1764706, g: 0, b: 0.6862745, a: 0.4745098}
-  areaRadius: 5
-  areaMaterial: {fileID: 2100000, guid: a294494d89e64324da941966b5492fab, type: 2}
-  customScarecrowPrefab: {fileID: 0}
-  scarecrowScale: 0.7
-  scarecrowColor: {r: 0.8, g: 0.39999998, b: 0, a: 1}
-  scarecrowMaterial: {fileID: 2100000, guid: bbc5d7763e0944247a076d7d1a02c9ec, type: 2}
 --- !u!1 &1245847353996163154
 GameObject:
   m_ObjectHideFlags: 0
@@ -117,6 +97,7 @@ MonoBehaviour:
   radius: 5
   heightOffset: 0.05
   customMaterial: {fileID: 2100000, guid: a294494d89e64324da941966b5492fab, type: 2}
+  updateColorOnRefresh: 0
   pulseSpeed: 2
   pulseMinAlpha: 0.2
   pulseMaxAlpha: 0.8

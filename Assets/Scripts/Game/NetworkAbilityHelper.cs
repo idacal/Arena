@@ -132,9 +132,18 @@ namespace Photon.Pun.Demo.Asteroids
         
         private void CreateAllVisuals()
         {
+            // Verificar si es un ScarecrowAbility - si lo es, NO crear visuales duplicadas
+            if (GetComponent<ScarecrowAbility>() != null)
+            {
+                if (debugMode)
+                {
+                    Debug.Log("[NetworkAbilityHelper] No se crean visuales para ScarecrowAbility, ya las maneja internamente");
+                }
+                return;
+            }
+
             // Crear visuales para cada tipo de habilidad
             TryCreateVisualsForAOE();
-            TryCreateVisualsForScarecrow();
             TryCreateVisualsForProjectile();
         }
         
@@ -154,35 +163,6 @@ namespace Photon.Pun.Demo.Asteroids
             
             if (debugMode) {
                 Debug.Log("[NetworkAbilityHelper] Creada visualización del área para AOE");
-            }
-        }
-        
-        private void TryCreateVisualsForScarecrow()
-        {
-            ScarecrowAbility scarecrow = GetComponent<ScarecrowAbility>();
-            if (scarecrow == null) return;
-            
-            // Verificar si ya existe un espantapájaros
-            Transform scarecrowObj = transform.Find("BasicScarecrow");
-            if (scarecrowObj == null && scarecrow.scarecrowPrefab != null)
-            {
-                GameObject spawnedScarecrow = Instantiate(scarecrow.scarecrowPrefab, transform.position, Quaternion.identity);
-                spawnedScarecrow.transform.SetParent(transform);
-                if (debugMode) {
-                    Debug.Log("[NetworkAbilityHelper] Creado espantapájaros manualmente");
-                }
-            }
-            
-            // Crear círculo visual si no existe
-            Transform circleVisual = transform.Find("CircleVisual");
-            Transform networkCreatedVisual = transform.Find("NetworkCreatedVisual");
-            
-            if (circleVisual == null && networkCreatedVisual == null)
-            {
-                CreateAOEVisual(scarecrow.radius, scarecrow.areaColor);
-                if (debugMode) {
-                    Debug.Log("[NetworkAbilityHelper] Creada visualización del área para espantapájaros");
-                }
             }
         }
         

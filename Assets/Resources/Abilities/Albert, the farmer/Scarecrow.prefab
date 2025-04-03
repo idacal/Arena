@@ -11,7 +11,6 @@ GameObject:
   - component: {fileID: 8346598441485190126}
   - component: {fileID: 5892757589523640666}
   - component: {fileID: 3178725358393507073}
-  - component: {fileID: 7570399139993718538}
   m_Layer: 0
   m_Name: Scarecrow
   m_TagString: Untagged
@@ -52,8 +51,7 @@ MonoBehaviour:
   Synchronization: 3
   OwnershipTransfer: 1
   observableSearch: 2
-  ObservedComponents:
-  - {fileID: 7570399139993718538}
+  ObservedComponents: []
   sceneViewId: 0
   InstantiationId: 0
   isRuntimeInstantiated: 0
@@ -69,7 +67,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a591930df244964438ed96f84cd36f23, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  lifetime: 5
+  lifetime: 53.4
   destroyOnImpact: 1
   baseDamage: 100
   isMagicDamage: 1
@@ -94,17 +92,5 @@ MonoBehaviour:
   fearDuration: 2
   scarecrowHealth: 100
   scarecrowPrefab: {fileID: 28731641800631256, guid: 5e28f2fe2ed3d4244943253f87d5d71b, type: 3}
-  areaColor: {r: 0.5471698, g: 0.13163047, b: 0.26010287, a: 0.3}
---- !u!114 &7570399139993718538
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5313538048827016762}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6965ac613f7e713408abb8eec4962bff, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  debugMode: 1
+  allyAreaColor: {r: 1, g: 0.7, b: 0, a: 0.3}
+  enemyAreaColor: {r: 1, g: 0.3, b: 0.3, a: 0.3}

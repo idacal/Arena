@@ -13,7 +13,6 @@ GameObject:
   - component: {fileID: 163357814676715535}
   - component: {fileID: 1361268675429351758}
   - component: {fileID: 4780892956646926868}
-  - component: {fileID: -4131816744423090720}
   m_Layer: 0
   m_Name: Shotgun
   m_TagString: Untagged
@@ -103,7 +102,7 @@ MonoBehaviour:
   OwnershipTransfer: 0
   observableSearch: 2
   ObservedComponents:
-  - {fileID: -4131816744423090720}
+  - {fileID: 0}
   sceneViewId: 0
   InstantiationId: 0
   isRuntimeInstantiated: 0
@@ -183,16 +182,3 @@ MonoBehaviour:
   projectilePrefab: {fileID: 2638751705936780157, guid: e44498276946a704181004acd2b6f055, type: 3}
   muzzleFlashPrefab: {fileID: 2750655131838023065, guid: 12cb9461aa2ed6941b6632e23299a364, type: 3}
   showDebugLogs: 0
---- !u!114 &-4131816744423090720
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7171029268720117425}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6965ac613f7e713408abb8eec4962bff, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  debugMode: 0

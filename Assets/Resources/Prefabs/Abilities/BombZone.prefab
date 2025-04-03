@@ -50,6 +50,7 @@ MonoBehaviour:
   radius: 5
   heightOffset: 0.05
   customMaterial: {fileID: 2100000, guid: 1a5411a5f4c64ba41bc679351d5b3ec5, type: 2}
+  updateColorOnRefresh: 0
   pulseSpeed: 2
   pulseMinAlpha: 0.2
   pulseMaxAlpha: 0.8

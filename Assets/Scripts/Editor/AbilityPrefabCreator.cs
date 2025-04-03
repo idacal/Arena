@@ -26,7 +26,7 @@ public class AbilityPrefabCreator : EditorWindow
         
         if (GUILayout.Button("Create Scarecrow in Scene"))
         {
-            CreateScarecrowInScene();
+    
         }
         
         EditorGUILayout.Space();
@@ -161,54 +161,5 @@ public class AbilityPrefabCreator : EditorWindow
         };
     }
     
-    void CreateScarecrowInScene()
-    {
-        // Crear materiales
-        Material areaMaterial = CreateAndSaveMaterial("Scarecrow_Area", new Color(1f, 0.6f, 0f, 0.5f), true);
-        Material scarecrowMaterial = CreateAndSaveMaterial("Scarecrow_Body", new Color(0.8f, 0.4f, 0.0f, 1f));
-        
-        // Crear el objeto principal
-        GameObject scarecrow = new GameObject("Scarecrow");
-        Undo.RegisterCreatedObjectUndo(scarecrow, "Create Scarecrow");
-        
-        // Añadir componentes necesarios
-        var setup = Undo.AddComponent<ScarecrowPrefabSetup>(scarecrow);
-        var ability = Undo.AddComponent<ScarecrowAbility>(scarecrow);
-        var photonView = Undo.AddComponent<PhotonView>(scarecrow);
-        
-        // Configurar PhotonView
-        photonView.ObservedComponents = new List<Component> { ability };
-        photonView.ViewID = 0;
-        
-        // Configurar ScarecrowAbility
-        ability.radius = 5f;
-        ability.fearDuration = 2f;
-        ability.scarecrowHealth = 100f;
-        ability.areaColor = areaMaterial.color;
-        
-        // Configurar ScarecrowPrefabSetup
-        setup.areaRadius = ability.radius;
-        setup.areaColor = ability.areaColor;
-        setup.scarecrowScale = 0.7f;
-        setup.scarecrowColor = scarecrowMaterial.color;
-        setup.areaMaterial = areaMaterial;
-        setup.scarecrowMaterial = scarecrowMaterial;
-        
-        // Posicionar en el centro de la escena
-        scarecrow.transform.position = Vector3.zero;
-        
-        // Seleccionar el objeto creado
-        Selection.activeGameObject = scarecrow;
-        
-        // Forzar la configuración inicial
-        EditorApplication.delayCall += () =>
-        {
-            if (setup != null)
-            {
-                Undo.RecordObject(setup, "Setup Scarecrow");
-                setup.SetupAreaEffect();
-                setup.SetupScarecrowVisual();
-            }
-        };
-    }
+    
 } 
