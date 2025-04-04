@@ -2238,6 +2238,9 @@ namespace Photon.Pun.Demo.Asteroids
             {
                 // Si no tenemos prefab, crear un efecto básico de partículas en tiempo de ejecución
                 CreateDynamicLevelUpEffect();
+                
+                // Sincronizar con todos los clientes - asegurar que todos ven el efecto incluso sin prefab
+                photonView.RPC("RPC_ShowLevelUpEffect", RpcTarget.Others);
             }
         }
         
@@ -2246,78 +2249,270 @@ namespace Photon.Pun.Demo.Asteroids
         /// </summary>
         private void CreateDynamicLevelUpEffect()
         {
-            // Crear objeto para el sistema de partículas
+            // Crear objeto para el sistema de partículas principal
             GameObject effectObj = new GameObject("LevelUpEffect");
-            effectObj.transform.position = transform.position + Vector3.up;
+            effectObj.transform.position = transform.position;
             effectObj.transform.SetParent(transform);
             
+            // Crear anillos alrededor del héroe
+            StartCoroutine(CreateLevelUpRingsSequentially(effectObj));
+            
+            // Destruir después de completar
+            Destroy(effectObj, levelUpEffectDuration);
+        }
+        
+        /// <summary>
+        /// Crea los anillos secuencialmente para evitar errores de partículas
+        /// </summary>
+        private IEnumerator CreateLevelUpRingsSequentially(GameObject parent)
+        {
+            // Crear los anillos con un pequeño retraso entre ellos
+            yield return StartCoroutine(CreateLevelUpRing(parent, 0, 0.7f));
+            yield return new WaitForSeconds(0.1f);
+            yield return StartCoroutine(CreateLevelUpRing(parent, 1, 1.0f));
+            yield return new WaitForSeconds(0.1f);
+            yield return StartCoroutine(CreateLevelUpRing(parent, 2, 1.3f));
+            yield return new WaitForSeconds(0.1f);
+            
+            // Añadir partículas centrales al final
+            CreateSimpleCentralEffect(parent);
+        }
+        
+        /// <summary>
+        /// Crea un anillo de escáner para el efecto de subida de nivel
+        /// </summary>
+        private IEnumerator CreateLevelUpRing(GameObject parent, int ringIndex, float radius)
+        {
+            // Crear objeto para el anillo
+            GameObject ringObj = new GameObject($"LevelUpRing_{ringIndex}");
+            ringObj.transform.position = transform.position + new Vector3(0, 1.0f, 0); // Centrado a la altura de los hombros
+            ringObj.transform.SetParent(parent.transform);
+            
             // Añadir sistema de partículas
-            ParticleSystem ps = effectObj.AddComponent<ParticleSystem>();
-            
-            // Configurar el sistema de partículas
+            ParticleSystem ps = ringObj.AddComponent<ParticleSystem>();
             var main = ps.main;
-            main.startColor = levelUpEffectColor;
-            main.startSize = 0.3f;
-            main.startSpeed = 5f;
+            
+            // Primero inicializamos el sistema con valores por defecto
+            main.startLifetime = 1f;
+            main.startSize = 0.1f;
+            main.startSpeed = 0f;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
             main.maxParticles = 100;
-            main.duration = 0.5f;
-            main.loop = false;
+            main.loop = true;
             
-            // Emisión en forma de explosión circular
             var emission = ps.emission;
-            emission.rateOverTime = 0;
-            emission.SetBursts(new ParticleSystem.Burst[] { 
-                new ParticleSystem.Burst(0f, 50)
-            });
+            emission.rateOverTime = 20;
             
-            // Forma de emisión en esfera
+            // Forma de emisión en círculo
             var shape = ps.shape;
-            shape.shapeType = ParticleSystemShapeType.Sphere;
-            shape.radius = 0.5f;
+            shape.shapeType = ParticleSystemShapeType.Circle;
+            shape.radius = radius;
+            shape.radiusThickness = 0f; // Emitir solo desde el borde
+            shape.arc = 360f;
             
-            // Tamaño a lo largo del tiempo
-            var sizeOverLifetime = ps.sizeOverLifetime;
-            sizeOverLifetime.enabled = true;
-            AnimationCurve sizeCurve = new AnimationCurve(
-                new Keyframe(0f, 0.5f),
-                new Keyframe(0.5f, 1f),
-                new Keyframe(1f, 0f)
-            );
-            sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f, sizeCurve);
-            
-            // Color a lo largo del tiempo para desvanecimiento
+            // Color a lo largo del tiempo para efecto de brillo
             var colorOverLifetime = ps.colorOverLifetime;
             colorOverLifetime.enabled = true;
             Gradient grad = new Gradient();
             grad.SetKeys(
                 new GradientColorKey[] { 
                     new GradientColorKey(levelUpEffectColor, 0f),
-                    new GradientColorKey(levelUpEffectColor, 0.8f) 
+                    new GradientColorKey(Color.white, 0.5f),
+                    new GradientColorKey(levelUpEffectColor, 1f) 
                 },
                 new GradientAlphaKey[] { 
-                    new GradientAlphaKey(1f, 0f),
-                    new GradientAlphaKey(1f, 0.5f),
+                    new GradientAlphaKey(0f, 0f),
+                    new GradientAlphaKey(1f, 0.1f),
+                    new GradientAlphaKey(1f, 0.9f),
                     new GradientAlphaKey(0f, 1f) 
                 }
             );
             colorOverLifetime.color = grad;
             
+            // Tamaño de partículas
+            var sizeOverLifetime = ps.sizeOverLifetime;
+            sizeOverLifetime.enabled = true;
+            AnimationCurve sizeCurve = new AnimationCurve(
+                new Keyframe(0f, 0.3f),
+                new Keyframe(0.5f, 1f),
+                new Keyframe(1f, 0.3f)
+            );
+            sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f, sizeCurve);
+            
             // Renderizador de partículas
             var renderer = ps.GetComponent<ParticleSystemRenderer>();
             renderer.material = new Material(Shader.Find("Particles/Standard Unlit"));
+            renderer.renderMode = ParticleSystemRenderMode.Billboard;
             
-            // Velocidad orbital para efecto de rotación
-            var velocityOverLifetime = ps.velocityOverLifetime;
-            velocityOverLifetime.enabled = true;
-            velocityOverLifetime.orbitalY = 1f;
-            
-            // Reproducir el efecto
+            // Iniciamos el sistema
             ps.Play();
             
-            // Destruir después de completar
-            Destroy(effectObj, 3f);
+            // Ahora configuramos la duración mientras está detenido
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            
+            yield return null; // Esperamos un frame para asegurar que se detiene
+            
+            main.duration = levelUpEffectDuration;
+            
+            // Y reiniciamos el sistema
+            ps.Play();
+            
+            // Animar el movimiento vertical del anillo
+            float startDelay = ringIndex * 0.3f;
+            StartCoroutine(AnimateRingPosition(ringObj, startDelay));
+            
+            yield return null;
         }
         
+        /// <summary>
+        /// Crea un efecto simple en el centro para la subida de nivel
+        /// </summary>
+        private void CreateSimpleCentralEffect(GameObject parent)
+        {
+            // Crear objeto para el efecto central
+            GameObject centerObj = new GameObject("LevelUpCenter");
+            centerObj.transform.position = transform.position + new Vector3(0, 0.5f, 0);
+            centerObj.transform.SetParent(parent.transform);
+            
+            // Añadir sistema de partículas
+            ParticleSystem ps = centerObj.AddComponent<ParticleSystem>();
+            
+            // Configuración básica
+            var main = ps.main;
+            main.startColor = new Color(levelUpEffectColor.r, levelUpEffectColor.g, levelUpEffectColor.b, 0.5f); // Más transparente
+            main.startSize = 0.08f; // Partículas más pequeñas
+            main.startSpeed = 1.5f; // Velocidad más lenta
+            main.startLifetime = 1.5f;
+            main.maxParticles = 30; // Menos partículas
+            main.loop = true;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            
+            // Emisión
+            var emission = ps.emission;
+            emission.rateOverTime = 10; // Menos partículas por segundo
+            
+            // Forma (disparo hacia arriba más sutil)
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Cone;
+            shape.angle = 10f; // Ángulo más cerrado
+            shape.radius = 0.05f; // Radio más pequeño
+            shape.radiusThickness = 1f;
+            
+            // Tamaño de partículas
+            var sizeOverLifetime = ps.sizeOverLifetime;
+            sizeOverLifetime.enabled = true;
+            AnimationCurve sizeCurve = new AnimationCurve(
+                new Keyframe(0f, 0.3f),
+                new Keyframe(0.3f, 0.7f),
+                new Keyframe(1f, 0f)
+            );
+            sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f, sizeCurve);
+            
+            // Color
+            var colorOverLifetime = ps.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            Gradient grad = new Gradient();
+            grad.SetKeys(
+                new GradientColorKey[] { 
+                    new GradientColorKey(levelUpEffectColor, 0f),
+                    new GradientColorKey(Color.white, 0.5f),
+                    new GradientColorKey(levelUpEffectColor, 1f) 
+                },
+                new GradientAlphaKey[] { 
+                    new GradientAlphaKey(0.4f, 0f), // Más transparente
+                    new GradientAlphaKey(0.3f, 0.5f), // Más transparente
+                    new GradientAlphaKey(0f, 1f) 
+                }
+            );
+            colorOverLifetime.color = grad;
+            
+            // Renderizador - aseguramos que las partículas sean redondas
+            var renderer = ps.GetComponent<ParticleSystemRenderer>();
+            renderer.material = new Material(Shader.Find("Particles/Standard Unlit"));
+            renderer.renderMode = ParticleSystemRenderMode.Billboard;
+            
+            // Establecer textura circular para las partículas
+            renderer.material.SetTexture("_MainTex", CreateCircleTexture());
+            
+            // Iniciar el sistema
+            ps.Play();
+        }
+        
+        /// <summary>
+        /// Crea una textura circular para las partículas
+        /// </summary>
+        private Texture2D CreateCircleTexture()
+        {
+            // Crear una textura de 32x32 píxeles
+            Texture2D texture = new Texture2D(32, 32, TextureFormat.RGBA32, false);
+            
+            // Radio del círculo
+            float radius = 15f;
+            float radiusSquared = radius * radius;
+            
+            // Centro de la textura
+            Vector2 center = new Vector2(15.5f, 15.5f);
+            
+            // Dibujar un círculo suave
+            for (int y = 0; y < 32; y++)
+            {
+                for (int x = 0; x < 32; x++)
+                {
+                    float distSquared = (x - center.x) * (x - center.x) + (y - center.y) * (y - center.y);
+                    
+                    // Calcular la transparencia basada en la distancia al centro
+                    float alpha = 0f;
+                    if (distSquared <= radiusSquared)
+                    {
+                        // Suavizado de bordes
+                        float dist = Mathf.Sqrt(distSquared);
+                        if (dist < radius - 2f)
+                            alpha = 1f;
+                        else
+                            alpha = 1f - ((dist - (radius - 2f)) / 2f);
+                    }
+                    
+                    // Establecer el color con transparencia
+                    Color color = new Color(1f, 1f, 1f, alpha);
+                    texture.SetPixel(x, y, color);
+                }
+            }
+            
+            // Aplicar los cambios a la textura
+            texture.Apply();
+            return texture;
+        }
+        
+        /// <summary>
+        /// Anima la posición del anillo para crear efecto de escaneo
+        /// </summary>
+        private IEnumerator AnimateRingPosition(GameObject ring, float startDelay)
+        {
+            if (startDelay > 0)
+                yield return new WaitForSeconds(startDelay);
+            
+            float duration = levelUpEffectDuration - startDelay;
+            float elapsed = 0f;
+            float height = 1.8f; // Altura total del movimiento
+            Vector3 basePosition = ring.transform.localPosition;
+            float baseY = basePosition.y;
+            
+            while (elapsed < duration && ring != null)
+            {
+                // Calcular posición Y con movimiento oscilante
+                float t = elapsed / 2.0f; // Ciclo más rápido que la duración total
+                float yPos = baseY + Mathf.PingPong(t, height) - height/2;
+                
+                if (ring != null)
+                {
+                    ring.transform.localPosition = new Vector3(0, yPos, 0);
+                }
+                
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+        }
+
         /// <summary>
         /// RPC para mostrar el efecto de subida de nivel en otros clientes
         /// </summary>
@@ -2326,8 +2521,33 @@ namespace Photon.Pun.Demo.Asteroids
         {
             if (!photonView.IsMine)
             {
-                // Crear un efecto dinámico en clientes remotos
-                CreateDynamicLevelUpEffect();
+                Debug.Log($"[HeroBase] RPC_ShowLevelUpEffect recibido para {heroName}");
+                
+                // Comprobamos si existe un prefab de efecto de nivel para este héroe
+                if (levelUpEffectPrefab != null)
+                {
+                    // Instanciar el prefab en la posición del héroe
+                    GameObject effect = Instantiate(levelUpEffectPrefab, transform.position + Vector3.up, Quaternion.identity);
+                    
+                    // Configurar el efecto para que siga al héroe
+                    effect.transform.SetParent(transform);
+                    
+                    // Ajustar color de las partículas
+                    ParticleSystem[] particleSystems = effect.GetComponentsInChildren<ParticleSystem>();
+                    foreach (ParticleSystem ps in particleSystems)
+                    {
+                        var main = ps.main;
+                        main.startColor = levelUpEffectColor;
+                    }
+                    
+                    // Destruir después de la duración configurada
+                    Destroy(effect, levelUpEffectDuration);
+                }
+                else
+                {
+                    // Crear un efecto dinámico en clientes remotos
+                    CreateDynamicLevelUpEffect();
+                }
             }
         }
 
