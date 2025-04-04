@@ -84,6 +84,18 @@ namespace Photon.Pun.Demo.Asteroids
         protected virtual void OnAbilityInitialized() { }
         
         /// <summary>
+        /// Método que se ejecuta cuando se activa la habilidad
+        /// </summary>
+        /// <param name="caster">Héroe que lanza la habilidad</param>
+        /// <param name="position">Posición de activación</param>
+        /// <param name="target">Objetivo opcional de la habilidad</param>
+        protected virtual void OnAbilityActivated(HeroBase caster, Vector3 position, HeroBase target = null)
+        {
+            // Método base para ser sobrescrito por las habilidades específicas
+            Debug.Log($"[AbilityBase] Habilidad activada por {caster?.name ?? "desconocido"} en posición {position}");
+        }
+        
+        /// <summary>
         /// Destruye la habilidad
         /// </summary>
         protected virtual void DestroyAbility()

@@ -16,7 +16,7 @@ MonoBehaviour:
   Description: Harvest Madness test
   IconSprite: {fileID: 21300000, guid: 9ad322f57cb79e744a30eb34e1f6e1c9, type: 3}
   Hotkey: R
-  Cooldown: 60
+  Cooldown: 5
   ManaCost: 100
   AbilityType: Activa
   DamageAmount: 0

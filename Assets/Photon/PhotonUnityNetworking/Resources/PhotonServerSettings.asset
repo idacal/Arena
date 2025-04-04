@@ -115,6 +115,10 @@ MonoBehaviour:
   - RPC_PlayLevelUpSound
   - RPC_ShowLevelUpEffect
   - RPC_SyncTeam
+  - RPC_SyncSpeedMultiplier
+  - RPC_SyncOriginalSpeed
+  - RPC_RemoveStatModifiers
+  - RPC_SyncStatModifier
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

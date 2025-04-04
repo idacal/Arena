@@ -65,6 +65,10 @@ namespace Photon.Pun.Demo.Asteroids
         private Transform cameraTransform;
         private HeroBase heroOwner;
         
+        // Añadir variables para controlar la frecuencia de actualización
+        private float uiUpdateInterval = 0.25f; // Actualizar cada 250ms en lugar de cada frame
+        private float lastUIUpdateTime = 0f;
+        
         /// <summary>
         /// Inicializa el controlador de UI con el héroe propietario
         /// </summary>
@@ -312,10 +316,30 @@ namespace Photon.Pun.Demo.Asteroids
                                  cameraTransform.rotation * Vector3.up);
             }
 
-            // Actualizar estadísticas si tenemos un héroe propietario
+            // Actualizar estadísticas si tenemos un héroe propietario, pero solo periódicamente
             if (heroOwner != null)
             {
-                UpdateHeroStats(heroOwner);
+                if (Time.time >= lastUIUpdateTime + uiUpdateInterval)
+                {
+                    // Actualizar todas las estadísticas excepto el oro
+                    UpdateHeroStats(heroOwner);
+                    
+                    // Actualizar la barra de vida
+                    UpdateHealthBar(heroOwner.CurrentHealth, heroOwner.MaxHealth);
+                    
+                    // Actualizar la barra de maná
+                    UpdateManaBar(heroOwner.currentMana, heroOwner.maxMana);
+                    
+                    // Actualizar barra de experiencia si tenemos datos de héroe
+                    if (heroOwner.heroData != null && experienceBar != null)
+                    {
+                        float experienceNeeded = heroOwner.heroData.GetExperienceForNextLevel();
+                        UpdateExperienceBar(0, heroOwner.CurrentExperience, experienceNeeded);
+                    }
+                    
+                    // Actualizar temporizador
+                    lastUIUpdateTime = Time.time;
+                }
             }
         }
         
@@ -440,7 +464,7 @@ namespace Photon.Pun.Demo.Asteroids
             if (attackSpeedText != null)
                 attackSpeedText.text = $"{heroData.CurrentAttackSpeed:F2}";
             if (moveSpeedText != null)
-                moveSpeedText.text = $"{heroData.MovementSpeed:F0}";
+                moveSpeedText.text = $"{heroData.CurrentMovementSpeed:F0}";
             if (attackRangeText != null)
                 attackRangeText.text = $"{hero.AttackRange:F1}";
             if (armorText != null)
@@ -1392,6 +1416,33 @@ namespace Photon.Pun.Demo.Asteroids
                 
                 Debug.Log($"Creando efecto especial de oro por héroe con {particleCount} partículas");
             }
+        }
+
+        /// <summary>
+        /// Fuerza una actualización inmediata de la UI sin esperar al intervalo
+        /// </summary>
+        public void ForceUIUpdate()
+        {
+            if (heroOwner == null) return;
+            
+            // Actualizar todas las estadísticas
+            UpdateHeroStats(heroOwner);
+            
+            // Actualizar la barra de vida
+            UpdateHealthBar(heroOwner.CurrentHealth, heroOwner.MaxHealth);
+            
+            // Actualizar la barra de maná
+            UpdateManaBar(heroOwner.currentMana, heroOwner.maxMana);
+            
+            // Actualizar barra de experiencia si tenemos datos de héroe
+            if (heroOwner.heroData != null && experienceBar != null)
+            {
+                float experienceNeeded = heroOwner.heroData.GetExperienceForNextLevel();
+                UpdateExperienceBar(0, heroOwner.CurrentExperience, experienceNeeded);
+            }
+            
+            // Reiniciar el temporizador para evitar actualizaciones duplicadas
+            lastUIUpdateTime = Time.time;
         }
 
         private void OnDestroy()

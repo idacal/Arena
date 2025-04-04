@@ -13,7 +13,6 @@ GameObject:
   - component: {fileID: 4537088642261520888}
   - component: {fileID: 7119904599423193994}
   - component: {fileID: 3091012703936009688}
-  - component: {fileID: 8310443664701733848}
   - component: {fileID: 92324241139660812}
   - component: {fileID: 3154869011685972476}
   - component: {fileID: 7197885360076725233}
@@ -145,28 +144,6 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!195 &8310443664701733848
-NavMeshAgent:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8450020148230160356}
-  m_Enabled: 1
-  m_AgentTypeID: 0
-  m_Radius: 0.5
-  m_Speed: 3.5
-  m_Acceleration: 200
-  avoidancePriority: 50
-  m_AngularSpeed: 720
-  m_StoppingDistance: 0
-  m_AutoTraverseOffMeshLink: 1
-  m_AutoBraking: 1
-  m_AutoRepath: 1
-  m_Height: 2
-  m_BaseOffset: 0
-  m_WalkableMask: 4294967295
-  m_ObstacleAvoidanceType: 4
 --- !u!114 &92324241139660812
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -322,10 +299,14 @@ MonoBehaviour:
   goldSound: {fileID: 0}
   bigGoldSound: {fileID: 0}
   smallGoldSound: {fileID: 0}
+  levelUpSound: {fileID: 0}
   baseHeroKillGold: 200
   heroLevelGoldMultiplier: 0.15
   killStreakGoldMultiplier: 0.1
   assistGoldMultiplier: 0.4
+  levelUpEffectPrefab: {fileID: 0}
+  levelUpEffectColor: {r: 1, g: 0.8, b: 0.2, a: 1}
+  levelUpEffectDuration: 3
 --- !u!114 &3269517159320140481
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -338,6 +319,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4f84343b1ab833649b996d9c4fa6cc80, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  speedMultiplier: 1
   rotationSpeed: 5
   targetDistance: 0.1
   animator: {fileID: 0}
@@ -404,3 +386,4 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   showDebugMessages: 0
+  updateInterval: 0.25

@@ -361,6 +361,19 @@ namespace Photon.Pun.Demo.Asteroids
             if (_isDead)
                 return;
             
+            // NUEVO: Limpiar modificadores expirados periódicamente en lugar de cada frame
+            if (heroData != null && Time.time >= lastStatCheckTime + statCheckInterval)
+            {
+                if (heroData.CleanupExpiredModifiers())
+                {
+                    // Si se eliminó algún modificador, actualizar valores
+                    UpdateStatsFromHeroData();
+                }
+                
+                // Actualizar temporizador
+                lastStatCheckTime = Time.time;
+            }
+            
             // Si estamos en el editor o modo de desarrollo, permitir pruebas con teclas
             #if UNITY_EDITOR || DEVELOPMENT_BUILD
             // Presionar L para subir de nivel (prueba del efecto visual y sonido)
@@ -417,6 +430,180 @@ namespace Photon.Pun.Demo.Asteroids
             }
         }
         
+        /// <summary>
+        /// Actualiza las estadísticas desde HeroData, útil después de cambios en modificadores
+        /// </summary>
+        private void UpdateStatsFromHeroData()
+        {
+            if (heroData == null) return;
+            
+            // Actualizar estadísticas básicas
+            maxHealth = heroData.MaxHealth;
+            maxMana = heroData.MaxMana;
+            attackDamage = heroData.CurrentAttackDamage;
+            attackSpeed = heroData.CurrentAttackSpeed;
+            armor = heroData.CurrentArmor;
+            magicResistance = heroData.CurrentMagicResistance;
+            healthRegenRate = heroData.CurrentHealthRegen;
+            manaRegenRate = heroData.CurrentManaRegen;
+            
+            // Usar la velocidad modificada desde heroData
+            moveSpeed = heroData.CurrentMovementSpeed * 0.01f; // Convertir a unidades de Unity
+            
+            // Actualizar UI si está disponible
+            UpdateUI();
+            
+            // Actualizar NavMeshAgent si está disponible
+            UpdateNavMeshAgent();
+        }
+        
+        /// <summary>
+        /// Actualiza el NavMeshAgent con la velocidad actual
+        /// </summary>
+        private void UpdateNavMeshAgent()
+        {
+            HeroMovementController movementController = GetComponent<HeroMovementController>();
+            if (movementController != null && movementController.navAgent != null)
+            {
+                movementController.SetBaseSpeed(moveSpeed);
+            }
+        }
+        
+        /// <summary>
+        /// Método público para aplicar un modificador de estadística
+        /// </summary>
+        public void ApplyStatModifier(string statName, string sourceName, bool isPercentage, float value, float duration = 0)
+        {
+            if (heroData == null) return;
+            
+            // Crear y aplicar el modificador
+            var modType = isPercentage ? HeroData.StatModifier.ModifierType.Percent : HeroData.StatModifier.ModifierType.Flat;
+            var modifier = new HeroData.StatModifier(sourceName, modType, value, duration);
+            
+            // Aplicar el modificador a HeroData
+            heroData.AddStatModifier(statName, modifier);
+            
+            // Actualizar estadísticas basadas en el nuevo modificador
+            UpdateStatsFromHeroData();
+            
+            // Forzar actualización inmediata de la UI
+            HeroUIController uiController = GetComponent<HeroUIController>();
+            if (uiController != null)
+            {
+                uiController.ForceUIUpdate();
+            }
+            
+            // Debug
+            Debug.Log($"[HeroBase] Modificador aplicado a {statName}: {(isPercentage ? value*100 : value)}{(isPercentage ? "%" : "")} por {duration}s");
+            
+            // Si somos el dueño, enviar RPC para sincronizar
+            if (photonView.IsMine)
+            {
+                photonView.RPC("RPC_SyncStatModifier", RpcTarget.Others, statName, sourceName, isPercentage, value, duration);
+            }
+        }
+        
+        /// <summary>
+        /// Método público para eliminar modificadores por fuente
+        /// </summary>
+        public void RemoveStatModifiersBySource(string statName, string sourceName)
+        {
+            if (heroData == null) return;
+            
+            // Eliminar los modificadores
+            heroData.RemoveStatModifiersBySource(statName, sourceName);
+            
+            // Actualizar estadísticas
+            UpdateStatsFromHeroData();
+            
+            // Forzar actualización inmediata de la UI
+            HeroUIController uiController = GetComponent<HeroUIController>();
+            if (uiController != null)
+            {
+                uiController.ForceUIUpdate();
+            }
+            
+            // Debug
+            Debug.Log($"[HeroBase] Modificadores de {sourceName} eliminados de {statName}");
+            
+            // Si somos el dueño, enviar RPC para sincronizar
+            if (photonView.IsMine)
+            {
+                photonView.RPC("RPC_RemoveStatModifiers", RpcTarget.Others, statName, sourceName);
+            }
+        }
+        
+        /// <summary>
+        /// Método para aplicar un buff de velocidad de movimiento
+        /// </summary>
+        public void ApplyMovementSpeedBuff(string sourceName, float percentIncrease, float duration)
+        {
+            // Simplemente llamamos a ApplyStatModifier con los parámetros correctos
+            ApplyStatModifier("MovementSpeed", sourceName, true, percentIncrease, duration);
+        }
+        
+        /// <summary>
+        /// RPC para sincronizar la aplicación de modificadores
+        /// </summary>
+        [PunRPC]
+        private void RPC_SyncStatModifier(string statName, string sourceName, bool isPercentage, float value, float duration)
+        {
+            // Solo procesar si no somos el dueño
+            if (photonView.IsMine) return;
+            
+            // Aplicar el modificador localmente (sin enviar más RPCs)
+            if (heroData != null)
+            {
+                var modType = isPercentage ? HeroData.StatModifier.ModifierType.Percent : HeroData.StatModifier.ModifierType.Flat;
+                var modifier = new HeroData.StatModifier(sourceName, modType, value, duration);
+                heroData.AddStatModifier(statName, modifier);
+                UpdateStatsFromHeroData();
+                
+                // Forzar actualización inmediata de la UI
+                HeroUIController uiController = GetComponent<HeroUIController>();
+                if (uiController != null)
+                {
+                    uiController.ForceUIUpdate();
+                }
+            }
+        }
+        
+        /// <summary>
+        /// RPC para sincronizar la eliminación de modificadores
+        /// </summary>
+        [PunRPC]
+        private void RPC_RemoveStatModifiers(string statName, string sourceName)
+        {
+            // Solo procesar si no somos el dueño
+            if (photonView.IsMine) return;
+            
+            // Eliminar los modificadores localmente
+            if (heroData != null)
+            {
+                heroData.RemoveStatModifiersBySource(statName, sourceName);
+                UpdateStatsFromHeroData();
+                
+                // Forzar actualización inmediata de la UI
+                HeroUIController uiController = GetComponent<HeroUIController>();
+                if (uiController != null)
+                {
+                    uiController.ForceUIUpdate();
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Actualiza la UI del héroe
+        /// </summary>
+        private void UpdateUI()
+        {
+            HeroUIController uiController = GetComponent<HeroUIController>();
+            if (uiController != null)
+            {
+                uiController.UpdateHeroStats(this);
+            }
+        }
+        
         #endregion
         
         #region GAMEPLAY METHODS
@@ -463,6 +650,12 @@ namespace Photon.Pun.Demo.Asteroids
                 int selectedHeroId = HeroManager.Instance.GetPlayerSelectedHeroId(player);
                 if (selectedHeroId != -1)
                 {
+                    // Si ya existe otro herodata, dejar de escuchar sus eventos
+                    if (heroData != null)
+                    {
+                        heroData.StatChanged -= OnHeroStatChanged;
+                    }
+                    
                     heroId = selectedHeroId;
                     
                     // Obtener el equipo del jugador
@@ -476,6 +669,9 @@ namespace Photon.Pun.Demo.Asteroids
                         Debug.Log($"[HeroBase] Atributos base - Fuerza: {heroData.BaseStrength}, Inteligencia: {heroData.BaseIntelligence}, Agilidad: {heroData.BaseAgility}");
                         Debug.Log($"[HeroBase] Escalados - Fuerza: {heroData.StrengthScaling}, Inteligencia: {heroData.IntelligenceScaling}, Agilidad: {heroData.AgilityScaling}");
                         
+                        // Suscribirse al evento de cambio de stats
+                        heroData.StatChanged += OnHeroStatChanged;
+                        
                         heroName = heroData.Name;
                         maxHealth = heroData.MaxHealth;
                         currentHealth = maxHealth;
@@ -483,7 +679,7 @@ namespace Photon.Pun.Demo.Asteroids
                         currentMana = maxMana;
                         attackDamage = heroData.CurrentAttackDamage;
                         attackSpeed = heroData.CurrentAttackSpeed;
-                        moveSpeed = heroData.MovementSpeed * 0.01f; // Convertir a unidades de Unity
+                        moveSpeed = heroData.CurrentMovementSpeed * 0.01f; // Usar CurrentMovementSpeed en lugar de MovementSpeed
                         armor = heroData.CurrentArmor;
                         magicResistance = heroData.CurrentMagicResistance;
                         healthRegenRate = heroData.CurrentHealthRegen;
@@ -508,6 +704,30 @@ namespace Photon.Pun.Demo.Asteroids
                     Debug.LogError($"[HeroBase] No se encontró ID de héroe seleccionado para el jugador {player.NickName}");
                 }
             }
+        }
+        
+        /// <summary>
+        /// Manejador para el evento de cambio de stats en HeroData
+        /// </summary>
+        private void OnHeroStatChanged(string statName)
+        {
+            // Actualizar las estadísticas desde HeroData
+            UpdateStatsFromHeroData();
+            
+            // Forzar actualización inmediata de la UI para cambios importantes
+            if (statName == "MovementSpeed" || statName == "AttackSpeed" || 
+                statName == "AttackDamage" || statName == "Armor" || 
+                statName == "MagicResistance")
+            {
+                // Obtener referencia a la UI y forzar actualización
+                HeroUIController uiController = GetComponent<HeroUIController>();
+                if (uiController != null)
+                {
+                    uiController.ForceUIUpdate();
+                }
+            }
+            
+            Debug.Log($"[HeroBase] Stat cambiado: {statName}, actualizando valores");
         }
         
         /// <summary>
@@ -2737,5 +2957,20 @@ namespace Photon.Pun.Demo.Asteroids
             
             return modifiedXP;
         }
+
+        protected virtual void OnDestroy()
+        {
+            // Cancelar la suscripción a los eventos de HeroData
+            if (heroData != null)
+            {
+                heroData.StatChanged -= OnHeroStatChanged;
+            }
+            
+            // Resto del código de limpieza que ya exista
+        }
+
+        // Añadir variables para controlar la frecuencia de actualización
+        private float statCheckInterval = 0.5f; // Comprobar cada 500ms en lugar de cada frame
+        private float lastStatCheckTime = 0f;
     }
 }

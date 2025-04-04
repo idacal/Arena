@@ -6,9 +6,14 @@ using Photon.Realtime;
 namespace Photon.Pun.Demo.Asteroids
 {
     [RequireComponent(typeof(HeroBase))]
-    [RequireComponent(typeof(NavMeshAgent))]
     public class HeroMovementController : MonoBehaviourPun, IPunObservable
     {
+        [Header("Speed Buff System")]
+        [SerializeField] private float speedMultiplier = 1.0f;
+        private float baseSpeedMultiplier = 1.0f;
+        private float originalNavMeshSpeed;
+        private bool hasInitializedSpeed = false;
+        
         [Header("Movement Settings")]
         public float rotationSpeed = 5f;
         public float targetDistance = 0.1f;
@@ -69,18 +74,28 @@ namespace Photon.Pun.Demo.Asteroids
         
         void Awake()
         {
-            // Obtener componentes
+            // Get required components
             heroBase = GetComponent<HeroBase>();
-            navAgent = GetComponent<NavMeshAgent>();
-            characterCollider = GetComponent<Collider>();
-            characterRigidbody = GetComponent<Rigidbody>();
             
+            // Configurar el NavMeshAgent (añadirlo si no existe)
+            ConfigureNavMeshAgent();
+            
+            // Get Rigidbody and Collider (if exists)
+            characterRigidbody = GetComponent<Rigidbody>();
+            characterCollider = GetComponent<Collider>();
+            
+            // Initialize the animation sync component if exists
+            animSync = GetComponent<HeroAnimationSync>();
+            
+            // Set defaults if needed
+            lastValidPosition = transform.position;
+            
+            // Buscar animator si no está asignado
             if (animator == null)
             {
                 animator = GetComponent<Animator>();
                 if (animator == null)
                 {
-                    // Buscar animator en hijos si no está en el objeto principal
                     animator = GetComponentInChildren<Animator>();
                 }
             }
@@ -89,22 +104,58 @@ namespace Photon.Pun.Demo.Asteroids
             if (groundLayer.value == 0)
             {
                 groundLayer = LayerMask.GetMask("Default", "Ground", "Terrain");
+            }
+        }
+        
+        /// <summary>
+        /// Configura o añade el componente NavMeshAgent según los datos del héroe
+        /// </summary>
+        private void ConfigureNavMeshAgent()
+        {
+            // Obtener o añadir el componente NavMeshAgent
+            navAgent = GetComponent<NavMeshAgent>();
+            if (navAgent == null)
+            {
+                navAgent = gameObject.AddComponent<NavMeshAgent>();
+                Debug.Log($"[HeroMovementController] NavMeshAgent añadido a {gameObject.name}");
+            }
+            
+            // Configurar parámetros estándar
+            navAgent.agentTypeID = 0; // Humanoid
+            navAgent.baseOffset = 0f;
+            navAgent.radius = 0.5f;
+            navAgent.height = 2f;
+            navAgent.angularSpeed = 720f;
+            navAgent.acceleration = 200f;
+            navAgent.stoppingDistance = 0f;
+            navAgent.autoBraking = true;
+            navAgent.autoTraverseOffMeshLink = true;
+            navAgent.autoRepath = true;
+            navAgent.avoidancePriority = 50;
+            navAgent.obstacleAvoidanceType = UnityEngine.AI.ObstacleAvoidanceType.HighQualityObstacleAvoidance;
+            
+            // Configurar velocidad según los datos del héroe
+            if (heroBase != null && heroBase.heroData != null)
+            {
+                // La velocidad en HeroData está en unidades brutas, dividimos por 100
+                // Usamos CurrentMovementSpeed (que incluye modificadores) en lugar de MovementSpeed
+                float heroMoveSpeed = heroBase.heroData.CurrentMovementSpeed / 100f;
+                navAgent.speed = heroMoveSpeed;
                 
-                if (debugMode)
-                    Debug.Log($"Set groundLayer to {groundLayer.value}");
+                // Guardar como velocidad original para referencia
+                originalNavMeshSpeed = heroMoveSpeed;
+                hasInitializedSpeed = true;
+                
+                Debug.Log($"[HeroMovementController] NavMeshAgent configurado con velocidad: {navAgent.speed} (HeroData: {heroBase.heroData.CurrentMovementSpeed})");
             }
-            
-            // Buscar HeroAnimationSync
-            animSync = GetComponent<HeroAnimationSync>();
-            if (animSync == null)
+            else
             {
-                animSync = GetComponentInParent<HeroAnimationSync>();
-            }
-            
-            // Debug message
-            if (animator == null && photonView.IsMine)
-            {
-                Debug.LogWarning("No se encontró un componente Animator en " + gameObject.name + ". Las animaciones no funcionarán.");
+                // Si no tenemos datos del héroe, usar valor predeterminado
+                navAgent.speed = 3.5f;
+                originalNavMeshSpeed = navAgent.speed;
+                hasInitializedSpeed = true;
+                
+                Debug.Log($"[HeroMovementController] NavMeshAgent configurado con velocidad predeterminada: {navAgent.speed}");
             }
         }
         
@@ -113,17 +164,15 @@ namespace Photon.Pun.Demo.Asteroids
             // Make sure we configure Rigidbody for both local and remote players
             SafeConfigureRigidbody();
             
-            // Ensure NavMeshAgent is assigned
+            // Ensure NavMeshAgent is assigned and configured
             if (navAgent == null)
             {
-                navAgent = GetComponent<NavMeshAgent>();
-                Debug.Log($"[HeroMovementController] NavMeshAgent obtenido manualmente: {(navAgent != null ? "éxito" : "FALLO")}");
+                ConfigureNavMeshAgent();
             }
             
             // Solo controlar si es el jugador local
             if (!photonView.IsMine)
             {
-                // MODIFICADO: No desactivar completamente el NavMeshAgent para permitir colisiones
                 // Configurar NavMeshAgent para clientes remotos (importante para colisiones)
                 if (navAgent != null)
                 {
@@ -169,6 +218,20 @@ namespace Photon.Pun.Demo.Asteroids
                 if (!navAgent.isOnNavMesh)
                 {
                     Debug.LogWarning($"[HeroMovementController] ¡ADVERTENCIA! NavMeshAgent no está en un NavMesh válido - {gameObject.name}");
+                }
+                
+                // Si el valor de velocidad no está sincronizado con HeroBase, actualizarlo
+                if (heroBase != null)
+                {
+                    // La velocidad debe ser la misma que en HeroBase
+                    if (Mathf.Abs(navAgent.speed - heroBase.moveSpeed) > 0.01f)
+                    {
+                        navAgent.speed = heroBase.moveSpeed;
+                        originalNavMeshSpeed = heroBase.moveSpeed;
+                        hasInitializedSpeed = true;
+                        
+                        Debug.Log($"[HeroMovementController] Velocidad de NavMeshAgent resincronizada con HeroBase: {navAgent.speed}");
+                    }
                 }
             }
             else
@@ -363,6 +426,24 @@ namespace Photon.Pun.Demo.Asteroids
                 timeSinceLastPositionUpdate = 0;
                 latestTargetPosition = targetPosition;
                 latestIsMoving = isMoving;
+            }
+            
+            // Asegurarse de que el multiplicador de velocidad sea respetado
+            if (photonView.IsMine && navAgent != null && navAgent.enabled && hasInitializedSpeed)
+            {
+                // Si la velocidad actual no coincide con la esperada (con un margen de error)
+                float expectedSpeed = originalNavMeshSpeed * speedMultiplier;
+                if (Mathf.Abs(navAgent.speed - expectedSpeed) > 0.01f)
+                {
+                    // Restaurar velocidad según multiplicador
+                    navAgent.speed = expectedSpeed;
+                    
+                    // Debug
+                    if (debugMode)
+                    {
+                        Debug.Log($"[HeroMovementController] Corrigiendo velocidad a {expectedSpeed}");
+                    }
+                }
             }
         }
         
@@ -1265,6 +1346,111 @@ namespace Photon.Pun.Demo.Asteroids
             {
                 Debug.Log($"[HeroMovementController] Movimiento reseteado para {gameObject.name}");
             }
+        }
+        
+        /// <summary>
+        /// Establece la velocidad base del NavMeshAgent
+        /// Este método es llamado desde HeroBase cuando cambia la velocidad por modificadores
+        /// </summary>
+        public void SetBaseSpeed(float newSpeed)
+        {
+            if (navAgent != null && navAgent.enabled)
+            {
+                // Conservar el multiplicador actual
+                float currentMultiplier = hasInitializedSpeed ? (navAgent.speed / originalNavMeshSpeed) : 1.0f;
+                
+                // Actualizar la velocidad original
+                originalNavMeshSpeed = newSpeed;
+                hasInitializedSpeed = true;
+                
+                // Aplicar la nueva velocidad con el multiplicador actual
+                navAgent.speed = newSpeed * currentMultiplier;
+                
+                if (debugMode)
+                {
+                    Debug.Log($"[HeroMovementController] Velocidad base actualizada a {newSpeed} (con multiplicador {currentMultiplier})");
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Aplica un multiplicador de velocidad
+        /// AHORA UTILIZA EL SISTEMA DE MODIFICADORES DE HERODATA
+        /// </summary>
+        public void ApplySpeedMultiplier(float multiplier, float duration)
+        {
+            if (!photonView.IsMine) return;
+            
+            // Verificar que tengamos referencia a HeroBase
+            if (heroBase == null)
+            {
+                heroBase = GetComponent<HeroBase>();
+                if (heroBase == null)
+                {
+                    Debug.LogError("[HeroMovementController] No se puede aplicar buff de velocidad: HeroBase es null");
+                    return;
+                }
+            }
+            
+            // Calcular el porcentaje de incremento 
+            // Por ejemplo, si multiplier = 1.5, entonces el incremento es 0.5 (50%)
+            float percentIncrease = multiplier - 1.0f;
+            
+            // Usar el nuevo sistema de modificadores a nivel de HeroData
+            heroBase.ApplyMovementSpeedBuff("SpeedBuff", percentIncrease, duration);
+            
+            // Debug
+            Debug.Log($"[HeroMovementController] Buff de velocidad aplicado: +{percentIncrease * 100}% durante {duration}s");
+        }
+        
+        /// <summary>
+        /// Actualiza la velocidad del NavMeshAgent según el multiplicador
+        /// </summary>
+        private void UpdateNavMeshAgentSpeed()
+        {
+            if (navAgent != null && hasInitializedSpeed)
+            {
+                // Si la velocidad actual no coincide con la esperada (con un margen de error)
+                float expectedSpeed = originalNavMeshSpeed * speedMultiplier;
+                if (Mathf.Abs(navAgent.speed - expectedSpeed) > 0.01f)
+                {
+                    // Restaurar velocidad según multiplicador
+                    navAgent.speed = expectedSpeed;
+                    
+                    // Debug
+                    if (debugMode)
+                    {
+                        Debug.Log($"[HeroMovementController] Corrigiendo velocidad a {expectedSpeed}");
+                    }
+                }
+            }
+        }
+        
+        [PunRPC]
+        private void RPC_SyncSpeedMultiplier(float multiplier)
+        {
+            // Solo sincronizamos el multiplicador, no lo aplicamos directamente en clientes remotos
+            speedMultiplier = multiplier;
+            
+            // Actualizar velocidad del NavMeshAgent
+            if (navAgent != null && navAgent.enabled && hasInitializedSpeed)
+            {
+                navAgent.speed = originalNavMeshSpeed * speedMultiplier;
+            }
+            
+            // Debug
+            Debug.Log($"[HeroMovementController] Multiplicador de velocidad sincronizado en cliente remoto: x{multiplier}");
+        }
+
+        /// <summary>
+        /// Método antiguo para restaurar la velocidad original
+        /// Ya no necesario, gestionado por el sistema de modificadores
+        /// Mantenido para compatibilidad
+        /// </summary>
+        private void RestoreOriginalSpeed()
+        {
+            // Este método ya no hace nada activo, todo se gestiona a través del sistema de modificadores
+            Debug.Log("[HeroMovementController] RestoreOriginalSpeed llamado (obsoleto)");
         }
     }
 }

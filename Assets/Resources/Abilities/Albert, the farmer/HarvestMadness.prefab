@@ -10,8 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4628166914243286855}
   - component: {fileID: 2457210732029297195}
-  - component: {fileID: 4622625313734082455}
-  - component: {fileID: 3238252319721251229}
+  - component: {fileID: 3679185188653588839}
   m_Layer: 0
   m_Name: HarvestMadness
   m_TagString: Untagged
@@ -53,12 +52,11 @@ MonoBehaviour:
   OwnershipTransfer: 1
   observableSearch: 2
   ObservedComponents:
-  - {fileID: 4622625313734082455}
-  - {fileID: 3238252319721251229}
+  - {fileID: 3679185188653588839}
   sceneViewId: 0
   InstantiationId: 0
   isRuntimeInstantiated: 0
---- !u!114 &4622625313734082455
+--- !u!114 &3679185188653588839
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -70,55 +68,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3540128e793b7794292ff4ecad435186, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  lifetime: 5
+  lifetime: 10
   destroyOnImpact: 1
   baseDamage: 100
   isMagicDamage: 1
   effectDuration: 0
   impactEffectPrefab: {fileID: 0}
-  buffType: 0
-  buffValue: 50
-  isPercentage: 0
-  duration: 5
-  applyToAllies: 1
-  applyToSelf: 1
-  radius: 5
-  targetLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  buffVisualPrefab: {fileID: 0}
-  attachToBone: 0
-  boneName: Chest
-  attackSpeedType: 1
-  attackSpeedValue: 100
-  attackSpeedIsPercentage: 1
-  attackSpeedDuration: 6
-  attackSpeedApplyToAllies: 0
-  attackSpeedApplyToSelf: 1
-  attackSpeedRadius: 0
-  attackSpeedTargetLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  moveSpeedType: 2
-  moveSpeedValue: 30
-  moveSpeedIsPercentage: 1
-  moveSpeedDuration: 6
-  moveSpeedApplyToAllies: 0
-  moveSpeedApplyToSelf: 1
-  moveSpeedRadius: 0
-  moveSpeedTargetLayers:
-    serializedVersion: 2
-    m_Bits: 0
---- !u!114 &3238252319721251229
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5462789346991478595}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6965ac613f7e713408abb8eec4962bff, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  debugMode: 1
+  abilitySound: {fileID: 0}
+  impactSound: {fileID: 0}
+  volumeMultiplier: 1
+  spatialBlend: 1
+  attackSpeedBonus: 100
+  moveSpeedBonus: 50
+  buffDuration: 10
+  effectColor: {r: 1, g: 0, b: 0, a: 1}
+  particleSize: 0.5
+  particleLifetime: 1.5

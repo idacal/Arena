@@ -32,7 +32,7 @@ MonoBehaviour:
   MagicResistancePerIntelligence: 0.5
   HealthRegenPerStrength: 0.1
   ManaRegenPerIntelligence: 0.05
-  MovementSpeed: 350
+  MovementSpeed: 320
   AttackRange: 3
   RespawnTime: 5
   MaxLevel: 18

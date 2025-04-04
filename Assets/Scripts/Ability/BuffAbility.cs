@@ -10,16 +10,16 @@ namespace Photon.Pun.Demo.Asteroids
     {
         [Header("Buff Settings")]
         public BuffType buffType = BuffType.AttackDamage;   // Tipo de buff
-        public float buffValue = 50f;                       // Valor de la mejora
+        public float buffAmount = 50f;                       // Valor de la mejora
         public bool isPercentage = false;                   // Si es un valor porcentual
-        public float duration = 5f;                         // Duración del buff
+        public float buffDuration = 5f;                         // Duración del buff
         public bool applyToAllies = true;                   // Si se aplica a aliados
         public bool applyToSelf = true;                     // Si se aplica al lanzador
         public float radius = 5f;                           // Radio de efecto (0 = solo al objetivo/lanzador)
         public LayerMask targetLayers;                      // Capas afectadas
         
         [Header("Visual Effects")]
-        public GameObject buffVisualPrefab;                 // Efecto visual temporal para mostrar en el objetivo
+        public GameObject buffEffectPrefab;                 // Efecto visual temporal para mostrar en el objetivo
         public bool attachToBone = false;                   // Si el efecto se adjunta a un hueso específico del personaje
         public string boneName = "Chest";                   // Nombre del hueso si attachToBone es true
         
@@ -125,72 +125,81 @@ namespace Photon.Pun.Demo.Asteroids
         }
         
         /// <summary>
-        /// Aplica el buff a un héroe específico
+        /// Aplica los efectos del buff a un héroe específico
         /// </summary>
-        private void ApplyBuff(HeroBase hero)
+        protected virtual void ApplyBuff(HeroBase hero)
         {
-            // Verificar que no tenga ya un buff de este tipo aplicado
-            if (HasActiveBuff(hero))
-                return;
-                
-            // Valor original de la estadística que vamos a modificar
+            if (hero == null) return;
+            
+            // Si ya tiene un buff activo, primero quitarlo
+            RemoveExistingBuff(hero);
+            
+            // Obtener el valor original de la estadística
             float originalValue = GetStatValue(hero, buffType);
             
-            // Aplicar el buff
+            // Calcular el nuevo valor con el porcentaje o valor plano
             float newValue;
             if (isPercentage)
             {
-                // Si es porcentaje, calculamos el incremento
-                newValue = originalValue * (1 + buffValue / 100f);
+                newValue = originalValue * (1 + (buffAmount / 100f));
             }
             else
             {
-                // Si es valor absoluto, sumamos directamente
-                newValue = originalValue + buffValue;
+                newValue = originalValue + buffAmount;
             }
             
-            // Establecer el nuevo valor
-            SetStatValue(hero, buffType, newValue);
-            
-            // Crear efecto visual si existe
-            GameObject visualEffect = null;
-            if (buffVisualPrefab != null)
+            // Crear efecto visual si hay prefab
+            GameObject vfx = null;
+            if (buffEffectPrefab != null)
             {
-                // Posición para el efecto
-                Transform attachPoint = hero.transform;
+                vfx = Instantiate(buffEffectPrefab, hero.transform.position, Quaternion.identity);
+                vfx.transform.SetParent(hero.transform);
                 
-                // Si queremos adjuntar a un hueso específico
-                if (attachToBone && hero.animator != null)
-                {
-                    Transform boneTransform = FindBoneRecursive(hero.animator.transform, boneName);
-                    if (boneTransform != null)
-                    {
-                        attachPoint = boneTransform;
-                    }
-                }
-                
-                // Instanciar efecto visual
-                visualEffect = Instantiate(buffVisualPrefab, attachPoint.position, Quaternion.identity);
-                
-                // Adjuntar al punto específico
-                visualEffect.transform.SetParent(attachPoint);
+                // Configurar duración del efecto
+                Destroy(vfx, buffDuration);
             }
             
-            // Registrar la instancia del buff
-            appliedBuffs.Add(new BuffInstance(hero, visualEffect, originalValue, duration));
+            // Registrar buff aplicado
+            BuffInstance newBuff = new BuffInstance(hero, vfx, originalValue, buffDuration);
+            appliedBuffs.Add(newBuff);
             
-            // Llamar a funciones específicas según el tipo de buff
-            switch (buffType)
+            // NUEVO: Usar el sistema de modificadores en lugar de establecer el valor directamente
+            // Esto maneja la propagación a NavMeshAgent y UI automáticamente
+            string statName = GetStatName(buffType);
+            if (!string.IsNullOrEmpty(statName))
             {
-                case BuffType.MoveSpeed:
-                    // Actualizar NavMeshAgent si tiene
-                    HeroMovementController movement = hero.GetComponent<HeroMovementController>();
-                    if (movement != null && movement.navAgent != null)
-                    {
-                        movement.navAgent.speed = newValue;
-                    }
-                    break;
-                // Otros casos específicos se pueden agregar aquí
+                hero.ApplyStatModifier(statName, this.GetType().Name, isPercentage, 
+                                      isPercentage ? buffAmount / 100f : buffAmount, 
+                                      buffDuration);
+            }
+            else
+            {
+                // Fallback al comportamiento anterior
+                SetStatValue(hero, buffType, newValue);
+                
+                // Actualizar componentes específicos según el tipo de buff
+                UpdateSpecificComponents(hero, buffType, newValue);
+            }
+            
+            // Debug
+            Debug.Log($"[BuffAbility] Buff aplicado a {hero.heroName}: {buffType} {(isPercentage ? "+" + buffAmount + "%" : "+" + buffAmount)} durante {buffDuration}s");
+        }
+        
+        /// <summary>
+        /// Obtiene el nombre de la estadística para el sistema de modificadores
+        /// </summary>
+        private string GetStatName(BuffType type)
+        {
+            switch (type)
+            {
+                case BuffType.AttackDamage: return "AttackDamage";
+                case BuffType.AttackSpeed: return "AttackSpeed";
+                case BuffType.MoveSpeed: return "MovementSpeed";
+                case BuffType.Armor: return "Armor";
+                case BuffType.MagicResistance: return "MagicResistance";
+                case BuffType.HealthRegen: return "HealthRegen";
+                case BuffType.ManaRegen: return "ManaRegen";
+                default: return "";
             }
         }
         
@@ -199,8 +208,20 @@ namespace Photon.Pun.Demo.Asteroids
         /// </summary>
         private void RemoveBuff(BuffInstance buff)
         {
-            // Restaurar el valor original
-            SetStatValue(buff.target, buffType, buff.originalValue);
+            // NUEVO: Usar el sistema de modificadores para eliminar
+            string statName = GetStatName(buffType);
+            if (!string.IsNullOrEmpty(statName) && buff.target != null)
+            {
+                buff.target.RemoveStatModifiersBySource(statName, this.GetType().Name);
+            }
+            else if (buff.target != null)
+            {
+                // Fallback al comportamiento anterior
+                SetStatValue(buff.target, buffType, buff.originalValue);
+                
+                // Actualizar componentes específicos según el tipo de buff
+                UpdateSpecificComponents(buff.target, buffType, buff.originalValue);
+            }
             
             // Destruir efecto visual si existe
             if (buff.visualEffect != null)
@@ -208,18 +229,10 @@ namespace Photon.Pun.Demo.Asteroids
                 Destroy(buff.visualEffect);
             }
             
-            // Actualizar componentes específicos según el tipo de buff
-            switch (buffType)
+            // Debug
+            if (buff.target != null)
             {
-                case BuffType.MoveSpeed:
-                    // Actualizar NavMeshAgent si tiene
-                    HeroMovementController movement = buff.target.GetComponent<HeroMovementController>();
-                    if (movement != null && movement.navAgent != null)
-                    {
-                        movement.navAgent.speed = buff.originalValue;
-                    }
-                    break;
-                // Otros casos específicos se pueden agregar aquí
+                Debug.Log($"[BuffAbility] Buff eliminado de {buff.target.heroName}: {buffType}");
             }
         }
         
@@ -334,6 +347,49 @@ namespace Photon.Pun.Demo.Asteroids
                 // Visualizar el radio de efecto
                 Gizmos.color = applyToAllies ? Color.green : Color.red;
                 Gizmos.DrawWireSphere(transform.position, radius);
+            }
+        }
+        
+        /// <summary>
+        /// Actualiza componentes específicos según el tipo de buff
+        /// Esto es un método de fallback para casos que no utilicen el sistema de modificadores
+        /// </summary>
+        private void UpdateSpecificComponents(HeroBase hero, BuffType buffType, float newValue)
+        {
+            switch (buffType)
+            {
+                case BuffType.MoveSpeed:
+                    // Actualizar NavMeshAgent si tiene
+                    HeroMovementController movement = hero.GetComponent<HeroMovementController>();
+                    if (movement != null && movement.navAgent != null)
+                    {
+                        movement.navAgent.speed = newValue;
+                    }
+                    break;
+                    
+                case BuffType.AttackSpeed:
+                    // Podríamos necesitar actualizar animadores u otros componentes
+                    break;
+                    
+                // Otros casos específicos se pueden agregar aquí
+            }
+        }
+        
+        /// <summary>
+        /// Elimina un buff existente en el héroe si ya hay uno aplicado
+        /// </summary>
+        private void RemoveExistingBuff(HeroBase hero)
+        {
+            // Buscar si el héroe ya tiene un buff de este tipo
+            for (int i = appliedBuffs.Count - 1; i >= 0; i--)
+            {
+                if (appliedBuffs[i].target == hero)
+                {
+                    // Remover el buff anterior
+                    RemoveBuff(appliedBuffs[i]);
+                    appliedBuffs.RemoveAt(i);
+                    break;
+                }
             }
         }
     }

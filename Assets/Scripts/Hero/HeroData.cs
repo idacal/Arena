@@ -1,6 +1,7 @@
 using UnityEngine;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Photon.Pun.Demo.Asteroids
 {
@@ -43,6 +44,9 @@ namespace Photon.Pun.Demo.Asteroids
         public float AttackRange;
         public float RespawnTime;
         
+        // NEW: Sistema de modificadores para stats
+        private Dictionary<string, List<StatModifier>> statModifiers = new Dictionary<string, List<StatModifier>>();
+        
         // Level System
         public int MaxLevel;
         public float BaseExperience;
@@ -65,6 +69,9 @@ namespace Photon.Pun.Demo.Asteroids
         public float MagicResistance => CurrentMagicResistance;
         public float HealthRegenRate => CurrentHealthRegen;
         public float ManaRegenRate => CurrentManaRegen;
+        
+        // Nueva propiedad para obtener la velocidad con modificadores aplicados
+        public float CurrentMovementSpeed => GetModifiedStat("MovementSpeed", MovementSpeed);
         
         // Properties calculated for the new system
         public float CurrentStrength => BaseStrength + (StrengthScaling * (CurrentLevel - 1));
@@ -98,9 +105,13 @@ namespace Photon.Pun.Demo.Asteroids
         public float MaxAttackDamage => CurrentAttackDamage;
         public string AttackDamageRange => $"{Mathf.RoundToInt(MinAttackDamage)} - {Mathf.RoundToInt(MaxAttackDamage)}";
         
-        public float CurrentAttackSpeed => 1f + (CurrentAgility * AttackSpeedPerAgility);
+        // Modificado para usar el sistema de modificadores
+        public float CurrentAttackSpeed => GetModifiedStat("AttackSpeed", 1f + (CurrentAgility * AttackSpeedPerAgility));
         public float CurrentHealthRegen => CurrentStrength * HealthRegenPerStrength;
         public float CurrentManaRegen => CurrentIntelligence * ManaRegenPerIntelligence;
+        
+        // Evento para notificar cuando un stat cambia
+        public event Action<string> StatChanged;
         
         // Method to add experience
         public bool AddExperience(float amount)
@@ -171,6 +182,113 @@ namespace Photon.Pun.Demo.Asteroids
                    $"Magic Resistance: {CurrentMagicResistance:F1}\n" +
                    $"Health Regen: {CurrentHealthRegen:F1}/s\n" +
                    $"Mana Regen: {CurrentManaRegen:F1}/s";
+        }
+        
+        // Clase para representar modificadores de estadísticas
+        [Serializable]
+        public class StatModifier
+        {
+            public enum ModifierType { Flat, Percent }
+            
+            public string SourceName;      // Nombre de la fuente del modificador (habilidad, buff, etc.)
+            public ModifierType Type;      // Tipo de modificador
+            public float Value;            // Valor del modificador
+            public float Duration;         // Duración en segundos (0 = permanente)
+            public float EndTime;          // Tiempo cuando finaliza el modificador
+            
+            public StatModifier(string sourceName, ModifierType type, float value, float duration = 0)
+            {
+                SourceName = sourceName;
+                Type = type;
+                Value = value;
+                Duration = duration;
+                EndTime = duration > 0 ? Time.time + duration : 0;
+            }
+            
+            public bool IsExpired => Duration > 0 && Time.time > EndTime;
+        }
+        
+        // Método para agregar un modificador a una estadística
+        public void AddStatModifier(string statName, StatModifier modifier)
+        {
+            if (!statModifiers.ContainsKey(statName))
+            {
+                statModifiers[statName] = new List<StatModifier>();
+            }
+            
+            statModifiers[statName].Add(modifier);
+            
+            // Notificar a los componentes que el stat ha cambiado
+            OnStatChanged(statName);
+        }
+        
+        // Método para remover modificadores por nombre de fuente
+        public void RemoveStatModifiersBySource(string statName, string sourceName)
+        {
+            if (statModifiers.ContainsKey(statName))
+            {
+                statModifiers[statName].RemoveAll(mod => mod.SourceName == sourceName);
+                
+                // Notificar a los componentes que el stat ha cambiado
+                OnStatChanged(statName);
+            }
+        }
+        
+        // Método para limpiar los modificadores expirados
+        public bool CleanupExpiredModifiers()
+        {
+            bool anyRemoved = false;
+            
+            foreach (var statName in statModifiers.Keys.ToList())
+            {
+                int countBefore = statModifiers[statName].Count;
+                statModifiers[statName].RemoveAll(mod => mod.IsExpired);
+                
+                if (countBefore != statModifiers[statName].Count)
+                {
+                    // Notificar a los componentes que el stat ha cambiado
+                    OnStatChanged(statName);
+                    anyRemoved = true;
+                }
+            }
+            
+            return anyRemoved;
+        }
+        
+        // Método para calcular una estadística con modificadores
+        public float GetModifiedStat(string statName, float baseValue)
+        {
+            if (!statModifiers.ContainsKey(statName) || statModifiers[statName].Count == 0)
+            {
+                return baseValue;
+            }
+            
+            float finalValue = baseValue;
+            float sumPercentAdd = 0;
+            
+            // Primero aplicar modificadores flat
+            foreach (var mod in statModifiers[statName].Where(m => m.Type == StatModifier.ModifierType.Flat))
+            {
+                finalValue += mod.Value;
+            }
+            
+            // Luego aplicar modificadores porcentuales
+            foreach (var mod in statModifiers[statName].Where(m => m.Type == StatModifier.ModifierType.Percent))
+            {
+                sumPercentAdd += mod.Value;
+            }
+            
+            // Aplicar el total porcentual (sumamos los porcentajes para evitar aplicaciones multiplicativas)
+            finalValue *= (1 + sumPercentAdd);
+            
+            return finalValue;
+        }
+        
+        // Método para notificar a los componentes que un stat ha cambiado
+        private void OnStatChanged(string statName)
+        {
+            // Invocar el evento StatChanged para que HeroBase pueda reaccionar
+            StatChanged?.Invoke(statName);
         }
     }
 }
