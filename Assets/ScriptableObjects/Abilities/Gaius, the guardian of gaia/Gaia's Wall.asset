@@ -31,5 +31,5 @@ MonoBehaviour:
   LevelRequirements: 0100000003000000050000000700000009000000
   SkillPointCosts: 0100000001000000010000000100000001000000
   StartingLevel: 0
-  AbilityPrefab: {fileID: 0}
+  AbilityPrefab: {fileID: 6224459786598866489, guid: 6e19da1e6d8c0e24680bc019f67cba03, type: 3}
   AbilitySound: {fileID: 0}

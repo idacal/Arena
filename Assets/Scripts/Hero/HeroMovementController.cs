@@ -737,6 +737,21 @@ namespace Photon.Pun.Demo.Asteroids
         {
             if (!photonView.IsMine || isStunned || isRooted) return;
             
+            // Nuevo: teclas para stop (S) y hold position (H)
+            if (Input.GetKeyDown(KeyCode.S))
+            {
+                Debug.Log("Tecla S (Stop) presionada - deteniendo movimiento");
+                StopMovement();
+                return;
+            }
+            
+            if (Input.GetKeyDown(KeyCode.H))
+            {
+                Debug.Log("Tecla H (Hold position) presionada - manteniendo posición");
+                StopMovement();
+                return;
+            }
+            
             // Click derecho para mover
             if (Input.GetMouseButtonDown(1))
             {
@@ -768,6 +783,13 @@ namespace Photon.Pun.Demo.Asteroids
                             {
                                 playerClickIndicator.ShowAt(hit.point);
                             }
+                            
+                            // Nuevo: Cancelar cualquier auto-ataque en progreso
+                            BasicAttackController attackController = GetComponent<BasicAttackController>();
+                            if (attackController != null)
+                            {
+                                attackController.CancelAutoAttack();
+                            }
                         }
                         else
                         {
@@ -790,6 +812,13 @@ namespace Photon.Pun.Demo.Asteroids
                                 if (playerClickIndicator != null)
                                 {
                                     playerClickIndicator.ShowAt(hit.point);
+                                }
+                                
+                                // Nuevo: Cancelar cualquier auto-ataque en progreso
+                                BasicAttackController attackController = GetComponent<BasicAttackController>();
+                                if (attackController != null)
+                                {
+                                    attackController.CancelAutoAttack();
                                 }
                             }
                         }
@@ -963,7 +992,7 @@ namespace Photon.Pun.Demo.Asteroids
         }
         
         /// <summary>
-        /// Detiene el movimiento del héroe
+        /// Detiene cualquier movimiento actual
         /// </summary>
         public void StopMovement()
         {
@@ -989,6 +1018,44 @@ namespace Photon.Pun.Demo.Asteroids
             {
                 animator.SetFloat(moveSpeedParameter, 0f);
             }
+            
+            // Nuevo: Cancelar cualquier auto-ataque en progreso
+            BasicAttackController attackController = GetComponent<BasicAttackController>();
+            if (attackController != null)
+            {
+                attackController.CancelAutoAttack();
+            }
+        }
+        
+        /// <summary>
+        /// Detiene cualquier movimiento actual sin cancelar el auto ataque
+        /// </summary>
+        public void StopMovementWithoutCancellingAutoAttack()
+        {
+            if (!photonView.IsMine) return;
+            
+            // Detener el NavMeshAgent
+            if (navAgent != null && navAgent.enabled)
+            {
+                navAgent.isStopped = true;
+                navAgent.velocity = Vector3.zero;
+                navAgent.ResetPath();
+                Debug.Log($"[HeroMovementController] Deteniendo movimiento de {gameObject.name} (sin cancelar auto ataque)");
+            }
+            
+            // Actualizar estado de movimiento
+            isMoving = false;
+            
+            // Notificar a otros clientes
+            photonView.RPC("RPC_SetMovingState", RpcTarget.Others, false);
+            
+            // Actualizar animación
+            if (animator != null)
+            {
+                animator.SetFloat(moveSpeedParameter, 0f);
+            }
+            
+            // No cancelamos el auto ataque aquí, esa es la diferencia con StopMovement()
         }
         
         /// <summary>

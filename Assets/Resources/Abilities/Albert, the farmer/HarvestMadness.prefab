@@ -82,4 +82,5 @@ MonoBehaviour:
   moveSpeedBonus: 50
   buffDuration: 10
   effectColor: {r: 1, g: 0, b: 0, a: 1}
-  effectPrefabPath: Effects/FuryEffectPrefab
+  particleSize: 0.04
+  particleLifetime: 0.4

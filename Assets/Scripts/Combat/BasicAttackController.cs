@@ -27,6 +27,10 @@ public class BasicAttackController : MonoBehaviourPun
     private Transform currentTarget;
     private Transform currentAttackTarget;
     
+    // NUEVO: Control de ataque automático
+    private bool autoAttackEnabled = false;
+    private Transform autoAttackTarget = null;
+    
     private const string PROJECTILE_PATH = "Prefabs/Combat/BasicAttackProjectile";
     
     private void Awake()
@@ -72,6 +76,13 @@ public class BasicAttackController : MonoBehaviourPun
     {
         if (!photonView.IsMine) return;
         
+        // Teclas para cancelar el autoataque
+        if (autoAttackEnabled && (Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.H)))
+        {
+            Debug.Log("Auto-ataque cancelado por tecla de parada");
+            StopAutoAttack();
+        }
+        
         // Implementar ataque con clic derecho
         if (Input.GetMouseButtonDown(1))
         {
@@ -111,7 +122,13 @@ public class BasicAttackController : MonoBehaviourPun
                 if (targetHero != null || targetCreep != null)
                 {
                     Debug.Log($"Objetivo detectado: {(targetHero != null ? targetHero.heroName : targetCreep.creepName)}, tag: {hit.collider.gameObject.tag}, layer: {LayerMask.LayerToName(hit.collider.gameObject.layer)}");
-                    // Atacar al objetivo
+                    
+                    // NUEVO: Establecer como objetivo de auto-ataque
+                    autoAttackTarget = hit.collider.transform;
+                    autoAttackEnabled = true;
+                    Debug.Log($"Auto-ataque activado contra {hit.collider.transform.name}");
+                    
+                    // Atacar al objetivo inmediatamente
                     bool attackSuccess = TryAttack(hit.collider.transform);
                     Debug.Log($"Resultado del ataque: {(attackSuccess ? "ÉXITO" : "FALLIDO")}");
                     
@@ -130,7 +147,71 @@ public class BasicAttackController : MonoBehaviourPun
             }
             else
             {
-                Debug.Log("El raycast no golpeó ningún objetivo válido");
+                Debug.Log("El raycast no golpeó ningún objetivo válido - movimiento normal");
+                
+                // Si hay un auto-ataque activo, cancelarlo ya que estamos moviéndonos
+                if (autoAttackEnabled)
+                {
+                    Debug.Log("Auto-ataque cancelado por movimiento");
+                    StopAutoAttack();
+                }
+            }
+        }
+        
+        // NUEVO: Auto-ataque si está habilitado y el cooldown lo permite
+        if (autoAttackEnabled && autoAttackTarget != null)
+        {
+            // Verificar si el objetivo sigue siendo válido
+            if (IsValidTarget(autoAttackTarget.gameObject))
+            {
+                // Comprobar si podemos atacar (cooldown) y está en rango
+                if (canAttack)
+                {
+                    TryAttack(autoAttackTarget);
+                }
+                else if (!canAttack)
+                {
+                    // Si estamos en cooldown, comprobar si tenemos que movernos hacia el objetivo
+                    // porque se ha movido y estamos fuera de rango
+                    float distance = Vector3.Distance(transform.position, autoAttackTarget.position);
+                    float attackRange = heroBase.AttackRange;
+                    
+                    if (distance > attackRange)
+                    {
+                        // El objetivo se ha movido y ahora está fuera de rango
+                        // Movemos automáticamente al personaje hacia él
+                        Debug.Log($"Objetivo de auto-ataque se movió fuera de rango, acercándonos a {autoAttackTarget.name}");
+                        
+                        HeroMovementController movementController = GetComponent<HeroMovementController>();
+                        if (movementController != null)
+                        {
+                            // Calculamos una posición de ataque dentro del rango
+                            Vector3 directionToTarget = (autoAttackTarget.position - transform.position).normalized;
+                            Vector3 attackPosition = autoAttackTarget.position - directionToTarget * (attackRange * 0.9f);
+                            
+                            // Almacenamos temporalmente el estado del auto ataque
+                            bool wasAutoAttacking = autoAttackEnabled;
+                            Transform autoAttackTargetTemp = autoAttackTarget;
+                            
+                            // Movemos al personaje (esto podría intentar cancelar el auto ataque)
+                            movementController.SetDestination(attackPosition);
+                            
+                            // Restauramos el estado de auto ataque
+                            if (wasAutoAttacking && autoAttackTargetTemp != null)
+                            {
+                                autoAttackEnabled = true;
+                                autoAttackTarget = autoAttackTargetTemp;
+                                Debug.Log($"Auto-ataque mantenido al perseguir al objetivo: {autoAttackTarget.name}");
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // El objetivo ya no es válido (murió o dejó de ser visible)
+                Debug.Log("Auto-ataque cancelado: objetivo no válido");
+                StopAutoAttack();
             }
         }
         
@@ -141,8 +222,23 @@ public class BasicAttackController : MonoBehaviourPun
             if (attackCooldown <= 0)
             {
                 canAttack = true;
+                Debug.Log("Cooldown finalizado, puede atacar nuevamente");
             }
         }
+    }
+    
+    // NUEVO: Método para detener el auto-ataque
+    public void StopAutoAttack()
+    {
+        autoAttackEnabled = false;
+        autoAttackTarget = null;
+        Debug.Log("Auto-ataque desactivado");
+    }
+    
+    // Método de interfaz pública para que otros sistemas puedan cancelar el auto-ataque
+    public void CancelAutoAttack()
+    {
+        StopAutoAttack();
     }
     
     private bool IsValidTarget(GameObject target)
@@ -252,7 +348,20 @@ public class BasicAttackController : MonoBehaviourPun
                 // Calcular punto de destino (justo dentro del rango de ataque)
                 Vector3 directionToTarget = (target.position - transform.position).normalized;
                 Vector3 attackPosition = target.position - directionToTarget * (attackRange * 0.9f); // 90% del rango para dar un poco de margen
+                
+                // Importante: Si estamos en auto ataque, no cancelamos el auto ataque al movernos hacia el objetivo
+                bool wasAutoAttacking = autoAttackEnabled;
+                Transform autoAttackTargetTemp = autoAttackTarget;
+                
                 movementController.SetDestination(attackPosition);
+                
+                // Restaurar el estado de auto ataque si estaba activado
+                if (wasAutoAttacking && autoAttackTargetTemp != null)
+                {
+                    autoAttackEnabled = true;
+                    autoAttackTarget = autoAttackTargetTemp;
+                    Debug.Log($"Auto-ataque mantenido mientras nos acercamos al objetivo: {autoAttackTarget.name}");
+                }
             }
             return false;
         }
@@ -261,7 +370,18 @@ public class BasicAttackController : MonoBehaviourPun
         HeroMovementController movement = GetComponent<HeroMovementController>();
         if (movement != null)
         {
-            movement.StopMovement();
+            // Detenemos el movimiento pero sin cancelar el auto ataque
+            bool wasAutoAttacking = autoAttackEnabled;
+            Transform autoAttackTargetTemp = autoAttackTarget;
+            
+            movement.StopMovementWithoutCancellingAutoAttack();
+            
+            // Restaurar el estado de auto ataque si estaba activado
+            if (wasAutoAttacking && autoAttackTargetTemp != null)
+            {
+                autoAttackEnabled = true;
+                autoAttackTarget = autoAttackTargetTemp;
+            }
         }
         
         // Orientar hacia el objetivo
@@ -285,6 +405,9 @@ public class BasicAttackController : MonoBehaviourPun
         // Actualizar cooldown
         canAttack = false;
         attackCooldown = 1f / heroBase.AttackSpeed;
+        
+        // Registrar en el log que estamos en cooldown para depuración
+        Debug.Log($"Ataque realizado. Cooldown activado por {attackCooldown} segundos. Auto ataque sigue activo: {autoAttackEnabled}");
         
         return true;
     }

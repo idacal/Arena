@@ -120,6 +120,7 @@ MonoBehaviour:
   - RPC_RemoveStatModifiers
   - RPC_SyncStatModifier
   - RPC_AttachEffectToCaster
+  - RPC_PlaceWall
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1
